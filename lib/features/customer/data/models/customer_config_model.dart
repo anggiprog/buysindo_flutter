@@ -1,0 +1,99 @@
+import 'package:flutter/foundation.dart';
+
+class AppConfigModel {
+  final int id;
+  final String appName;
+  final String packageName;
+  final String appType;
+  final String primaryColor;
+  final String textColor;
+  final String? logoUrl;
+  final String subdomain;
+  final String template;
+  final String template2;
+  final String status;
+
+  AppConfigModel({
+    required this.id,
+    required this.appName,
+    required this.packageName,
+    required this.appType,
+    required this.primaryColor,
+    required this.textColor,
+    this.logoUrl,
+    required this.subdomain,
+    required this.template,
+    required this.template2,
+    required this.status,
+  });
+
+  factory AppConfigModel.fromApi(Map<String, dynamic> json) {
+    // Debug log untuk memastikan data mentah dari API terlihat
+    debugPrint('');
+    debugPrint('🔍 PARSING DATA API (RAW JSON):');
+    debugPrint('Full JSON: $json');
+    debugPrint('');
+
+    // Ekstrak semua field dengan logging detail
+    final id = json['id'] is int
+        ? json['id']
+        : int.tryParse(json['id'].toString()) ?? 0;
+    final appName = json['app_name']?.toString() ?? 'Apk Customer';
+    final packageName = json['package_name']?.toString() ?? '';
+    final appType = json['app_type']?.toString() ?? 'customer';
+    final primaryColor =
+        json['primary_color']?.toString() ??
+        json['branding']?['primary_color']?.toString() ??
+        '#0d6efd';
+    final textColor =
+        json['text_color']?.toString() ??
+        json['branding']?['text_color']?.toString() ??
+        '#ffffff';
+    final logoUrl =
+        json['logo_url']?.toString() ??
+        json['branding']?['logo_url']?.toString();
+    final subdomain =
+        json['subdomain']?.toString() ??
+        json['server_info']?['subdomain']?.toString() ??
+        '';
+
+    // 🔴 FIELD KRITIS: Debugging template
+    final templateRaw = json['template'];
+    final template = templateRaw?.toString() ?? '';
+    final template2Raw = json['template2'];
+    final template2 = template2Raw?.toString() ?? '';
+
+    debugPrint('🔴 FIELD TEMPLATE (CRITICAL):');
+    debugPrint('  - Nilai raw: $templateRaw');
+    debugPrint('  - Tipe: ${templateRaw.runtimeType}');
+    debugPrint('  - Setelah toString(): "$template"');
+    debugPrint('  - Panjang: ${template.length}');
+    debugPrint('  - isEmpty: ${template.isEmpty}');
+    debugPrint('  - Bytes: ${template.codeUnits}');
+    debugPrint('');
+
+    debugPrint('🟡 FIELD TEMPLATE2:');
+    debugPrint('  - Nilai raw: $template2Raw');
+    debugPrint('  - Setelah toString(): "$template2"');
+    debugPrint('');
+
+    final status = json['status']?.toString() ?? 'nonactive';
+
+    debugPrint('✅ SEMUA FIELD BERHASIL DI-EXTRACT');
+    debugPrint('');
+
+    return AppConfigModel(
+      id: id,
+      appName: appName,
+      packageName: packageName,
+      appType: appType,
+      primaryColor: primaryColor,
+      textColor: textColor,
+      logoUrl: logoUrl,
+      subdomain: subdomain,
+      template: template,
+      template2: template2,
+      status: status,
+    );
+  }
+}
