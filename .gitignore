@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Abaikan perubahan versi & package yang dilakukan Gradle
+android/app/build.gradle.kts
+android/app/src/main/AndroidManifest.xml
+
+# Abaikan logo & splash screen yang digenerate Laravel
+android/app/src/main/res/drawable*/*.png
+android/app/src/main/res/mipmap*/*.png
+android/app/src/main/res/values/*.xml
+assets/images/logo.png
+
+# Abaikan file lock
+pubspec.lock
