@@ -1,11 +1,15 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
 
 class ApiService {
   final Dio _dio;
   final String baseUrl;
+  static const String _prefKey = "cached_products";
 
-  /// Constructor dengan inisialisasi baseUrl langsung ke property class
-  ApiService(this._dio, {this.baseUrl = 'http://buysindo.com/'}) {
+  ApiService(this._dio, {this.baseUrl = 'https://buysindo.com/'}) {
     _dio.options.baseUrl = baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
@@ -13,15 +17,14 @@ class ApiService {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
-    // Di dalam constructor ApiService
-    _dio.options.validateStatus = (status) {
-      return status! <
-          500; // Dio tidak akan "throw error" jika status di bawah 500
-    };
+    _dio.options.validateStatus = (status) => status! < 500;
   }
 
   /// Getter untuk URL dasar Gambar
   String get imageBaseUrl => '${baseUrl}storage/images/logo/';
+  String get imageBannerBaseUrl => '${baseUrl}storage/images/prabayar/';
+  // Di dalam class ApiService
+  String get imagePascabayarUrl => '${baseUrl}storage/images/pascabayar/';
 
   // ===========================================================================
   // ENDPOINTS CONFIG & BANNER
@@ -90,6 +93,194 @@ class ApiService {
           'Authorization': 'Bearer $token', // Sertakan token di sini
         },
       ),
+    );
+  }
+
+  // --- Endpoints Dasar ---
+  Future<Response> getMenuPrabayar(String token) => _dio.get(
+    'api/menu-prabayar',
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+
+  Future<Response> getMenuPascabayar(String token) => _dio.get(
+    'api/menu-pascabayar',
+    options: Options(headers: {'Authorization': 'Bearer $token'}),
+  );
+
+  // --- Ambil Produk dengan Logika Cache ---
+  // Ambil produk dari cache terlebih dahulu, jika tidak ada ambil dari API
+  Future<List<ProductPrabayar>> getProducts(
+    String? token, {
+    bool forceRefresh = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? cachedData = prefs.getString(_prefKey);
+
+    // 1. Jika forceRefresh = true, langsung ambil dari API dan bypass cache
+    if (forceRefresh) {
+      return await _fetchProductsFromApi(token, prefs);
+    }
+
+    // 2. Cek Cache terlebih dahulu
+    if (cachedData != null) {
+      debugPrint(
+        '📦 Menggunakan cache produk (${_parseProducts(cachedData).length} produk)',
+      );
+      return _parseProducts(cachedData);
+    }
+
+    // 3. Jika cache kosong, ambil dari API
+    debugPrint('🔄 Cache kosong, fetch dari API...');
+    return await _fetchProductsFromApi(token, prefs);
+  }
+
+  // Helper method untuk fetch dari API dan simpan ke cache
+  Future<List<ProductPrabayar>> _fetchProductsFromApi(
+    String? token,
+    SharedPreferences prefs,
+  ) async {
+    try {
+      final response = await _dio.get(
+        'api/produk-prabayar',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data['status'] == true && data['products'] != null) {
+          final String productsJson = json.encode(data['products']);
+          await prefs.setString(_prefKey, productsJson);
+          final products = _parseProducts(productsJson);
+          debugPrint(
+            '✅ Produk berhasil di-fetch dari API (${products.length} produk)',
+          );
+          return products;
+        }
+      }
+    } catch (e) {
+      debugPrint("❌ Error Fetching Products: $e");
+      // Fallback ke cache jika API gagal
+      final String? cachedData = prefs.getString(_prefKey);
+      if (cachedData != null) {
+        debugPrint('⚠️ API gagal, fallback ke cache');
+        return _parseProducts(cachedData);
+      }
+    }
+    return [];
+  }
+
+  List<ProductPrabayar> _parseProducts(String jsonString) {
+    final List decoded = json.decode(jsonString);
+    return decoded.map((item) => ProductPrabayar.fromJson(item)).toList();
+  }
+
+  Future<void> clearProductCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefKey);
+    debugPrint('🗑️ Cache produk telah dihapus');
+  }
+
+  //detect brand
+  // api_service.dart
+
+  // api_service.dart
+
+  Future<String?> detectBrand(String phone, String? token) async {
+    final prefs = await SharedPreferences.getInstance();
+    String prefix = phone.substring(0, 4);
+    String cacheKey = "brand_$prefix";
+
+    // 1. Cek apakah brand untuk prefix ini sudah pernah disimpan?
+    if (prefs.containsKey(cacheKey)) {
+      return prefs.getString(cacheKey);
+    }
+
+    try {
+      final response = await _dio.get(
+        'api/detect-brand',
+        queryParameters: {'phone': phone},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200 && response.data['brand'] != null) {
+        String detectedBrand = response.data['brand'].toString();
+
+        // 2. Simpan ke Cache SharedPreferences agar kedepannya tidak perlu API lagi
+        await prefs.setString(cacheKey, detectedBrand);
+
+        return detectedBrand;
+      }
+    } catch (e) {
+      debugPrint("❌ Gagal deteksi brand: $e");
+    }
+    return null;
+  }
+
+  // ===========================================================================
+  // PIN ENDPOINTS
+  // ===========================================================================
+
+  /// Cek status PIN user (active/inactive)
+  Future<Response> checkPinStatus(String token) {
+    return _dio.get(
+      'api/pin/status',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Validasi PIN yang dimasukkan user
+  Future<Response> validatePin(String pin, String token) {
+    return _dio.get(
+      'api/pin/validate',
+      queryParameters: {'pin': pin},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Simpan/Update PIN baru
+  Future<Response> savePinData(String pin, String token) {
+    return _dio.post(
+      'api/pin',
+      data: {'pin': pin},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  // ===========================================================================
+  // TRANSACTION ENDPOINTS
+  // ===========================================================================
+
+  /// Proses transaksi prabayar
+  Future<Response> processPrabayarTransaction({
+    required String pin,
+    required String category,
+    required String sku,
+    required String productName,
+    required String phoneNumber,
+    required int discount,
+    required int total,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/proses-trx-prabayar',
+      data: {
+        'pin': pin,
+        'category': category,
+        'sku': sku,
+        'nama_produk': productName,
+        'no_handphone': phoneNumber,
+        'diskon': discount,
+        'total': total,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil detail transaksi prabayar (untuk history)
+  Future<Response> getTransactionDetailPrabayar(String token) {
+    return _dio.get(
+      'api/user/transaksi/prabayar',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
 }

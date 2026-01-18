@@ -8,7 +8,7 @@ import 'session_manager.dart';
 class AuthService {
   final Dio _dio;
 
-  AuthService(this._dio, {String baseUrl = 'http://buysindo.com/api/'}) {
+  AuthService(this._dio, {String baseUrl = 'https://buysindo.com/api/'}) {
     _dio.options.baseUrl = baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.headers = {

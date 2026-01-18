@@ -33,6 +33,16 @@ class _AccountTabState extends State<AccountTab> {
 
       if (token == null) {
         debugPrint('  - Status: ❌ Token null, tidak bisa fetch profile');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Gagal memuat data profile, periksa jaringan internet anda",
+              ),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
         return;
       }
 
@@ -51,12 +61,42 @@ class _AccountTabState extends State<AccountTab> {
           debugPrint('✅ Profile data loaded');
         } catch (e) {
           debugPrint('  - ❌ Parsing error: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Gagal memuat data profile, periksa jaringan internet anda",
+                ),
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
         }
       } else {
         debugPrint('  - ❌ Response status: ${response.statusCode}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Gagal memuat data profile, periksa jaringan internet anda",
+              ),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint("❌ Error load profile: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Gagal memuat data profile, periksa jaringan internet anda",
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -98,28 +138,30 @@ class _AccountTabState extends State<AccountTab> {
       );
     }
 
-    if (_profileData == null) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text("Gagal memuat data profil"),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchProfile,
-                child: const Text("Coba Lagi"),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+    // Gunakan data yang ada atau buat model default
+    final user =
+        _profileData?.user ??
+        models.UserModel(
+          id: 0,
+          email: "email@example.com",
+          username: "-",
+          referralCode: null,
+        );
 
-    final user = _profileData!.user;
-    final profile = _profileData!.profile;
+    final profile =
+        _profileData?.profile ??
+        models.ProfileModel(
+          id: 0,
+          userId: 0,
+          fullName: "Nama tidak tersedia",
+          phone: "-",
+          gender: "-",
+          birthdate: "-",
+          address: "-",
+          profilePicture: null,
+          referralDate: null,
+          verified: 0,
+        );
 
     return DefaultTabController(
       length: 2,
@@ -145,16 +187,25 @@ class _AccountTabState extends State<AccountTab> {
               onPressed: () {
                 // Navigasi ke halaman edit profil di sini
                 debugPrint("Tombol Edit ditekan");
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditProfileScreen(
-                      profile: _profileData!.profile,
-                      user: _profileData!.user,
-                      onProfileUpdated: _fetchProfile,
+                if (_profileData != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProfileScreen(
+                        profile: _profileData!.profile,
+                        user: _profileData!.user,
+                        onProfileUpdated: _fetchProfile,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Silakan tunggu sampai data profil dimuat"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               },
             ),
             // Anda bisa menambah icon lain jika perlu

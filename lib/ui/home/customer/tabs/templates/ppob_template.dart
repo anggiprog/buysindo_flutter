@@ -3,10 +3,14 @@ import '../../../../../core/app_config.dart';
 import '../../../topup_modal.dart';
 import '../../../../../core/network/api_service.dart';
 import '../../../../../features/customer/data/models/banner_model.dart';
+import '../../../../../features/customer/data/models/menu_prabayar_model.dart';
+import '../../../../../features/customer/data/models/menu_pascabayar_model.dart';
 import '../../../banner_slider_widget.dart'; // Import widget slider tadi
 import 'package:dio/dio.dart';
 import '../../../../../core/utils/format_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Import library
+import '../../../../../core/network/session_manager.dart';
+import '../../tabs/templates/prabayar/pulsa.dart';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -27,38 +31,56 @@ class _PpobTemplateState extends State<PpobTemplate> {
   String _saldo = "0"; // Default saldo
   bool _isLoadingSaldo = true;
 
+  // Menu Prabayar
+  List<MenuPrabayarItem> _menuList = [];
+  bool _isLoadingMenu = true;
+  bool _showAllMenus = false;
+
+  //menu pascabayar
+  List<MenuPascabayarItem> _pascabayarList = [];
+  bool _isLoadingPascabayar = true;
+
   @override
   void initState() {
     super.initState();
+
     // Panggil fetch setelah frame pertama dirender untuk keamanan
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchBanners();
       _fetchSaldo();
+      _fetchMenuPrabayar();
+      _fetchPascabayar();
     });
   }
 
   //saldo
   Future<void> _fetchSaldo() async {
     try {
-      // Membaca token dengan kunci 'user_token'
-      // Pastikan saat Login, Anda menyimpan token dengan kunci yang sama
-      String? token = await storage.read(key: 'user_token');
+      // 1. Gunakan SessionManager untuk mengambil token (bukan storage.read)
+      String? token = await SessionManager.getToken();
 
-      if (token == null) {
-        debugPrint("SALDO_LOG: Token tidak ditemukan.");
+      if (token == null || token.isEmpty) {
+        setState(() => _isLoadingSaldo = false);
         return;
       }
 
+      // 2. Panggil API dengan token yang benar
       final response = await apiService.getSaldo(token);
 
+      // Karena Anda menggunakan Dio dengan validateStatus < 500,
+      // pastikan cek status code secara manual
       if (response.statusCode == 200) {
-        setState(() {
-          _saldo = response.data['saldo'].toString();
-          _isLoadingSaldo = false;
-        });
+        if (mounted) {
+          setState(() {
+            // Sesuaikan dengan response body API Anda: {"saldo": "663656"}
+            _saldo = response.data['saldo'].toString();
+            _isLoadingSaldo = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingSaldo = false);
       }
     } catch (e) {
-      debugPrint("SALDO_LOG_ERROR: $e");
       if (mounted) setState(() => _isLoadingSaldo = false);
     }
   }
@@ -84,6 +106,67 @@ class _PpobTemplateState extends State<PpobTemplate> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingBanners = false);
+    }
+  }
+
+  // Menu Prabayar - SIMPLE VERSION (no cache for now)
+  Future<void> _fetchMenuPrabayar() async {
+    try {
+      // 1. Ambil token
+
+      String? token = await SessionManager.getToken();
+
+      if (token == null || token.isEmpty) {
+        if (mounted) setState(() => _isLoadingMenu = false);
+        return;
+      }
+
+      // 2. Fetch dari API dengan token
+
+      final response = await apiService.getMenuPrabayar(token);
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = MenuPrabayarResponse.fromJson(response.data);
+
+        if (mounted) {
+          setState(() {
+            _menuList = data.menus;
+            _isLoadingMenu = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingMenu = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingMenu = false);
+    }
+  }
+
+  Future<void> _fetchPascabayar() async {
+    try {
+      String? token = await SessionManager.getToken();
+
+      if (token == null) {
+        setState(() => _isLoadingPascabayar = false);
+        return;
+      }
+
+      final response = await apiService.getMenuPascabayar(token);
+
+      if (response.statusCode == 200) {
+        final List data = response.data;
+
+        if (mounted) {
+          setState(() {
+            _pascabayarList = data
+                .map((item) => MenuPascabayarItem.fromJson(item))
+                .toList();
+            _isLoadingPascabayar = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingPascabayar = false);
     }
   }
 
@@ -239,6 +322,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
             // Grid Menu
             _buildMenuGrid(),
+            // Grid Pascabayar
+            _buildPascabayarGrid(),
           ],
         ),
       ),
@@ -298,7 +383,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
   Widget _buildMenuGrid() {
     return Padding(
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -314,39 +399,113 @@ class _PpobTemplateState extends State<PpobTemplate> {
             "Yuk Pilih Produk Disini",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          const SizedBox(height: 20),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 4,
-            mainAxisSpacing: 20,
-            children: [
-              _buildMenuIcon(Icons.flash_on, "PLN", Colors.black87),
-              _buildMenuIcon(Icons.wallet, "E-Money", Colors.black87),
-              _buildMenuIcon(Icons.phone_android, "Pulsa", Colors.black87),
-              _buildMenuIcon(Icons.mail, "Sms & Telpon", Colors.black87),
-              _buildMenuIcon(Icons.language, "Data", Colors.black87),
-              _buildMenuIcon(Icons.sim_card, "Aktivasi", Colors.black87),
-              _buildMenuIcon(Icons.access_time, "Masa Aktif", Colors.black87),
-            ],
-          ),
+          const SizedBox(height: 16),
+          if (_isLoadingMenu)
+            const SizedBox(
+              height: 150,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_menuList.isEmpty)
+            const SizedBox(
+              height: 100,
+              child: Center(child: Text("Tidak ada menu tersedia")),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                mainAxisExtent:
+                    105, // Menentukan tinggi tetap tiap item agar tidak overflow
+              ),
+              itemCount: _showAllMenus
+                  ? _menuList.length
+                  : (_menuList.length > 8 ? 8 : _menuList.length),
+              itemBuilder: (context, index) {
+                // Jika mencapai index ke-7 dan ada lebih dari 8 menu, dan tidak sedang showAll
+                if (!_showAllMenus && _menuList.length > 8 && index == 7) {
+                  return _buildMoreMenuIcon();
+                }
+                return _buildDynamicMenuIcon(_menuList[index]);
+              },
+            ),
+
+          // Tombol Sembunyikan
+          if (_showAllMenus && _menuList.length > 8)
+            Padding(
+              padding: const EdgeInsets.only(top: 15),
+              child: Center(
+                child: TextButton.icon(
+                  onPressed: () => setState(() => _showAllMenus = false),
+                  icon: const Icon(Icons.expand_less),
+                  label: const Text("Sembunyikan"),
+                  style: TextButton.styleFrom(
+                    foregroundColor: appConfig.primaryColor,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // --- Helper Widgets ---
-  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildDynamicMenuIcon(MenuPrabayarItem menu) {
+    final imageUrl = '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
+
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        if (menu.namaKategori == "Pulsa") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PulsaPage()),
+          );
+        } else {
+          debugPrint("Kategori ${menu.namaKategori} belum diatur");
+        }
+      }, // Penutup onTap yang benar
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.black87),
-          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl,
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.image_not_supported,
+                  size: 40,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
           Text(
-            label,
+            menu.namaKategori,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: FontWeight.w500,
               color: Colors.black,
             ),
@@ -356,31 +515,168 @@ class _PpobTemplateState extends State<PpobTemplate> {
     );
   }
 
-  Widget _buildMenuIcon(IconData icon, String label, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5),
-            ],
+  Widget _buildMoreMenuIcon() {
+    return InkWell(
+      onTap: () => setState(() => _showAllMenus = true),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: appConfig.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(
+              Icons.more_horiz,
+              color: appConfig.primaryColor,
+              size: 40,
+            ),
           ),
-          child: Icon(icon, color: color, size: 28),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
+          const SizedBox(height: 6),
+          Text(
+            "Lainnya",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: appConfig.primaryColor,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: appConfig.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: appConfig.primaryColor, size: 30),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Colors.black),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // GRID PASCABAYAR (Tagihan)
+  // ==========================================
+  Widget _buildPascabayarGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Tagihan Pascabayar",
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const Text(
+            "Bayar tagihan bulanan lebih mudah",
+            style: TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          if (_isLoadingPascabayar)
+            const SizedBox(
+              height: 100,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_pascabayarList.isEmpty)
+            const SizedBox(
+              height: 50,
+              child: Center(child: Text("Menu tidak tersedia")),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                mainAxisExtent: 105,
+              ),
+              itemCount: _pascabayarList.length,
+              itemBuilder: (context, index) {
+                final menu = _pascabayarList[index];
+
+                // PERBAIKAN DI SINI:
+                // Gunakan imagePascabayarUrl agar mengarah ke folder /pascabayar/
+                final imageUrl =
+                    '${apiService.imagePascabayarUrl}${menu.gambarBrand}';
+
+                // LOG UNTUK TESTING (Bisa dihapus setelah gambar muncul)
+
+                return InkWell(
+                  onTap: () => debugPrint("Klik: ${menu.namaBrand}"),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrl,
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.contain,
+                            // Jika URL salah atau 404, icon ini yang muncul
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.receipt_long,
+                                size: 40,
+                                color: Colors.grey[400],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        menu.namaBrand,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 }

@@ -12,8 +12,18 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
-val flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
-val flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0"
+// Ambil variabel dari Laravel Job (-PversionCode & -PversionName)
+val flutterVersionCode = if (project.hasProperty("versionCode")) {
+    project.property("versionCode").toString()
+} else {
+    localProperties.getProperty("flutter.versionCode") ?: "1"
+}
+
+val flutterVersionName = if (project.hasProperty("versionName")) {
+    project.property("versionName").toString()
+} else {
+    localProperties.getProperty("flutter.versionName") ?: "1.0.0"
+}
 
 android {
     // Namespace default (akan dioverride oleh applicationId di bawah)
@@ -34,7 +44,9 @@ android {
     }
 
     defaultConfig {
-        // 1. Ambil Package Name dari Laravel (-PappPackage)
+        applicationId = if (project.hasProperty("appPackage")) project.property("appPackage").toString() else "com.buysindo.app"
+        
+         // 1. Ambil Package Name dari Laravel (-PappPackage)
         val customPackageName = if (project.hasProperty("appPackage")) {
             project.property("appPackage").toString()
         } else {
