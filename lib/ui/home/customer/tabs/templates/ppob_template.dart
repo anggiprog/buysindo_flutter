@@ -11,6 +11,8 @@ import '../../../../../core/utils/format_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Import library
 import '../../../../../core/network/session_manager.dart';
 import '../../tabs/templates/prabayar/pulsa.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -21,6 +23,7 @@ class PpobTemplate extends StatefulWidget {
 
 class _PpobTemplateState extends State<PpobTemplate> {
   final storage = const FlutterSecureStorage();
+  late SharedPreferences _prefs;
   // Langsung inisialisasi di sini agar instance selalu siap
   final ApiService apiService = ApiService(Dio());
 
@@ -40,17 +43,100 @@ class _PpobTemplateState extends State<PpobTemplate> {
   List<MenuPascabayarItem> _pascabayarList = [];
   bool _isLoadingPascabayar = true;
 
+  // Refresh controller
+  bool _isRefreshing = false;
+
   @override
   void initState() {
     super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Initialize SharedPreferences once
+    _prefs = await SharedPreferences.getInstance();
+
+    // Load dari cache terlebih dahulu untuk kecepatan
+    _loadFromCache();
 
     // Panggil fetch setelah frame pertama dirender untuk keamanan
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchBanners();
-      _fetchSaldo();
-      _fetchMenuPrabayar();
-      _fetchPascabayar();
+      _fetchAllData();
     });
+  }
+
+  // Load semua data dari cache
+  void _loadFromCache() {
+    if (mounted) {
+      setState(() {
+        // Load banners dari cache
+        final cachedBanners = _prefs.getStringList('cached_banners');
+        if (cachedBanners != null && cachedBanners.isNotEmpty) {
+          _bannerList = cachedBanners;
+          _isLoadingBanners = false;
+        }
+
+        // Load menu prabayar dari cache
+        final cachedMenu = _prefs.getString('cached_menu_prabayar');
+        if (cachedMenu != null) {
+          try {
+            final List<dynamic> data = jsonDecode(cachedMenu);
+            _menuList = data
+                .map((item) => MenuPrabayarItem.fromJson(item))
+                .toList();
+            _isLoadingMenu = false;
+          } catch (e) {
+            debugPrint('Error loading cached menu: $e');
+          }
+        }
+
+        // Load menu pascabayar dari cache
+        final cachedPascabayar = _prefs.getString('cached_menu_pascabayar');
+        if (cachedPascabayar != null) {
+          try {
+            final List<dynamic> data = jsonDecode(cachedPascabayar);
+            _pascabayarList = data
+                .map((item) => MenuPascabayarItem.fromJson(item))
+                .toList();
+            _isLoadingPascabayar = false;
+          } catch (e) {
+            debugPrint('Error loading cached pascabayar: $e');
+          }
+        }
+
+        // Load saldo dari cache
+        final cachedSaldo = _prefs.getString('cached_saldo');
+        if (cachedSaldo != null) {
+          _saldo = cachedSaldo;
+          _isLoadingSaldo = false;
+        }
+      });
+    }
+  }
+
+  // Fetch semua data dari API
+  Future<void> _fetchAllData() async {
+    await Future.wait([
+      _fetchBanners(),
+      _fetchSaldo(),
+      _fetchMenuPrabayar(),
+      _fetchPascabayar(),
+    ]);
+  }
+
+  // Refresh semua data
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return;
+
+    setState(() => _isRefreshing = true);
+
+    try {
+      await _fetchAllData();
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
   }
 
   //saldo
@@ -70,10 +156,14 @@ class _PpobTemplateState extends State<PpobTemplate> {
       // Karena Anda menggunakan Dio dengan validateStatus < 500,
       // pastikan cek status code secara manual
       if (response.statusCode == 200) {
+        final saldo = response.data['saldo'].toString();
+
+        // Cache to SharedPreference
+        await _prefs.setString('cached_saldo', saldo);
+
         if (mounted) {
           setState(() {
-            // Sesuaikan dengan response body API Anda: {"saldo": "663656"}
-            _saldo = response.data['saldo'].toString();
+            _saldo = saldo;
             _isLoadingSaldo = false;
           });
         }
@@ -81,6 +171,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (mounted) setState(() => _isLoadingSaldo = false);
       }
     } catch (e) {
+      debugPrint('Error fetching saldo: $e');
       if (mounted) setState(() => _isLoadingSaldo = false);
     }
   }
@@ -95,6 +186,10 @@ class _PpobTemplateState extends State<PpobTemplate> {
       if (response.statusCode == 200 && response.data != null) {
         // Parsing data menggunakan model
         final data = BannerResponse.fromJson(response.data);
+
+        // Cache to SharedPreference
+        await _prefs.setStringList('cached_banners', data.banners);
+
         if (mounted) {
           setState(() {
             _bannerList = data.banners;
@@ -105,11 +200,12 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (mounted) setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
+      debugPrint('Error fetching banners: $e');
       if (mounted) setState(() => _isLoadingBanners = false);
     }
   }
 
-  // Menu Prabayar - SIMPLE VERSION (no cache for now)
+  // Menu Prabayar - WITH CACHE
   Future<void> _fetchMenuPrabayar() async {
     try {
       // 1. Ambil token
@@ -128,6 +224,12 @@ class _PpobTemplateState extends State<PpobTemplate> {
       if (response.statusCode == 200 && response.data != null) {
         final data = MenuPrabayarResponse.fromJson(response.data);
 
+        // Cache to SharedPreference
+        final menusJson = jsonEncode(
+          data.menus.map((m) => m.toJson()).toList(),
+        );
+        await _prefs.setString('cached_menu_prabayar', menusJson);
+
         if (mounted) {
           setState(() {
             _menuList = data.menus;
@@ -138,6 +240,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (mounted) setState(() => _isLoadingMenu = false);
       }
     } catch (e) {
+      debugPrint('Error fetching menu prabayar: $e');
       if (mounted) setState(() => _isLoadingMenu = false);
     }
   }
@@ -155,17 +258,25 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
       if (response.statusCode == 200) {
         final List data = response.data;
+        final pascabayarList = data
+            .map((item) => MenuPascabayarItem.fromJson(item))
+            .toList();
+
+        // Cache to SharedPreference
+        final pascabayarJson = jsonEncode(
+          pascabayarList.map((p) => p.toJson()).toList(),
+        );
+        await _prefs.setString('cached_menu_pascabayar', pascabayarJson);
 
         if (mounted) {
           setState(() {
-            _pascabayarList = data
-                .map((item) => MenuPascabayarItem.fromJson(item))
-                .toList();
+            _pascabayarList = pascabayarList;
             _isLoadingPascabayar = false;
           });
         }
       }
     } catch (e) {
+      debugPrint('Error fetching pascabayar: $e');
       if (mounted) setState(() => _isLoadingPascabayar = false);
     }
   }
@@ -292,39 +403,47 @@ class _PpobTemplateState extends State<PpobTemplate> {
         ],
       ),
 
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Area Banner Slider
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Container(height: 90, color: darkHeaderColor),
-                Positioned(
-                  top: 10,
-                  left: 0,
-                  right: 0,
-                  child: _isLoadingBanners
-                      ? const SizedBox(
-                          height: 160,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : BannerSliderWidget(
-                          banners: _bannerList,
-                          baseUrl: apiService.imageBaseUrl,
-                        ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 110), // Jarak di bawah slider
-            // Card Saldo
-            _buildBalanceCard(),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        displacement: 40.0,
+        strokeWidth: 2.5,
+        color: dynamicPrimaryColor,
+        backgroundColor: Colors.white,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              // Area Banner Slider
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(height: 90, color: darkHeaderColor),
+                  Positioned(
+                    top: 10,
+                    left: 0,
+                    right: 0,
+                    child: _isLoadingBanners
+                        ? const SizedBox(
+                            height: 160,
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                        : BannerSliderWidget(
+                            banners: _bannerList,
+                            baseUrl: apiService.imageBaseUrl,
+                          ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 110), // Jarak di bawah slider
+              // Card Saldo
+              _buildBalanceCard(),
 
-            // Grid Menu
-            _buildMenuGrid(),
-            // Grid Pascabayar
-            _buildPascabayarGrid(),
-          ],
+              // Grid Menu
+              _buildMenuGrid(),
+              // Grid Pascabayar
+              _buildPascabayarGrid(),
+            ],
+          ),
         ),
       ),
     );
@@ -668,6 +787,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
+                          color: Colors.black,
                         ),
                       ),
                     ],

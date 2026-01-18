@@ -27,7 +27,7 @@ val flutterVersionName = if (project.hasProperty("versionName")) {
 
 android {
     // Namespace default (akan dioverride oleh applicationId di bawah)
-    namespace = "com.buysindo.app" 
+    namespace = "com.rutino.customer" 
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -44,7 +44,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = if (project.hasProperty("appPackage")) project.property("appPackage").toString() else "com.buysindo.app"
+        applicationId = if (project.hasProperty("appPackage")) project.property("appPackage").toString() else "com.rutino.customer"
         
          // 1. Ambil Package Name dari Laravel (-PappPackage)
         val customPackageName = if (project.hasProperty("appPackage")) {

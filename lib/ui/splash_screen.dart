@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:rutino_customer/core/app_config.dart';
 import 'package:rutino_customer/core/network/api_service.dart';
-import 'package:rutino_customer/core/network/session_manager.dart'; // Pastikan diimport
+import 'package:rutino_customer/core/network/session_manager.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,10 +12,26 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  // Animasi state
+  double _opacity = 0;
+  double _scale = 0.8;
+
   @override
   void initState() {
     super.initState();
+    _startAnimation();
     _initApp();
+  }
+
+  void _startAnimation() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _opacity = 1;
+          _scale = 1.0;
+        });
+      }
+    });
   }
 
   Future<void> _initApp() async {
@@ -23,59 +39,169 @@ class _SplashScreenState extends State<SplashScreen> {
     final apiService = ApiService(dio);
 
     try {
-      // 1. Ambil Konfigurasi Aplikasi (Warna, Nama, Logo)
+      // 1. Inisialisasi konfigurasi (Warna, Logo, dll dari API)
       await appConfig.initializeApp(apiService);
 
-      // 2. AMBIL TOKEN dari SessionManager (Penting!)
+      // 2. Ambil token user
       String? token = await SessionManager.getToken();
 
-      // 3. Jeda visual agar user bisa melihat logo
-      await Future.delayed(const Duration(seconds: 2));
+      // 3. Durasi splash (total sekitar 3 detik)
+      await Future.delayed(const Duration(seconds: 3));
 
       if (!mounted) return;
 
-      // 4. Logika Percabangan Halaman
-      if (token != null && token.isNotEmpty) {
-        // Jika ada token, pergi ke Home
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        // Jika tidak ada token, pergi ke Login
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+      // 4. Navigasi dengan efek transisi halus
+      _navigateToNext(token != null && token.isNotEmpty ? '/home' : '/login');
     } catch (e) {
-      debugPrint("Error saat inisialisasi splash: $e");
-      // Jika terjadi error (misal offline), arahkan ke login sebagai fallback
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
+      debugPrint("Error inisialisasi: $e");
+      if (mounted) _navigateToNext('/login');
     }
-    // Note: Blok 'finally' dihapus agar tidak menimpa navigasi di atas
+  }
+
+  void _navigateToNext(String routeName) {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            // Ganti ini dengan widget halaman tujuan Anda sesuai routeName
+            // Untuk kesederhanaan, kita gunakan pushReplacementNamed jika router sudah siap
+            const SizedBox(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+    // Jika router Anda sudah menggunakan onGenerateRoute:
+    Navigator.pushReplacementNamed(context, routeName);
   }
 
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = appConfig.primaryColor;
+    // Membuat warna secondary yang lebih gelap untuk gradasi
+    final Color secondaryColor = HSLColor.fromColor(primaryColor)
+        .withLightness(
+          (HSLColor.fromColor(primaryColor).lightness - 0.1).clamp(0, 1),
+        )
+        .toColor();
+
     return Scaffold(
-      backgroundColor: appConfig.primaryColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [primaryColor, secondaryColor],
+          ),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            // Logo
-            Image.asset('assets/images/logo.png', width: 120, height: 120),
-            const SizedBox(height: 24),
-            // App Name
-            Text(
-              appConfig.appName,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            // Background Decoration (Opsional: Membuat lingkaran halus di background)
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.05),
+                ),
               ),
             ),
-            const SizedBox(height: 40),
-            // Loading Indicator
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+
+            // Content
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedScale(
+                  scale: _scale,
+                  duration: const Duration(milliseconds: 1000),
+                  curve: Curves.easeOutBack,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 800),
+                    opacity: _opacity,
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 100,
+                        height: 100,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 1000),
+                  opacity: _opacity,
+                  child: Column(
+                    children: [
+                      Text(
+                        appConfig.appName.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          letterSpacing: 4,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 2,
+                        width: 40,
+                        color: Colors.white.withOpacity(0.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            // Footer / Loading di bawah
+            Positioned(
+              bottom: 60,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 800),
+                opacity: _opacity,
+                child: Column(
+                  children: [
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.white70,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "Transaksi Mudah, Cepat, dan Aman",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.7),
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

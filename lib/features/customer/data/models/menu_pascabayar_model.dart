@@ -18,4 +18,8 @@ class MenuPascabayarItem {
       gambarBrand: json['gambar_brand'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'nama_brand': namaBrand, 'gambar_brand': gambarBrand};
+  }
 }

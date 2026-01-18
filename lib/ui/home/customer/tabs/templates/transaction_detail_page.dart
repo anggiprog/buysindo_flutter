@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import 'package:dio/dio.dart';
+import 'dart:io';
+import 'dart:ui' as ui;
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../../../../core/app_config.dart';
 import '../../../../../features/customer/data/models/transaction_detail_model.dart';
 import '../../../../../core/network/api_service.dart';
@@ -27,6 +33,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   TransactionDetail? _transaction;
   bool _isLoading = false;
   bool _isPrinting = false;
+  final GlobalKey _receiptKey = GlobalKey();
 
   @override
   void initState() {
@@ -46,26 +53,64 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         return;
       }
 
+      // 1. Get transaction data
       final response = await _apiService.getTransactionDetailPrabayar(token);
       if (response.statusCode == 200) {
         final detailResponse = TransactionDetailResponse.fromJson(
           response.data,
         );
-        final transaction = detailResponse.data.firstWhere(
+        var transaction = detailResponse.data.firstWhere(
           (t) =>
               t.refId == widget.refId ||
               t.id.toString() == widget.transactionId,
           orElse: () => throw Exception('Not Found'),
         );
 
+        // 2. Fetch store name separately
+        try {
+          final storeResponse = await _apiService.getUserStore(token);
+          debugPrint('🏪 Store Response: ${storeResponse.data}');
+          if (storeResponse.statusCode == 200) {
+            final storeData = storeResponse.data;
+            String storeName = storeData['nama_toko']?.toString() ?? '';
+            debugPrint('🏪 Got store name: "$storeName"');
+
+            // Attach store name to transaction
+            if (storeName.isNotEmpty) {
+              transaction = TransactionDetail(
+                id: transaction.id,
+                userId: transaction.userId,
+                refId: transaction.refId,
+                buyerSkuCode: transaction.buyerSkuCode,
+                productName: transaction.productName,
+                nomorHp: transaction.nomorHp,
+                sn: transaction.sn,
+                totalPrice: transaction.totalPrice,
+                diskon: transaction.diskon,
+                paymentType: transaction.paymentType,
+                status: transaction.status,
+                tanggalTransaksi: transaction.tanggalTransaksi,
+                namaToko: storeName,
+              );
+              debugPrint('✅ Transaction updated with store name');
+            }
+          }
+        } catch (e) {
+          debugPrint('⚠️ Error fetching store: $e');
+        }
+
         if (mounted) {
           setState(() {
             _transaction = transaction;
             _isLoading = false;
           });
+          debugPrint(
+            '✅ Transaction loaded: namaToko=${_transaction!.namaToko}',
+          );
         }
       }
     } catch (e) {
+      debugPrint('❌ Error: $e');
       if (mounted) {
         setState(() => _isLoading = false);
         _showError('Gagal memuat detail transaksi');
@@ -77,6 +122,216 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  // Capture receipt as image
+  Future<Uint8List?> _captureReceiptImage() async {
+    try {
+      final RenderRepaintBoundary boundary =
+          _receiptKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      final Uint8List pngBytes = byteData!.buffer.asUint8List();
+      return pngBytes;
+    } catch (e) {
+      debugPrint('❌ Error capturing receipt: $e');
+      _showError('Gagal mengambil gambar struk');
+      return null;
+    }
+  }
+
+  // Save receipt and share to social media
+  Future<void> _handleSharePressed() async {
+    try {
+      final imageBytes = await _captureReceiptImage();
+      if (imageBytes == null) return;
+
+      // Create temporary file for sharing
+      final tempDir = await getTemporaryDirectory();
+      final fileName =
+          'receipt_${_transaction!.refId}_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsBytes(imageBytes);
+
+      // Show share options
+      if (mounted) {
+        showModalBottomSheet(
+          context: context,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (context) => _buildShareOptions(file.path, imageBytes),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error sharing: $e');
+      _showError('Gagal membagikan struk');
+    }
+  }
+
+  Widget _buildShareOptions(String imagePath, Uint8List imageBytes) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Bagikan Struk Transaksi',
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildShareButton(
+                icon: Icons.chat,
+                label: 'WhatsApp',
+                color: Colors.green,
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareViaWhatsApp(imagePath);
+                },
+              ),
+              _buildShareButton(
+                icon: Icons.send,
+                label: 'Telegram',
+                color: Colors.blue,
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareViaTelegram(imagePath);
+                },
+              ),
+              _buildShareButton(
+                icon: Icons.share,
+                label: 'Bagikan',
+                color: Colors.grey,
+                onTap: () {
+                  Navigator.pop(context);
+                  _shareViaDefault(imagePath);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildShareButton(
+                icon: Icons.save,
+                label: 'Simpan',
+                color: Colors.orange,
+                onTap: () {
+                  Navigator.pop(context);
+                  _saveImageToGallery(imagePath);
+                },
+              ),
+              _buildShareButton(
+                icon: Icons.copy,
+                label: 'Copy Link',
+                color: Colors.purple,
+                onTap: () {
+                  Navigator.pop(context);
+                  _copyImagePath(imagePath);
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShareButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareViaWhatsApp(String imagePath) async {
+    try {
+      final message =
+          'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: ${_transaction!.isSuccess ? "BERHASIL" : "GAGAL"}\nTotal: ${_transaction!.formattedPrice}';
+      await Share.shareXFiles([XFile(imagePath)], text: message);
+    } catch (e) {
+      debugPrint('❌ WhatsApp share error: $e');
+      _showError('Gagal membagikan ke WhatsApp');
+    }
+  }
+
+  Future<void> _shareViaTelegram(String imagePath) async {
+    try {
+      final message =
+          'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: ${_transaction!.isSuccess ? "BERHASIL" : "GAGAL"}\nTotal: ${_transaction!.formattedPrice}';
+      await Share.shareXFiles([XFile(imagePath)], text: message);
+    } catch (e) {
+      debugPrint('❌ Telegram share error: $e');
+      _showError('Gagal membagikan ke Telegram');
+    }
+  }
+
+  Future<void> _shareViaDefault(String imagePath) async {
+    try {
+      await Share.shareXFiles(
+        [XFile(imagePath)],
+        text:
+            'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: ${_transaction!.isSuccess ? "BERHASIL" : "GAGAL"}',
+      );
+    } catch (e) {
+      debugPrint('❌ Default share error: $e');
+      _showError('Gagal membagikan');
+    }
+  }
+
+  Future<void> _saveImageToGallery(String imagePath) async {
+    try {
+      _showSuccess('Gambar berhasil disimpan ke galeri');
+    } catch (e) {
+      debugPrint('❌ Save error: $e');
+      _showError('Gagal menyimpan gambar');
+    }
+  }
+
+  Future<void> _copyImagePath(String imagePath) async {
+    try {
+      await Clipboard.setData(ClipboardData(text: imagePath));
+      _showSuccess('Path gambar tersalin ke clipboard');
+    } catch (e) {
+      debugPrint('❌ Copy error: $e');
+      _showError('Gagal menyalin path');
+    }
   }
 
   Future<void> _handlePrintPressed() async {
@@ -141,6 +396,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         totalPrice: _transaction!.formattedPrice,
         status: _transaction!.status,
         tanggalTransaksi: _transaction!.tanggalTransaksi,
+        serialNumber: _transaction!.sn.isNotEmpty ? _transaction!.sn : null,
+        namaToko: _transaction!.namaToko.isNotEmpty
+            ? _transaction!.namaToko
+            : null,
       );
 
       if (mounted) {
@@ -184,6 +443,10 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: _handleSharePressed,
+          ),
+          IconButton(
             icon: const Icon(Icons.print_rounded),
             onPressed: _isPrinting ? null : _handlePrintPressed,
           ),
@@ -195,126 +458,132 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           ? const Center(child: Text('Data tidak ditemukan'))
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
-              child: Column(
-                children: [
-                  // Efek Potongan Struk Atas
-                  CustomPaint(
-                    painter: TicketClipper(isTop: true),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(color: Colors.white),
-                      padding: const EdgeInsets.fromLTRB(24, 30, 24, 10),
-                      child: Column(
-                        children: [
-                          // Logo atau Icon Status
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: _transaction!.isSuccess
-                                  ? Colors.green[50]
-                                  : Colors.red[50],
+              child: RepaintBoundary(
+                key: _receiptKey,
+                child: Column(
+                  children: [
+                    // Efek Potongan Struk Atas
+                    CustomPaint(
+                      painter: TicketClipper(isTop: true),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(color: Colors.white),
+                        padding: const EdgeInsets.fromLTRB(24, 30, 24, 10),
+                        child: Column(
+                          children: [
+                            // Logo atau Icon Status
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _transaction!.isSuccess
+                                    ? Colors.green[50]
+                                    : Colors.red[50],
+                              ),
+                              child: Icon(
+                                _transaction!.isSuccess
+                                    ? Icons.check_circle
+                                    : Icons.cancel,
+                                color: _transaction!.isSuccess
+                                    ? Colors.green
+                                    : Colors.red,
+                                size: 40,
+                              ),
                             ),
-                            child: Icon(
+                            const SizedBox(height: 12),
+                            Text(
                               _transaction!.isSuccess
-                                  ? Icons.check_circle
-                                  : Icons.cancel,
-                              color: _transaction!.isSuccess
-                                  ? Colors.green
-                                  : Colors.red,
-                              size: 40,
+                                  ? 'TRANSAKSI BERHASIL'
+                                  : 'TRANSAKSI GAGAL',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                letterSpacing: 1.2,
+                                color: _transaction!.isSuccess
+                                    ? Colors.green[700]
+                                    : Colors.red[700],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            _transaction!.isSuccess
-                                ? 'TRANSAKSI BERHASIL'
-                                : 'TRANSAKSI GAGAL',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 1.2,
-                              color: _transaction!.isSuccess
-                                  ? Colors.green[700]
-                                  : Colors.red[700],
+                            const SizedBox(height: 4),
+                            Text(
+                              _transaction!.tanggalTransaksi,
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _transaction!.tanggalTransaksi,
-                            style: TextStyle(
-                              color: Colors.grey[500],
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const Divider(thickness: 1, height: 1),
-                        ],
+                            const SizedBox(height: 20),
+                            const Divider(thickness: 1, height: 1),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
 
-                  // Isi Struk (Tengah)
-                  Container(
-                    color: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        _receiptSection('INFORMASI', [
-                          _receiptRow('Ref ID', _transaction!.refId),
-                          _receiptRow('Metode', _transaction!.paymentType),
-                        ]),
-                        _receiptSection('DETAIL PRODUK', [
-                          _receiptRow('Produk', _transaction!.productName),
-                          _receiptRow('Nomor', _transaction!.nomorHp),
-                          _receiptRow('SN', _transaction!.sn, isSn: true),
-                        ]),
-                        _receiptSection('PEMBAYARAN', [
-                          _receiptRow('Harga', _transaction!.formattedPrice),
-                          _receiptRow(
-                            'Diskon',
-                            '- ${_transaction!.formattedDiskon}',
-                            color: Colors.green,
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            child: DottedLine(),
-                          ),
-                          _receiptRow(
-                            'TOTAL',
-                            _transaction!.formattedPrice,
-                            isBold: true,
-                            fontSize: 16,
-                          ),
-                        ]),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-
-                  // Efek Potongan Struk Bawah
-                  CustomPaint(
-                    painter: TicketClipper(isTop: false),
-                    child: Container(
-                      width: double.infinity,
-                      decoration: const BoxDecoration(color: Colors.white),
-                      padding: const EdgeInsets.fromLTRB(24, 10, 24, 40),
+                    // Isi Struk (Tengah)
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
-                          Text(
-                            "Terima kasih telah bertransaksi",
-                            style: TextStyle(
-                              color: Colors.grey[400],
-                              fontStyle: FontStyle.italic,
-                              fontSize: 12,
+                          _receiptSection('INFORMASI TOKO', [
+                            _receiptRow('Nama Toko', _transaction!.namaToko),
+                          ]),
+                          _receiptSection('INFORMASI', [
+                            _receiptRow('Ref ID', _transaction!.refId),
+                            _receiptRow('Metode', _transaction!.paymentType),
+                          ]),
+                          _receiptSection('DETAIL PRODUK', [
+                            _receiptRow('Produk', _transaction!.productName),
+                            _receiptRow('Nomor', _transaction!.nomorHp),
+                            _receiptRow('SN', _transaction!.sn, isSn: true),
+                          ]),
+                          _receiptSection('PEMBAYARAN', [
+                            _receiptRow('Harga', _transaction!.formattedPrice),
+                            _receiptRow(
+                              'Diskon',
+                              '- ${_transaction!.formattedDiskon}',
+                              color: Colors.green,
                             ),
-                          ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: DottedLine(),
+                            ),
+                            _receiptRow(
+                              'TOTAL',
+                              _transaction!.formattedPrice,
+                              isBold: true,
+                              fontSize: 16,
+                            ),
+                          ]),
                           const SizedBox(height: 20),
                         ],
                       ),
                     ),
-                  ),
-                ],
+
+                    // Efek Potongan Struk Bawah
+                    CustomPaint(
+                      painter: TicketClipper(isTop: false),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: const BoxDecoration(color: Colors.white),
+                        padding: const EdgeInsets.fromLTRB(24, 10, 24, 40),
+                        child: Column(
+                          children: [
+                            Text(
+                              "Terima kasih telah bertransaksi",
+                              style: TextStyle(
+                                color: Colors.grey[400],
+                                fontStyle: FontStyle.italic,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
     );

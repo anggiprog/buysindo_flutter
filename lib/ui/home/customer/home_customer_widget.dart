@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/app_config.dart';
 import 'tabs/customer_dashboard.dart';
+import 'tabs/transaction_history_tab.dart';
 import 'tabs/account_tab.dart';
 
 class HomeCustomerScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
   // Semua tab dalam satu list: Beranda, Riwayat, Akun
   final List<Widget> _pages = [
     const CustomerDashboard(),
-    const Center(child: Text("Halaman Riwayat")),
+    const TransactionHistoryTab(),
     const AccountTab(),
   ];
 

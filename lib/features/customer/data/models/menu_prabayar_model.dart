@@ -33,6 +33,19 @@ class MenuPrabayarItem {
       updatedAt: json['updated_at'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'urutan': urutan,
+      'admin_user_id': adminUserId,
+      'nama_kategori': namaKategori,
+      'gambar_kategori': gambarKategori,
+      'icon_template': iconTemplate,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+    };
+  }
 }
 
 class MenuPrabayarResponse {

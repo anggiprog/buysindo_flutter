@@ -28,6 +28,7 @@ class TransactionDetail {
   final String paymentType;
   final String status;
   final String tanggalTransaksi;
+  final String namaToko;
 
   TransactionDetail({
     required this.id,
@@ -42,6 +43,7 @@ class TransactionDetail {
     required this.paymentType,
     required this.status,
     required this.tanggalTransaksi,
+    required this.namaToko,
   });
 
   factory TransactionDetail.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,7 @@ class TransactionDetail {
       paymentType: json['payment_type'] ?? '',
       status: json['status'] ?? '',
       tanggalTransaksi: json['tanggal_transaksi'] ?? '',
+      namaToko: json['nama_toko'] ?? '',
     );
   }
 
@@ -74,7 +77,7 @@ class TransactionDetail {
   String get formattedDiskon {
     try {
       int discount = int.parse(diskon);
-      if (discount == 0) return 'Gratis';
+      if (discount == 0) return '0';
       return 'Rp ${discount.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
     } catch (e) {
       return 'Rp $diskon';

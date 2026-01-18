@@ -283,4 +283,20 @@ class ApiService {
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
+
+  /// Ambil detail transaksi pascabayar (untuk history)
+  Future<Response> getTransactionDetailPascabayar(String token) {
+    return _dio.get(
+      'api/user/transaksi/pascabayar',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil informasi toko user
+  Future<Response> getUserStore(String token) {
+    return _dio.get(
+      'api/user/buat-toko',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
 }

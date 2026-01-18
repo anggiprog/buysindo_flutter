@@ -8,7 +8,7 @@ class BluetoothPrinterService {
   static final BluetoothPrinterService _instance =
       BluetoothPrinterService._internal();
 
-  static const platform = MethodChannel('com.buysindo.app/printer');
+  static const platform = MethodChannel('com.rutino.customer/printer');
 
   factory BluetoothPrinterService() {
     return _instance;
@@ -139,6 +139,8 @@ class BluetoothPrinterService {
     required String totalPrice,
     required String tanggalTransaksi,
     required String status,
+    String? serialNumber,
+    String? namaToko,
   }) async {
     try {
       final connected = await isConnected();
@@ -158,6 +160,8 @@ class BluetoothPrinterService {
         totalPrice: totalPrice,
         tanggalTransaksi: tanggalTransaksi,
         status: status,
+        serialNumber: serialNumber,
+        namaToko: namaToko,
       );
 
       final bool result =
@@ -188,20 +192,28 @@ class BluetoothPrinterService {
     required String totalPrice,
     required String tanggalTransaksi,
     required String status,
+    String? serialNumber,
+    String? namaToko,
   }) {
-    final statusText = status == 'SUKSES' ? 'BERHASIL' : 'GAGAL';
+    final statusText = status.toUpperCase() == 'SUKSES' ? 'BERHASIL' : 'GAGAL';
     final divider = '================================';
+    final snLine = serialNumber != null && serialNumber.isNotEmpty
+        ? '\nSN: $serialNumber'
+        : '';
+    final storeName = namaToko != null && namaToko.isNotEmpty
+        ? namaToko
+        : 'BUYSINDO';
 
     return '''
 
-BUYSINDO
+$storeName
 $divider
 TRANSAKSI $statusText
 $tanggalTransaksi
 
 $divider
 INFORMASI
-Ref ID: $refId
+Ref ID: $refId$snLine
 
 DETAIL PRODUK
 Produk: $productName
