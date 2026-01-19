@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/rendering.dart';
-import 'dart:ui' as ui;
 import '../../../../../features/customer/data/models/transaction_mutasi_model.dart';
 import '../../../../../core/app_config.dart';
 import '../../../../../core/services/bluetooth_printer_service.dart';
@@ -22,7 +19,6 @@ class _TransactionMutasiDetailPageState
     extends State<TransactionMutasiDetailPage> {
   late TransactionMutasi transaction;
   late BluetoothPrinterService _printerService;
-  bool _isPrinting = false;
 
   @override
   void initState() {
@@ -377,8 +373,6 @@ class _TransactionMutasiDetailPageState
       return;
     }
 
-    setState(() => _isPrinting = true);
-
     try {
       // Get paired devices
       final devices = await _printerService.getPairedDevices();
@@ -386,7 +380,6 @@ class _TransactionMutasiDetailPageState
       if (!mounted) return;
 
       if (devices.isEmpty) {
-        setState(() => _isPrinting = false);
         _showError('Tidak ada printer Bluetooth yang dipasangkan');
         return;
       }
@@ -401,7 +394,6 @@ class _TransactionMutasiDetailPageState
       );
 
       if (selectedDevice == null) {
-        setState(() => _isPrinting = false);
         return;
       }
 
@@ -409,7 +401,6 @@ class _TransactionMutasiDetailPageState
       final connected = await _printerService.connect(selectedDevice);
       if (!connected) {
         if (mounted) {
-          setState(() => _isPrinting = false);
           _showError('Gagal terhubung ke printer');
         }
         return;
@@ -433,7 +424,6 @@ class _TransactionMutasiDetailPageState
       );
 
       if (mounted) {
-        setState(() => _isPrinting = false);
         if (printed) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -451,7 +441,6 @@ class _TransactionMutasiDetailPageState
     } catch (e) {
       debugPrint('❌ Print error: $e');
       if (mounted) {
-        setState(() => _isPrinting = false);
         _showError('Terjadi kesalahan saat mencetak: $e');
       }
     }
