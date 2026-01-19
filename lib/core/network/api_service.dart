@@ -292,6 +292,14 @@ class ApiService {
     );
   }
 
+  /// Ambil log mutasi saldo (untuk history mutasi)
+  Future<Response> getLogTransaksiMutasi(String token) {
+    return _dio.get(
+      'api/admin/log-transaksi',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   /// Ambil informasi toko user
   Future<Response> getUserStore(String token) {
     return _dio.get(

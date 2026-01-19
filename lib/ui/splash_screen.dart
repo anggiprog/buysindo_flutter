@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import 'package:rutino_customer/core/app_config.dart';
-import 'package:rutino_customer/core/network/api_service.dart';
 import 'package:rutino_customer/core/network/session_manager.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -35,22 +33,16 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initApp() async {
-    final dio = Dio();
-    final apiService = ApiService(dio);
-
     try {
-      // 1. Inisialisasi konfigurasi (Warna, Logo, dll dari API)
-      await appConfig.initializeApp(apiService);
-
-      // 2. Ambil token user
+      // Ambil token user (cepat dari local storage)
       String? token = await SessionManager.getToken();
 
-      // 3. Durasi splash (total sekitar 3 detik)
-      await Future.delayed(const Duration(seconds: 3));
+      // Minimal show splash screen untuk animasi (500ms untuk animation, 500ms untuk UI transition)
+      await Future.delayed(const Duration(milliseconds: 1000));
 
       if (!mounted) return;
 
-      // 4. Navigasi dengan efek transisi halus
+      // Navigasi ke halaman selanjutnya tanpa delay
       _navigateToNext(token != null && token.isNotEmpty ? '/home' : '/login');
     } catch (e) {
       debugPrint("Error inisialisasi: $e");

@@ -8,8 +8,10 @@ import '../../../../core/network/api_service.dart';
 import '../../../../core/network/session_manager.dart';
 import '../../../../features/customer/data/models/transaction_detail_model.dart';
 import '../../../../features/customer/data/models/transaction_pascabayar_model.dart';
+import '../../../../features/customer/data/models/transaction_mutasi_model.dart';
 import 'templates/transaction_detail_page.dart';
 import 'templates/transaction_pascabayar_detail_page.dart';
+import 'templates/transaction_mutasi_detail_page.dart';
 
 class TransactionHistoryTab extends StatefulWidget {
   const TransactionHistoryTab({super.key});
@@ -34,6 +36,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   List<TransactionPascabayar> _allPascabayarTransactions = [];
   List<TransactionPascabayar> _filteredPascabayarTransactions = [];
 
+  // Mutasi transactions
+  List<TransactionMutasi> _allMutasiTransactions = [];
+  List<TransactionMutasi> _filteredMutasiTransactions = [];
+
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -43,6 +49,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   static const String _cachePascabayarKey = 'transaction_pascabayar_cache';
   static const String _cachePascabayarTimestampKey =
       'transaction_pascabayar_timestamp';
+  static const String _cacheMutasiKey = 'transaction_mutasi_cache';
+  static const String _cacheMutasiTimestampKey = 'transaction_mutasi_timestamp';
   static const int _cacheValidityMinutes = 30;
 
   @override
@@ -61,6 +69,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           _loadTransactionHistory();
         } else if (_tabController.index == 1) {
           _loadPascabayarHistory();
+        } else if (_tabController.index == 2) {
+          _loadMutasiHistory();
         }
       }
     });
@@ -181,28 +191,36 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   }
 
   Widget _buildMutasiTab() {
-    return _buildComingSoonTab("Mutasi");
-  }
-
-  Widget _buildComingSoonTab(String tabName) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.construction, size: 64, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text(
-            'Fitur $tabName',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Akan segera hadir',
-            style: TextStyle(color: Colors.grey[600], fontSize: 14),
-          ),
-        ],
-      ),
-    );
+    return _isLoading && _filteredMutasiTransactions.isEmpty
+        ? _buildLoadingState()
+        : _errorMessage != null && _filteredMutasiTransactions.isEmpty
+        ? _buildErrorState()
+        : Column(
+            children: [
+              _buildSearchAndFilterMutasi(),
+              Expanded(
+                child: _filteredMutasiTransactions.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          await _loadMutasiHistory(forceRefresh: true);
+                        },
+                        color: appConfig.primaryColor,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          itemCount: _filteredMutasiTransactions.length,
+                          itemBuilder: (context, index) {
+                            final item = _filteredMutasiTransactions[index];
+                            return _buildMutasiCard(item);
+                          },
+                        ),
+                      ),
+              ),
+            ],
+          );
   }
 
   // ======================== LOADING & ERROR STATES ========================
@@ -1305,6 +1323,393 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () => _copyToClipboard(item.refId),
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.copy,
+                            size: 14,
+                            color: appConfig.primaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ======================== MUTASI DATA LOADING ========================
+
+  Future<void> _loadMutasiHistory({bool forceRefresh = false}) async {
+    if (!mounted) return;
+
+    try {
+      setState(() {
+        _isLoading = !forceRefresh;
+        _errorMessage = null;
+      });
+
+      // 1. Try to load from cache first if not forcing refresh
+      if (!forceRefresh && await _loadMutasiFromCache()) {
+        _applyMutasiFilters();
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
+
+      // 2. Get token from session
+      final String? token = await SessionManager.getToken();
+      if (token == null) {
+        _setError('Token tidak ditemukan');
+        return;
+      }
+
+      debugPrint('🔐 Token Mutasi: ${token.substring(0, 20)}...');
+
+      // 3. Fetch from API
+      final response = await _apiService.getLogTransaksiMutasi(token);
+
+      debugPrint('🔍 Mutasi API Response Status Code: ${response.statusCode}');
+      debugPrint('🔍 Mutasi API Response Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+
+        // Check status
+        final bool isSuccess =
+            (data['status'] == true || data['status'] == 'success');
+
+        debugPrint(
+          '🔍 Status Check: ${data['status']} -> isSuccess: $isSuccess',
+        );
+
+        if (isSuccess) {
+          // Parse response
+          final transactionData = data['data'] as List?;
+
+          debugPrint(
+            '🔍 Mutasi Transaction Data Length: ${transactionData?.length ?? 0}',
+          );
+
+          if (transactionData != null && transactionData.isNotEmpty) {
+            _allMutasiTransactions = transactionData
+                .map(
+                  (item) =>
+                      TransactionMutasi.fromJson(item as Map<String, dynamic>),
+                )
+                .toList();
+
+            debugPrint(
+              '✅ Loaded ${_allMutasiTransactions.length} Mutasi transactions from API',
+            );
+
+            // Sort by date (newest first)
+            _allMutasiTransactions.sort(
+              (a, b) => b.createdAt.compareTo(a.createdAt),
+            );
+
+            // Fetch store name and attach to transactions
+            try {
+              final storeResponse = await _apiService.getUserStore(token);
+              debugPrint(
+                '🏪 Store Response Status (Mutasi): ${storeResponse.statusCode}',
+              );
+
+              if (storeResponse.statusCode == 200) {
+                final storeData = storeResponse.data;
+                String storeName = '';
+                if (storeData is Map) {
+                  storeName = storeData['nama_toko']?.toString() ?? '';
+                }
+
+                debugPrint('🏪 Extracted store name (Mutasi): "$storeName"');
+
+                if (storeName.isNotEmpty) {
+                  for (var i = 0; i < _allMutasiTransactions.length; i++) {
+                    final transaction = _allMutasiTransactions[i];
+                    _allMutasiTransactions[i] = TransactionMutasi(
+                      id: transaction.id,
+                      trxId: transaction.trxId,
+                      userId: transaction.userId,
+                      username: transaction.username,
+                      saldoAwal: transaction.saldoAwal,
+                      saldoAkhir: transaction.saldoAkhir,
+                      jumlah: transaction.jumlah,
+                      markupAdmin: transaction.markupAdmin,
+                      adminFee: transaction.adminFee,
+                      keterangan: transaction.keterangan,
+                      createdAt: transaction.createdAt,
+                      namaToko: storeName,
+                    );
+                  }
+                  debugPrint(
+                    '✅ Attached store name to ${_allMutasiTransactions.length} Mutasi transactions',
+                  );
+                }
+              }
+            } catch (e) {
+              debugPrint('⚠️ Error fetching store name for Mutasi: $e');
+            }
+
+            // Save to cache
+            await _saveMutasiToCache();
+            _applyMutasiFilters();
+          } else {
+            debugPrint('⚠️ Empty Mutasi transaction list');
+            _allMutasiTransactions = [];
+            _applyMutasiFilters();
+          }
+        } else {
+          _setError('Status response tidak valid: ${data['status']}');
+        }
+      } else {
+        _setError('Gagal mengambil data (${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('Error loading Mutasi transaction history: $e');
+      _setError('Terjadi kesalahan: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<bool> _loadMutasiFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString(_cacheMutasiKey);
+      final timestamp = prefs.getInt(_cacheMutasiTimestampKey) ?? 0;
+
+      if (cachedJson == null) return false;
+
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now - timestamp > (_cacheValidityMinutes * 60 * 1000)) {
+        return false;
+      }
+
+      final List<dynamic> decodedList = json_convert.json.decode(cachedJson);
+      _allMutasiTransactions = decodedList
+          .map(
+            (item) => TransactionMutasi.fromJson(item as Map<String, dynamic>),
+          )
+          .toList();
+
+      debugPrint('✅ Loaded Mutasi transaction history from cache');
+      return true;
+    } catch (e) {
+      debugPrint('⚠️ Error loading Mutasi from cache: $e');
+      return false;
+    }
+  }
+
+  Future<void> _saveMutasiToCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonList = _allMutasiTransactions.map((t) => t.toJson()).toList();
+
+      await prefs.setString(
+        _cacheMutasiKey,
+        json_convert.json.encode(jsonList),
+      );
+      await prefs.setInt(
+        _cacheMutasiTimestampKey,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+      debugPrint('💾 Mutasi transaction history saved to cache');
+    } catch (e) {
+      debugPrint('⚠️ Error saving Mutasi to cache: $e');
+    }
+  }
+
+  void _applyMutasiFilters() {
+    _filteredMutasiTransactions = _allMutasiTransactions.where((transaction) {
+      // Filter by search query
+      bool searchMatch =
+          searchQuery.isEmpty ||
+          transaction.trxId.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          transaction.username.toLowerCase().contains(
+            searchQuery.toLowerCase(),
+          ) ||
+          transaction.keterangan.toLowerCase().contains(
+            searchQuery.toLowerCase(),
+          );
+
+      return searchMatch;
+    }).toList();
+  }
+
+  Widget _buildSearchAndFilterMutasi() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
+      child: TextField(
+        onChanged: (value) {
+          setState(() {
+            searchQuery = value;
+            _applyMutasiFilters();
+          });
+        },
+        decoration: InputDecoration(
+          hintText: "Cari ID Transaksi atau Username...",
+          prefixIcon: Icon(Icons.search, color: appConfig.primaryColor),
+          suffixIcon: searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    setState(() {
+                      searchQuery = "";
+                      _applyMutasiFilters();
+                    });
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: Colors.grey[100],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMutasiCard(TransactionMutasi item) {
+    final isDebit = item.isDebit;
+    final statusColor = isDebit ? Colors.red : Colors.green;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                TransactionMutasiDetailPage(transaction: item),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    item.createdAt,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      isDebit ? 'Pengeluaran' : 'Pemasukan',
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: statusColor.withOpacity(0.1),
+                    child: Icon(
+                      isDebit ? Icons.arrow_downward : Icons.arrow_upward,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.keterangan,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.username,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    item.formattedJumlah,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "TRX ID: ${item.trxId}",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[700],
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _copyToClipboard(item.trxId),
                         borderRadius: BorderRadius.circular(4),
                         child: Padding(
                           padding: const EdgeInsets.all(4),

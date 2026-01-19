@@ -13,32 +13,49 @@ Future<void> main() async {
   // 1. Ensure binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Initialize Firebase
+  // 2. Initialize Firebase FIRST (required before other operations)
+  debugPrint('🔥 Initializing Firebase...');
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    debugPrint('✅ Firebase initialized');
 
     // Request notification permission
     await FirebaseMessaging.instance.requestPermission();
-
-    // 1. Load data dari memori HP (Shared Preferences)
-    await appConfig.loadLocalConfig();
+    debugPrint('✅ Notification permission requested');
 
     // Handle background messages
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
-    debugPrint('Firebase initialization error: $e');
+    debugPrint('❌ Firebase initialization error: $e');
   }
 
-  // 3. Initialize ApiService
-  final dio = Dio();
-  final apiService = ApiService(dio);
+  // 3. Load cached config dari SharedPreferences (FAST - dari local storage)
+  debugPrint('📥 Loading cached config from SharedPreferences...');
+  await appConfig.loadLocalConfig();
+  debugPrint('✅ Cached config loaded. Tampilan: "${appConfig.tampilan}"');
 
-  // 4. Load application configuration
-  await appConfig.initializeApp(apiService);
+  // 4. Start API initialization in background (fire and forget)
+  debugPrint('🌐 Starting API config fetch in background...');
+  _fetchConfigAsync();
 
   runApp(const MyApp());
+}
+
+/// Initialize Firebase & API config in background tanpa blocking UI
+Future<void> _fetchConfigAsync() async {
+  try {
+    debugPrint('🌐 [BACKGROUND] Fetching config dari API...');
+    final dio = Dio();
+    final apiService = ApiService(dio);
+    await appConfig.initializeApp(apiService);
+    debugPrint(
+      '✅ [BACKGROUND] Config dari API selesai. Tampilan: "${appConfig.tampilan}"',
+    );
+  } catch (e) {
+    debugPrint('❌ [BACKGROUND] API config fetch error: $e');
+  }
 }
 
 /// Background message handler for Firebase Cloud Messaging

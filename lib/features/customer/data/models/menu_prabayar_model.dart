@@ -6,6 +6,7 @@ class MenuPrabayarItem {
   final int adminUserId;
   final String namaKategori;
   final String gambarKategori;
+  final String? gambarUrl; // 👈 NEW: Full URL dari API
   final String? iconTemplate;
   final String createdAt;
   final String updatedAt;
@@ -16,6 +17,7 @@ class MenuPrabayarItem {
     required this.adminUserId,
     required this.namaKategori,
     required this.gambarKategori,
+    this.gambarUrl,
     this.iconTemplate,
     required this.createdAt,
     required this.updatedAt,
@@ -28,6 +30,7 @@ class MenuPrabayarItem {
       adminUserId: json['admin_user_id'] ?? 0,
       namaKategori: json['nama_kategori'] ?? '',
       gambarKategori: json['gambar_kategori'] ?? '',
+      gambarUrl: json['gambar_url'], // 👈 NEW: Read from API response
       iconTemplate: json['icon_template'],
       createdAt: json['created_at'] ?? '',
       updatedAt: json['updated_at'] ?? '',
@@ -41,6 +44,7 @@ class MenuPrabayarItem {
       'admin_user_id': adminUserId,
       'nama_kategori': namaKategori,
       'gambar_kategori': gambarKategori,
+      'gambar_url': gambarUrl,
       'icon_template': iconTemplate,
       'created_at': createdAt,
       'updated_at': updatedAt,

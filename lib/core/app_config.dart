@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import '../features/customer/data/models/customer_config_model.dart';
 import 'network/api_service.dart';
 
@@ -9,6 +10,7 @@ class AppConfig with ChangeNotifier {
   static const String _keyPrimaryColor = 'cfg_primary_color';
   static const String _keyTextColor = 'cfg_text_color';
   static const String _keyTemplate = 'cfg_template';
+  static const String _keyTampilan = 'cfg_tampilan';
   static const String _keyLogoUrl = 'cfg_logo_url';
 
   static const String _adminId = String.fromEnvironment(
@@ -23,7 +25,7 @@ class AppConfig with ChangeNotifier {
   // --- STATE VARIABLES ---
   String _appName = "Apk Customer";
   String _appType = _initialAppType;
-  String _template = "";
+  String _tampilan = "";
   String _status = "active";
   String? _logoUrl;
 
@@ -34,7 +36,7 @@ class AppConfig with ChangeNotifier {
   String get adminId => _adminId;
   String get appName => _appName;
   String get appType => _appType;
-  String get template => _template;
+  String get tampilan => _tampilan;
   String get status => _status;
   Color get primaryColor => _primaryColor;
   Color get textColor => _textColor;
@@ -45,7 +47,7 @@ class AppConfig with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
 
     _appName = prefs.getString(_keyAppName) ?? _appName;
-    _template = prefs.getString(_keyTemplate) ?? _template;
+    _tampilan = prefs.getString(_keyTampilan) ?? _tampilan;
     _logoUrl = prefs.getString(_keyLogoUrl);
 
     final hexPrimary = prefs.getString(_keyPrimaryColor);
@@ -64,6 +66,7 @@ class AppConfig with ChangeNotifier {
     await prefs.setString(_keyPrimaryColor, model.primaryColor);
     await prefs.setString(_keyTextColor, model.textColor);
     await prefs.setString(_keyTemplate, model.template);
+    await prefs.setString(_keyTampilan, model.tampilan);
     if (model.logoUrl != null) {
       await prefs.setString(_keyLogoUrl, model.logoUrl!);
     }
@@ -72,20 +75,46 @@ class AppConfig with ChangeNotifier {
   // --- API INITIALIZATION ---
   Future<void> initializeApp(ApiService apiService) async {
     try {
-      // 1. Ambil data dari API
-      final response = await apiService.getPublicConfig(_adminId, _appType);
+      debugPrint('🔵 AppConfig.initializeApp START');
+      debugPrint('  Admin ID: $_adminId');
+      debugPrint('  App Type: $_appType');
+
+      // 1. Ambil data dari API dengan timeout
+      debugPrint('🌐 Calling API: getPublicConfig($_adminId, $_appType)');
+      final response = await apiService
+          .getPublicConfig(_adminId, _appType)
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('API call timeout setelah 15 detik');
+            },
+          );
+
+      debugPrint('📨 API Response Status: ${response.statusCode}');
+      debugPrint('📨 API Response Body: ${response.data}');
 
       if (response.statusCode == 200 && response.data['data'] != null) {
+        debugPrint('✅ API response valid, parsing data...');
         final model = AppConfigModel.fromApi(response.data['data']);
 
         // 2. Update State & Notify UI
+        debugPrint('🔄 Updating AppConfig from model...');
         updateFromModel(model);
 
         // 3. Simpan ke Local untuk penggunaan berikutnya (Offline/Fast Load)
+        debugPrint('💾 Saving config to SharedPreferences...');
         await _saveToLocal(model);
+        debugPrint('✅ AppConfig.initializeApp COMPLETE');
+      } else {
+        debugPrint(
+          '❌ API response invalid: statusCode=${response.statusCode}, data=${response.data}',
+        );
       }
+    } on TimeoutException catch (e) {
+      debugPrint('⏱️ AppConfig Initialize Timeout: $e');
     } catch (e) {
-      debugPrint('AppConfig Initialize Error: $e');
+      debugPrint('❌ AppConfig Initialize Error: $e');
+      debugPrint('📋 Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -96,8 +125,14 @@ class AppConfig with ChangeNotifier {
       _textColor = _parseColor(model.textColor);
       _logoUrl = model.logoUrl;
       _appType = model.appType.toLowerCase();
-      _template = model.template.trim();
+      _tampilan = model.tampilan.trim();
       _status = model.status;
+
+      // DEBUG: Log tampilan value
+      debugPrint('✅ AppConfig Updated:');
+      debugPrint('  - App Name: $_appName');
+      debugPrint('  - Tampilan: $_tampilan (raw: "${model.tampilan}")');
+      debugPrint('  - Template: ${model.template}');
 
       notifyListeners();
     } catch (e) {

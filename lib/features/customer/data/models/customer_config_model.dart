@@ -11,6 +11,7 @@ class AppConfigModel {
   final String subdomain;
   final String template;
   final String template2;
+  final String tampilan;
   final String status;
 
   AppConfigModel({
@@ -24,6 +25,7 @@ class AppConfigModel {
     required this.subdomain,
     required this.template,
     required this.template2,
+    required this.tampilan,
     required this.status,
   });
 
@@ -62,19 +64,16 @@ class AppConfigModel {
     final template = templateRaw?.toString() ?? '';
     final template2Raw = json['template2'];
     final template2 = template2Raw?.toString() ?? '';
+    final tampilanRaw = json['tampilan'];
+    final tampilan = tampilanRaw?.toString() ?? '';
 
     debugPrint('🔴 FIELD TEMPLATE (CRITICAL):');
-    debugPrint('  - Nilai raw: $templateRaw');
-    debugPrint('  - Tipe: ${templateRaw.runtimeType}');
-    debugPrint('  - Setelah toString(): "$template"');
-    debugPrint('  - Panjang: ${template.length}');
-    debugPrint('  - isEmpty: ${template.isEmpty}');
-    debugPrint('  - Bytes: ${template.codeUnits}');
-    debugPrint('');
-
-    debugPrint('🟡 FIELD TEMPLATE2:');
-    debugPrint('  - Nilai raw: $template2Raw');
-    debugPrint('  - Setelah toString(): "$template2"');
+    debugPrint('  - Nilai raw: $tampilanRaw');
+    debugPrint('  - Tipe: ${tampilanRaw.runtimeType}');
+    debugPrint('  - Setelah toString(): "$tampilan"');
+    debugPrint('  - Panjang: ${tampilan.length}');
+    debugPrint('  - isEmpty: ${tampilan.isEmpty}');
+    debugPrint('  - Bytes: ${tampilan.codeUnits}');
     debugPrint('');
 
     final status = json['status']?.toString() ?? 'nonactive';
@@ -93,6 +92,7 @@ class AppConfigModel {
       subdomain: subdomain,
       template: template,
       template2: template2,
+      tampilan: tampilan,
       status: status,
     );
   }

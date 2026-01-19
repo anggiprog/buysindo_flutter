@@ -229,6 +229,111 @@ Terima kasih telah bertransaksi
 
 ''';
   }
+
+  /// Print Mutasi (Saldo Balance Log) receipt
+  Future<bool> printMutasiReceipt({
+    required String trxId,
+    required String username,
+    required String jumlah,
+    required bool isDebit,
+    required String saldoAwal,
+    required String saldoAkhir,
+    required String keterangan,
+    required String createdAt,
+    required String markupAdmin,
+    required String adminFee,
+    String? namaToko,
+  }) async {
+    try {
+      debugPrint('🖨️ Starting print mutasi...');
+
+      final receiptData = _generateMutasiReceiptText(
+        trxId: trxId,
+        username: username,
+        jumlah: jumlah,
+        isDebit: isDebit,
+        saldoAwal: saldoAwal,
+        saldoAkhir: saldoAkhir,
+        keterangan: keterangan,
+        createdAt: createdAt,
+        markupAdmin: markupAdmin,
+        adminFee: adminFee,
+        namaToko: namaToko,
+      );
+
+      final bool result =
+          await platform.invokeMethod<bool>('printReceipt', {
+            'content': receiptData,
+          }) ??
+          false;
+
+      if (result) {
+        debugPrint('✅ Mutasi print completed');
+      } else {
+        debugPrint('❌ Mutasi print failed');
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('❌ Error printing mutasi: $e');
+      return false;
+    }
+  }
+
+  /// Generate Mutasi receipt text for thermal printer
+  String _generateMutasiReceiptText({
+    required String trxId,
+    required String username,
+    required String jumlah,
+    required bool isDebit,
+    required String saldoAwal,
+    required String saldoAkhir,
+    required String keterangan,
+    required String createdAt,
+    required String markupAdmin,
+    required String adminFee,
+    String? namaToko,
+  }) {
+    final tipeTransaksi = isDebit ? 'PENGELUARAN' : 'PEMASUKAN';
+    final storeName = namaToko != null && namaToko.isNotEmpty
+        ? namaToko
+        : 'BUYSINDO';
+    final divider = '================================';
+
+    return '''
+
+$storeName - MUTASI SALDO
+$divider
+
+TRX ID: $trxId
+Tanggal: $createdAt
+Username: $username
+
+$divider
+TIPE TRANSAKSI
+$tipeTransaksi
+Keterangan: $keterangan
+
+JUMLAH TRANSAKSI
+$jumlah
+
+$divider
+RINGKASAN SALDO
+Saldo Awal: $saldoAwal
+Perubahan: $jumlah
+Saldo Akhir: $saldoAkhir
+
+$divider
+DETAIL BIAYA
+Markup Admin: $markupAdmin
+Admin Fee: $adminFee
+
+$divider
+Terima kasih!
+
+
+''';
+  }
 }
 
 /// Bluetooth Device Model

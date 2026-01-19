@@ -573,7 +573,10 @@ class _PpobTemplateState extends State<PpobTemplate> {
   }
 
   Widget _buildDynamicMenuIcon(MenuPrabayarItem menu) {
-    final imageUrl = '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
+    // 👈 Use gambar_url from API if available, fallback to manual URL building
+    final imageUrl =
+        menu.gambarUrl ??
+        '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
 
     return InkWell(
       onTap: () {
@@ -737,8 +740,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 final menu = _pascabayarList[index];
 
                 // PERBAIKAN DI SINI:
-                // Gunakan imagePascabayarUrl agar mengarah ke folder /pascabayar/
+                // Gunakan gambarUrl dari API jika tersedia, fallback ke manual construction
                 final imageUrl =
+                    menu.gambarUrl ??
                     '${apiService.imagePascabayarUrl}${menu.gambarBrand}';
 
                 // LOG UNTUK TESTING (Bisa dihapus setelah gambar muncul)
