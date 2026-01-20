@@ -34,6 +34,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Mengaktifkan core library desugaring yang diperlukan oleh beberapa AAR (mis. flutter_local_notifications)
+        isCoreLibraryDesugaringEnabled = true
     }
 
     // PERBAIKAN: kotlinOptions dihapus, diganti dengan compilerOptions di dalam blok android
@@ -105,5 +107,11 @@ flutter {
     source = "../.."
 }
 
-// Opsional: Memastikan clean berjalan jika diperlukan, 
+// Tambahkan blok dependencies untuk coreLibraryDesugaring
+dependencies {
+    // Versi desugar terbaru kompatibel pada banyak proyek; ganti jika ingin versi lain
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+}
+
+// Opsional: Memastikan clean berjalan jika diperlukan,
 // namun biasanya Laravel Job sudah menjalankan 'flutter clean' secara eksplisit.

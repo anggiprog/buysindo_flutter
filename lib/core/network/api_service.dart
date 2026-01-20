@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
+import '../../features/customer/data/models/notification_count_model.dart';
+import 'session_manager.dart';
 
 class ApiService {
   final Dio _dio;
@@ -44,12 +47,87 @@ class ApiService {
   // ENDPOINTS AUTH & USER
   // ===========================================================================
 
-  /// Fungsi Login dengan pengiriman Device Token untuk Notifikasi (FCM)
-  Future<Response> login(String email, String password, String deviceToken) {
-    return _dio.post(
-      'api/login',
-      data: {'email': email, 'password': password, 'device_token': deviceToken},
-    );
+  /// High-level Login: sends device token and returns LoginResponse
+  Future<LoginResponse> login(String email, String password) async {
+    try {
+      debugPrint('🔐 [ApiService] Starting login with email: $email');
+      final deviceToken = await getDeviceToken();
+      debugPrint('📤 [ApiService] Sending login request with device_token: $deviceToken');
+
+      final response = await _dio.post(
+        'api/login',
+        data: {'email': email, 'password': password, 'device_token': deviceToken},
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ [ApiService] Login successful, status code: ${response.statusCode}');
+        return LoginResponse.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Login failed');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Get Firebase Device Token safely
+  Future<String> getDeviceToken() async {
+    try {
+      debugPrint('📱 [ApiService] Fetching Firebase device token...');
+      final token = await FirebaseMessaging.instance.getToken();
+
+      if (token != null && token.isNotEmpty) {
+        debugPrint('✅ [ApiService] Device token fetched: $token');
+        return token;
+      } else {
+        debugPrint('⚠️ [ApiService] Firebase device token is empty/null');
+        return 'unknown_device_token';
+      }
+    } catch (e) {
+      debugPrint('❌ [ApiService] Error getting device token: $e');
+      return 'error_getting_token';
+    }
+  }
+
+  /// Verify OTP code
+  Future<OtpResponse> verifyOtp(String email, String otpCode) async {
+    try {
+      final deviceToken = await getDeviceToken();
+
+      final response = await _dio.post(
+        'api/verify-otp',
+        data: {
+          'email': email,
+          'otp_code': otpCode,
+          'device_token': deviceToken,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final otpResponse = OtpResponse.fromJson(response.data);
+        if (otpResponse.status == true && otpResponse.token != null) {
+          await SessionManager.saveToken(otpResponse.token!);
+        }
+        return otpResponse;
+      } else {
+        throw Exception('OTP verification failed: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Resend OTP to email
+  Future<void> resendOtp(String email) async {
+    try {
+      final response = await _dio.post('api/resend-otp', data: {'email': email});
+
+      if (response.statusCode != 200) {
+        throw Exception('Resend OTP failed: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
 
   /// Mengambil profil user menggunakan Bearer Token
@@ -305,6 +383,291 @@ class ApiService {
     return _dio.get(
       'api/user/buat-toko',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  // ===========================================================================
+  // REGISTRATION ENDPOINTS
+  // ===========================================================================
+
+  /// Ambil admin token publik untuk registrasi (tanpa auth)
+  Future<Response> getAdminToken(String adminUserId) {
+    return _dio.get(
+      'api/admin-tokens/$adminUserId',
+      options: Options(validateStatus: (status) => status! < 500),
+    );
+  }
+
+  /// Registrasi user baru dengan verifikasi email
+  /// Memerlukan X-Admin-Token di header
+  Future<Response> registerV2({
+    required String adminToken,
+    required String username,
+    required String email,
+    required String password,
+    required String fullName,
+    required String phone,
+    String? referralCode,
+    String? deviceToken,
+  }) {
+    return _dio.post(
+      'api/registerV2',
+      data: {
+        'username': username,
+        'email': email,
+        'password': password,
+        'full_name': fullName,
+        'phone': phone,
+        if (referralCode != null && referralCode.isNotEmpty)
+          'referral_code': referralCode,
+        if (deviceToken != null && deviceToken.isNotEmpty)
+          'device_token': deviceToken,
+      },
+      options: Options(
+        headers: {
+          'X-Admin-Token': adminToken,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        validateStatus: (status) => status! < 500,
+      ),
+    );
+  }
+
+  /// Verifikasi email user
+  Future<Response> verifyEmail(String token) {
+    return _dio.get('api/verify-email', queryParameters: {'token': token});
+  }
+
+  // ===========================================================================
+  // PASSWORD RESET ENDPOINTS
+  // ===========================================================================
+
+  /// Request to send OTP / reset link to user's email
+  /// Endpoint: POST api/lupa-password-user
+  Future<String> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post('api/lupa-pwd-user', data: {'email': email});
+      if (response.statusCode == 200) {
+        return response.data['message'] ?? 'Permintaan lupa password dikirim';
+      } else {
+        throw Exception(response.data['message'] ?? 'Gagal meminta lupa password');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Reset password using OTP/code sent to email
+  /// Endpoint: POST api/reset-password-user
+  Future<String> resetPassword({
+    required String email,
+    required String otp,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    try {
+      final response = await _dio.post('api/reset-pwd-user', data: {
+        'email': email,
+        'otp': otp,
+        'password': password,
+        'password_confirmation': passwordConfirmation,
+      });
+
+      if (response.statusCode == 200) {
+        return response.data['message'] ?? 'Password berhasil direset';
+      } else {
+        throw Exception(response.data['message'] ?? 'Gagal reset password');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Update or register device token
+  Future<void> updateDeviceToken(String token) async {
+    try {
+      debugPrint('📝 [ApiService] updateDeviceToken() called');
+      debugPrint('🔑 [ApiService] Using auth token: ${token.substring(0, 20)}...');
+
+      final deviceToken = await getDeviceToken();
+      debugPrint('📱 [ApiService] Device token to update: $deviceToken');
+
+      final response = await _dio.post(
+        'api/device-token/update',
+        data: {'device_token': deviceToken},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ [ApiService] Device token updated successfully!');
+        debugPrint('📌 [ApiService] Device Token: $deviceToken');
+        debugPrint('📌 [ApiService] Response: ${response.data}');
+      } else {
+        debugPrint('⚠️ [ApiService] Device token update returned status ${response.statusCode}');
+        throw Exception('Update device token failed: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      debugPrint('❌ [ApiService] Device token update error: ${_handleDioError(e)}');
+      // Don't throw, just log warning - not critical
+    } catch (e) {
+      debugPrint('❌ [ApiService] Unexpected error in updateDeviceToken: $e');
+    }
+  }
+
+  /// Logout user
+  Future<void> logout(String token) async {
+    try {
+      await _dio.post('api/logout', options: Options(headers: {'Authorization': 'Bearer $token'}));
+      await SessionManager.clearSession();
+    } on DioException catch (e) {
+      await SessionManager.clearSession();
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Mengambil jumlah notifikasi untuk admin
+  /// Endpoint: GET api/jumlah-notif-admin
+  /// Jika token == null maka akan memanggil tanpa header Authorization
+  Future<int> getAdminNotificationCount([String? token]) async {
+    try {
+      debugPrint('🔔 [ApiService] getAdminNotificationCount() called (token present: ${token != null && token.isNotEmpty})');
+
+      final options = token != null && token.isNotEmpty
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null;
+
+      final response = await _dio.get(
+        'api/jumlah-notif-admin',
+        options: options,
+      );
+
+      debugPrint('🔔 [ApiService] Response status: ${response.statusCode}');
+      debugPrint('🔔 [ApiService] Response data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is Map) {
+          try {
+            // Normalize keys to String
+            final Map<String, dynamic> mapData = {};
+            data.forEach((k, v) {
+              mapData[k.toString()] = v;
+            });
+            final parsed = NotificationCountResponse.fromJson(mapData);
+            debugPrint('🔔 [ApiService] jumlah_belum_dibaca: ${parsed.jumlahBelumDibaca}');
+            return parsed.jumlahBelumDibaca;
+          } catch (e) {
+            debugPrint('⚠️ [ApiService] Failed to parse NotificationCountResponse: $e');
+          }
+        }
+
+        // fallback: previous heuristics
+        if (data is Map) {
+          final possible = data['data'] ?? data['count'] ?? data['jumlah'] ?? 0;
+          return int.tryParse(possible.toString()) ?? 0;
+        }
+        if (data is int) return data;
+        if (data is String) return int.tryParse(data) ?? 0;
+      }
+      debugPrint('⚠️ [ApiService] getAdminNotificationCount unexpected status: ${response.statusCode}');
+      return 0;
+    } on DioException catch (e) {
+      debugPrint('❌ [ApiService] getAdminNotificationCount error: $e');
+      return 0;
+    } catch (e) {
+      debugPrint('❌ [ApiService] getAdminNotificationCount unknown error: $e');
+      return 0;
+    }
+  }
+
+  /// Ambil daftar notifikasi user
+  Future<Response> getUserNotifications(String token) {
+    return _dio.get(
+      'api/user/notifications',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil jumlah notifikasi belum dibaca untuk user
+  Future<Response> getUserUnreadCount(String token) {
+    return _dio.get(
+      'api/user/notification/unread-count',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Mark single notification as read (POST id)
+  Future<Response> markNotificationAsRead({required int id, required String token}) {
+    return _dio.post(
+      'api/user/notification/read',
+      data: {'id': id},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Delete all notifications for user
+  Future<Response> deleteAllUserNotifications(String token) {
+    return _dio.post(
+      'api/user/notification/delete-all',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Handle Dio errors uniformly
+  String _handleDioError(DioException e) {
+    if (e.response != null) {
+      return e.response?.data['message'] ?? e.response?.statusMessage ?? 'Unknown error';
+    }
+    return e.message ?? 'Network error';
+  }
+
+  // =============================================
+  // High-level models: LoginResponse & OtpResponse
+  // =============================================
+
+}
+
+/// Model for Login Response
+class LoginResponse {
+  final bool? status;
+  final String? message;
+  final bool? requireOtp;
+  final String? accessToken;
+  final Map<String, dynamic>? user;
+
+  LoginResponse({this.status, this.message, this.requireOtp, this.accessToken, this.user});
+
+  factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    debugPrint('📦 Login Response JSON: $json');
+
+    String? token = json['access_token'] as String? ?? json['token'] as String? ?? json['accessToken'] as String?;
+
+    return LoginResponse(
+      status: json['status'] as bool?,
+      message: json['message'] as String?,
+      requireOtp: json['require_otp'] as bool? ?? false,
+      accessToken: token,
+      user: json['user'] as Map<String, dynamic>?,
+    );
+  }
+}
+
+/// Model for OTP Response
+class OtpResponse {
+  final bool? status;
+  final String? message;
+  final String? token;
+  final Map<String, dynamic>? user;
+
+  OtpResponse({this.status, this.message, this.token, this.user});
+
+  factory OtpResponse.fromJson(Map<String, dynamic> json) {
+    return OtpResponse(
+      status: json['status'] as bool?,
+      message: json['message'] as String?,
+      token: json['token'] as String?,
+      user: json['user'] as Map<String, dynamic>?,
     );
   }
 }

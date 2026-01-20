@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:rutino_customer/core/app_config.dart';
 import 'package:rutino_customer/core/network/session_manager.dart';
 
@@ -22,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _startAnimation() {
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         setState(() {
           _opacity = 1;
@@ -35,36 +36,40 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _initApp() async {
     try {
       // Ambil token user (cepat dari local storage)
+      final startTime = DateTime.now();
       String? token = await SessionManager.getToken();
+      final tokenDuration = DateTime.now().difference(startTime);
+      debugPrint(
+        '⏱️ SessionManager.getToken: ${tokenDuration.inMilliseconds}ms',
+      );
 
-      // Minimal show splash screen untuk animasi (500ms untuk animation, 500ms untuk UI transition)
-      await Future.delayed(const Duration(milliseconds: 1000));
+      // MINIMUM delay untuk animasi (300ms cukup)
+      await Future.delayed(const Duration(milliseconds: 300));
 
       if (!mounted) return;
 
-      // Navigasi ke halaman selanjutnya tanpa delay
+      // Remove native splash screen sebelum navigate
+      debugPrint('🗑️ Removing native splash screen...');
+      FlutterNativeSplash.remove();
+
+      debugPrint(
+        '✅ Splash screen removed, navigating to: ${token != null && token.isNotEmpty ? '/home' : '/login'}',
+      );
+
+      // Navigasi ke halaman selanjutnya
       _navigateToNext(token != null && token.isNotEmpty ? '/home' : '/login');
     } catch (e) {
-      debugPrint("Error inisialisasi: $e");
+      debugPrint("❌ Error inisialisasi: $e");
+      FlutterNativeSplash.remove();
       if (mounted) _navigateToNext('/login');
     }
   }
 
   void _navigateToNext(String routeName) {
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            // Ganti ini dengan widget halaman tujuan Anda sesuai routeName
-            // Untuk kesederhanaan, kita gunakan pushReplacementNamed jika router sudah siap
-            const SizedBox(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-      ),
-    );
-    // Jika router Anda sudah menggunakan onGenerateRoute:
-    Navigator.pushReplacementNamed(context, routeName);
+    debugPrint('🚀 Navigating to: $routeName');
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, routeName);
+    }
   }
 
   @override

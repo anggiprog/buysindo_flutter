@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../core/app_config.dart';
-import '../../core/network/auth_service.dart';
+import '../../core/network/api_service.dart';
 import '../../core/network/session_manager.dart';
 import 'otp_screen.dart';
+import 'register_screen.dart';
+import 'forgot_password_screen.dart'; // Import the ForgotPasswordScreen
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,11 +33,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final dio = Dio();
-      final authService = AuthService(dio);
+      final apiService = ApiService(dio);
 
       debugPrint('🔐 Attempting login with email: ${_emailController.text}');
 
-      final loginResponse = await authService.login(
+      final loginResponse = await apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
@@ -69,6 +71,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await SessionManager.saveToken(loginResponse.accessToken!);
         debugPrint('✅ Token disimpan di SessionManager');
+
+        // Update device token di server
+        debugPrint('📱 Updating device token...');
+        try {
+          await apiService.updateDeviceToken(loginResponse.accessToken!);
+        } catch (e) {
+          debugPrint('⚠️ Device token update failed (non-critical): $e');
+        }
 
         // Delay untuk memastikan token tersimpan dengan baik
         await Future.delayed(const Duration(milliseconds: 500));
@@ -382,7 +392,12 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Center(
           child: TextButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+              );
+            },
             child: const Text(
               "Lupa Password",
               style: TextStyle(
@@ -398,7 +413,12 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             const Text("Belum Punya Akun "),
             GestureDetector(
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                );
+              },
               child: const Text(
                 "DAFTAR",
                 style: TextStyle(

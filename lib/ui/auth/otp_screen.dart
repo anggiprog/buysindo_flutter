@@ -4,7 +4,7 @@ import 'package:flutter/services.dart'; // Untuk HapticFeedback
 import 'package:pinput/pinput.dart';
 import 'package:dio/dio.dart';
 import '../../core/app_config.dart';
-import '../../core/network/auth_service.dart';
+import '../../core/network/api_service.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -50,16 +50,31 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _isLoading = true);
     try {
       final dio = Dio();
-      final authService = AuthService(dio);
-      final response = await authService.verifyOtp(widget.email, pin);
+      final api = ApiService(dio);
+      final response = await api.verifyOtp(widget.email, pin);
 
       if (response.status == true) {
+        debugPrint('✅ OTP verification successful');
+
+        // Update device token di server
+        if (response.token != null && response.token!.isNotEmpty) {
+          debugPrint('📱 Updating device token after OTP verification...');
+          try {
+            await api.updateDeviceToken(response.token!);
+          } catch (e) {
+            debugPrint(
+              '⚠️ Device token update failed after OTP (non-critical): $e',
+            );
+          }
+        }
+
         if (!mounted) return;
         Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       } else {
         _showError(response.message ?? 'Verifikasi Gagal');
       }
     } catch (e) {
+      debugPrint('❌ OTP verification error: $e');
       _showError('Terjadi kesalahan koneksi');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -83,8 +98,8 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() => _isLoading = true);
     try {
       final dio = Dio();
-      final authService = AuthService(dio);
-      await authService.resendOtp(widget.email);
+      final api = ApiService(dio);
+      await api.resendOtp(widget.email);
       _startTimer();
       _otpController.clear();
       _showSuccess("OTP baru telah dikirim!");

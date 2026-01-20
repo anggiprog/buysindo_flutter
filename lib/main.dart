@@ -142,7 +142,33 @@ Future<void> _initializeNotificationChannels() async {
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
 
-    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      // Callback when user taps on a displayed local notification
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        try {
+          final payload = response.payload;
+          if (payload != null && payload.isNotEmpty) {
+            final Map<String, dynamic> data = jsonDecode(payload);
+            final route = data['route'] ?? data['screen'] ?? data['click_action_activity'];
+            if (route == 'notifications' || route == 'NotificationListActivity') {
+              // Use navigatorKey to navigate to NotificationsPage; schedule if navigator not ready
+              if (navigatorKey.currentState != null) {
+                navigatorKey.currentState?.pushNamed('/notifications');
+              } else {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  navigatorKey.currentState?.pushNamed('/notifications');
+                });
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error handling local notification tap: $e');
+        }
+      },
+      // For older versions of the plugin, provide onSelectNotification fallback
+      onDidReceiveBackgroundNotificationResponse: null,
+    );
 
     // Create notification channel for FCM
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
@@ -203,11 +229,36 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    // Register lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
     _setupForegroundMessageHandler();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When returning to foreground, re-check initial message as a fallback
+    if (state == AppLifecycleState.resumed) {
+      FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
+        if (message != null && message.data.isNotEmpty) {
+          // Schedule navigation after frame to ensure navigator is ready
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _handleNotificationTap(message.data);
+          });
+        }
+      }).catchError((e) {
+        debugPrint('⚠️ [FCM] Error checking initial message on resume: $e');
+      });
+    }
   }
 
   /// Setup foreground message handler
@@ -234,7 +285,12 @@ class _MyAppState extends State<MyApp> {
         '👆 [FCM] Notification tapped (app running): ${message.messageId}',
       );
       debugPrint('📌 [FCM] Data: ${message.data}');
-      _handleNotificationTap(message.data);
+      // Ensure navigation occurs after frame if navigator not ready
+      if (navigatorKey.currentState != null) {
+        _handleNotificationTap(message.data);
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationTap(message.data));
+      }
     });
 
     // 3. Handle notification tap when app was terminated
@@ -248,7 +304,12 @@ class _MyAppState extends State<MyApp> {
         debugPrint('📌 [FCM] Data: ${message.data}');
         // Delay navigation slightly to allow app to finish init
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          _handleNotificationTap(message.data);
+          if (navigatorKey.currentState != null) {
+            _handleNotificationTap(message.data);
+          } else {
+            // try again next frame
+            WidgetsBinding.instance.addPostFrameCallback((__) => _handleNotificationTap(message.data));
+          }
         });
       }
     });
@@ -275,13 +336,30 @@ class _MyAppState extends State<MyApp> {
     debugPrint('✅ [FCM] Foreground message handler setup complete');
   }
 
+  /// Safe navigation helper that retries until navigatorKey.currentState is available
+  Future<void> _safeNavigate(String routeName) async {
+    // Try immediate
+    if (navigatorKey.currentState != null) {
+      navigatorKey.currentState?.pushNamed(routeName);
+      return;
+    }
+
+    // Retry for a short period until navigator is ready
+    final end = DateTime.now().add(const Duration(seconds: 4));
+    while (DateTime.now().isBefore(end)) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (navigatorKey.currentState != null) {
+        navigatorKey.currentState?.pushNamed(routeName);
+        return;
+      }
+    }
+    debugPrint('❌ [NAVIGATION] Failed to navigate to $routeName - navigator not ready');
+  }
+
   /// Handle notification tap and navigate to appropriate screen
-  void _handleNotificationTap(Map<String, dynamic> data) {
+  Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
     final route =
-        data['route'] ??
-        data['screen'] ??
-        data['click_action_activity'] ??
-        'notifications';
+        data['route'] ?? data['screen'] ?? data['click_action_activity'] ?? 'notifications';
 
     debugPrint('🔍 [NOTIFICATION TAP] Parsed route: "$route"');
 
@@ -290,9 +368,7 @@ class _MyAppState extends State<MyApp> {
         route == 'NotificationListActivity' ||
         route == 'notifications') {
       debugPrint('✅ [NAVIGATION] Navigating to NotificationsPage');
-      navigatorKey.currentState?.push(
-        MaterialPageRoute(builder: (_) => const NotificationsPage()),
-      );
+      await _safeNavigate('/notifications');
     } else {
       debugPrint('⚠️ [NAVIGATION] Unknown route: $route');
     }
@@ -366,6 +442,7 @@ class _MyAppState extends State<MyApp> {
           routes: {
             '/login': (ctx) => const LoginScreen(),
             '/register': (ctx) => const RegisterScreen(),
+            '/notifications': (ctx) => const NotificationsPage(),
             '/home': (context) => const HomeScreen(),
           },
           home: const SplashScreen(),

@@ -13,6 +13,7 @@ import '../../../../../core/network/session_manager.dart';
 import '../../tabs/templates/prabayar/pulsa.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../../notifications_page.dart';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -25,6 +26,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
   final storage = const FlutterSecureStorage();
   late SharedPreferences _prefs;
   // Langsung inisialisasi di sini agar instance selalu siap
+  late ApiService _apiService;
   final ApiService apiService = ApiService(Dio());
 
   List<String> _bannerList = [];
@@ -46,9 +48,15 @@ class _PpobTemplateState extends State<PpobTemplate> {
   // Refresh controller
   bool _isRefreshing = false;
 
+  // Notifikasi
+  int _notifCount = 0;
+  bool _isNotifLoading = false;
+  String? _lastNotifResponse;
+
   @override
   void initState() {
     super.initState();
+    _apiService = ApiService(Dio());
     _initializeApp();
   }
 
@@ -121,6 +129,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
       _fetchSaldo(),
       _fetchMenuPrabayar(),
       _fetchPascabayar(),
+      _loadNotifCount(),
     ]);
   }
 
@@ -294,6 +303,129 @@ class _PpobTemplateState extends State<PpobTemplate> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pastikan memanggil ulang saat dependencies berubah (mis. token tersimpan setelah login)
+    _loadNotifCount();
+  }
+
+  Future<void> _loadNotifCount() async {
+    setState(() => _isNotifLoading = true);
+    try {
+      final String? token = await SessionManager.getToken();
+      debugPrint('🔔 [_loadNotifCount] token from SessionManager: $token');
+
+      // Panggil API meskipun token null — ApiService menangani header optional
+      final count = await _api_service_getCountSafe(token);
+      debugPrint('🔔 [_loadNotifCount] fetched count: $count');
+      if (!mounted) return;
+      setState(() {
+        _notifCount = count;
+        _isNotifLoading = false;
+      });
+    } catch (e) {
+      debugPrint('❌ Error loading notif count: $e');
+      if (!mounted) return;
+      setState(() {
+        _notifCount = 0;
+        _isNotifLoading = false;
+      });
+    }
+  }
+
+  // Wrapper yang menyimpan last response string untuk debug dan mengembalikan count
+  Future<int> _api_service_getCountSafe(String? token) async {
+    try {
+      final dioCount = await _api_service_getCount(token);
+      _lastNotifResponse = 'OK: $dioCount';
+      return dioCount;
+    } catch (e) {
+      _lastNotifResponse = 'Error: $e';
+      return 0;
+    }
+  }
+
+  // Memanggil ApiService dan juga menyimpan raw response jika memungkinkan
+  Future<int> _api_service_getCount(String? token) async {
+    // langsung gunakan apiService yang sudah ada
+    final count = await _api_service_call(token: token);
+    return count;
+  }
+
+  Future<int> _api_service_call({String? token}) async {
+    // ApiService sudah mengeluarkan debugPrint dari response; tapi kembalikan count
+    final count = await _api_service_getRaw(token);
+    return count;
+  }
+
+  // Akhir: panggil langsung ApiService.getAdminNotificationCount dan simpan string respons
+  Future<int> _api_service_getRaw(String? token) async {
+    try {
+      if (token == null || token.isEmpty) {
+        _lastNotifResponse = 'No token';
+        return 0;
+      }
+      final resp = await _apiService.getUserUnreadCount(token);
+      debugPrint('🔔 [_api_service_getRaw] unread-count status: ${resp.statusCode} data: ${resp.data}');
+      if (resp.statusCode == 200 && resp.data != null) {
+        final data = resp.data;
+        final Map<String, dynamic> map = {};
+        if (data is Map) {
+          data.forEach((k, v) => map[k.toString()] = v);
+        }
+        final possible = map['jumlah_belum_dibaca'] ?? map['data'] ?? map['count'] ?? 0;
+        final parsed = int.tryParse(possible?.toString() ?? '0') ?? 0;
+        _lastNotifResponse = 'count=$parsed';
+        return parsed;
+      }
+      _lastNotifResponse = 'unexpected status ${resp.statusCode}';
+      return 0;
+    } catch (e) {
+      _lastNotifResponse = 'error: $e';
+      return 0;
+    }
+  }
+
+  Widget _buildNotifBadge() {
+    final display = _notifCount > 99 ? '99+' : _notifCount.toString();
+    return GestureDetector(
+      onTap: () async {
+        // Navigate to notifications page
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const NotificationsPage()),
+        );
+        // refresh count when returning
+        _loadNotifCount();
+      },
+      onLongPress: () {
+        final msg = _lastNotifResponse ?? 'No response cached';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Notif debug: $msg')),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: _isNotifLoading
+              ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : Text(
+                  display,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final Color dynamicPrimaryColor = appConfig.primaryColor;
     final Color darkHeaderColor = Color.alphaBlend(
@@ -354,39 +486,18 @@ class _PpobTemplateState extends State<PpobTemplate> {
                   Icons.notifications_none_outlined,
                   color: Colors.white,
                 ),
-                onPressed: () {
-                  // Navigasi ke halaman Notifikasi
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                  );
+                  _loadNotifCount();
                 },
               ),
               // Badge merah dengan angka
               Positioned(
                 top: 5, // Sesuaikan posisi agar angka terlihat jelas
                 right: 5,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: darkHeaderColor,
-                      width: 1.5,
-                    ), // Border agar badge lebih kontras
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16, // Ukuran minimum agar lingkaran tidak gepeng
-                    minHeight: 16,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      '5',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+                child: _buildNotifBadge(),
               ),
             ],
           ),

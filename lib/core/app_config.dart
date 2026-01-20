@@ -22,6 +22,12 @@ class AppConfig with ChangeNotifier {
     defaultValue: 'app',
   );
 
+  /// Admin token untuk registrasi - HARUS dikonfigurasi dari backend
+  static const String adminToken = String.fromEnvironment(
+    'ADMIN_TOKEN',
+    defaultValue: 'your-admin-token-here',
+  );
+
   // --- STATE VARIABLES ---
   String _appName = "Apk Customer";
   String _appType = _initialAppType;
