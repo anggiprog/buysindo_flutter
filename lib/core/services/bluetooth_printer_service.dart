@@ -8,7 +8,8 @@ class BluetoothPrinterService {
   static final BluetoothPrinterService _instance =
       BluetoothPrinterService._internal();
 
-  static const platform = MethodChannel('com.rutino.customer/printer');
+  // Updated MethodChannel to match Android package name com.buysindo.app
+  static const platform = MethodChannel('com.buysindo.app/printer');
 
   factory BluetoothPrinterService() {
     return _instance;

@@ -1,7 +1,15 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:rutino_customer/core/app_config.dart';
-import 'package:rutino_customer/core/network/session_manager.dart';
+import 'package:buysindo_app/core/app_config.dart';
+import 'package:buysindo_app/core/network/session_manager.dart';
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../core/network/api_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,198 +19,347 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // Animasi state
-  double _opacity = 0;
-  double _scale = 0.8;
+  String? _remoteLogoUrl;
+  String? _tagline;
+  Uint8List? _remoteLogoBytes; // prefer memory image when available
+  String? _cachedUpdatedAt;
+  bool _isLoadingImage = true; // controls showing spinner when we don't have cache
+
+  static const _kSplashUrlKey = 'cached_splash_url';
+  static const _kSplashTaglineKey = 'cached_splash_tagline';
+  static const _kSplashUpdatedAtKey = 'cached_splash_updated_at';
+  static const _kSplashFileKey = 'cached_splash_file';
 
   @override
   void initState() {
     super.initState();
-    _startAnimation();
-    _initApp();
-  }
-
-  void _startAnimation() {
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) {
-        setState(() {
-          _opacity = 1;
-          _scale = 1.0;
+    // Load cached splash first so UI can show it immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadCachedSplash();
+      // If we already have cached bytes, show immediately and remove native splash
+      if (_remoteLogoBytes != null) {
+        try {
+          FlutterNativeSplash.remove();
+        } catch (_) {}
+        // Start background update but don't wait for it; navigate quickly for snappy UX
+        _backgroundUpdateSplash();
+        // Short delay so user sees splash before navigating
+        Future.delayed(const Duration(milliseconds: 800), () async {
+          if (!mounted) return;
+          final token = await SessionManager.getToken();
+          final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
+          Navigator.pushReplacementNamed(context, next);
         });
+      } else {
+        // No cached image -- perform fetch and navigate when completed
+        _fetchRemoteSplashAndPrecache();
       }
+    });
+    // fallback removal
+    Future.delayed(const Duration(seconds: 5), () {
+      try {
+        FlutterNativeSplash.remove();
+      } catch (_) {}
     });
   }
 
-  Future<void> _initApp() async {
+  Future<void> _loadCachedSplash() async {
     try {
-      // Ambil token user (cepat dari local storage)
-      final startTime = DateTime.now();
-      String? token = await SessionManager.getToken();
-      final tokenDuration = DateTime.now().difference(startTime);
-      debugPrint(
-        '⏱️ SessionManager.getToken: ${tokenDuration.inMilliseconds}ms',
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final filePath = prefs.getString(_kSplashFileKey);
+      final url = prefs.getString(_kSplashUrlKey);
+      final tagline = prefs.getString(_kSplashTaglineKey);
+      final updatedAt = prefs.getString(_kSplashUpdatedAtKey);
 
-      // MINIMUM delay untuk animasi (300ms cukup)
-      await Future.delayed(const Duration(milliseconds: 300));
+      if (filePath != null && filePath.isNotEmpty) {
+        final f = File(filePath);
+        if (await f.exists()) {
+          final bytes = await f.readAsBytes();
+          setState(() {
+            _remoteLogoBytes = bytes;
+            _remoteLogoUrl = url;
+            _tagline = tagline;
+            _cachedUpdatedAt = updatedAt;
+            _isLoadingImage = false; // cached image available => no spinner
+          });
+          return;
+        }
+      }
 
-      if (!mounted) return;
+      // If no file but url exists, keep network mode
+      if (url != null && url.isNotEmpty) {
+        setState(() {
+          _remoteLogoUrl = url;
+          _tagline = tagline;
+          _cachedUpdatedAt = updatedAt;
+          _isLoadingImage = true;
+        });
+        return;
+      }
 
-      // Remove native splash screen sebelum navigate
-      debugPrint('🗑️ Removing native splash screen...');
-      FlutterNativeSplash.remove();
-
-      debugPrint(
-        '✅ Splash screen removed, navigating to: ${token != null && token.isNotEmpty ? '/home' : '/login'}',
-      );
-
-      // Navigasi ke halaman selanjutnya
-      _navigateToNext(token != null && token.isNotEmpty ? '/home' : '/login');
+      // nothing cached
+      setState(() {
+        _isLoadingImage = true;
+      });
     } catch (e) {
-      debugPrint("❌ Error inisialisasi: $e");
-      FlutterNativeSplash.remove();
-      if (mounted) _navigateToNext('/login');
+      debugPrint('⚠️ Failed to load cached splash: $e');
+      setState(() {
+        _isLoadingImage = true;
+      });
     }
   }
 
-  void _navigateToNext(String routeName) {
-    debugPrint('🚀 Navigating to: $routeName');
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, routeName);
+  Future<void> _saveSplashToCache(String url, List<int> bytes, String? tagline, String? updatedAt) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/cached_splash.png');
+      await file.writeAsBytes(bytes, flush: true);
+      await prefs.setString(_kSplashFileKey, file.path);
+      await prefs.setString(_kSplashUrlKey, url);
+      await prefs.setString(_kSplashTaglineKey, tagline ?? '');
+      await prefs.setString(_kSplashUpdatedAtKey, updatedAt ?? '');
+      debugPrint('✅ Splash cached to filesystem: ${file.path}');
+    } catch (e) {
+      debugPrint('⚠️ Failed to cache splash: $e');
+    }
+  }
+
+  Future<void> _fetchRemoteSplashAndPrecache() async {
+    String? logoToUse;
+    String? taglineToUse;
+    bool shouldShowSplash = true;
+    String? remoteUpdatedAt;
+
+    try {
+      final adminId = appConfig.adminId;
+      final api = ApiService(Dio());
+      final data = await api.getSplashScreen(adminId);
+      debugPrint('🌊 Splash API response: $data');
+
+      if (data == null) {
+        shouldShowSplash = true; // no remote config, show default splash
+      } else {
+        final status = (data['status'] as String?)?.toLowerCase();
+        // If status explicitly not 'active', skip splash entirely
+        if (status != null && status != 'active') {
+          shouldShowSplash = false;
+        } else {
+          // status active or missing -> accept remote logo URL directly
+          final candidate = data['logo'] as String?;
+          final candidateTag = data['tagline'] as String?;
+          remoteUpdatedAt = data['updated_at'] as String?;
+          if (candidate != null && candidate.isNotEmpty) {
+            logoToUse = candidate;
+            taglineToUse = candidateTag;
+            debugPrint('ℹ️ Using remote logo: $logoToUse');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Splash fetch failed: $e');
+    }
+
+    // If remote config said inactive -> navigate immediately (skip showing remote splash)
+    if (!shouldShowSplash) {
+      try {
+        FlutterNativeSplash.remove();
+      } catch (_) {}
+      if (!mounted) return;
+      final token = await SessionManager.getToken();
+      final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
+      Navigator.pushReplacementNamed(context, next);
+      return;
+    }
+
+    // If we found a usable remote logo, consider if we need to fetch/update cache
+    if (logoToUse != null) {
+      final needsUpdate = (_cachedUpdatedAt == null || remoteUpdatedAt == null || remoteUpdatedAt != _cachedUpdatedAt) || (_remoteLogoUrl == null || _remoteLogoUrl != logoToUse) || _remoteLogoBytes == null;
+      debugPrint('ℹ️ Splash needsUpdate=$needsUpdate cachedUpdated=$_cachedUpdatedAt remoteUpdated=$remoteUpdatedAt');
+      if (!needsUpdate) {
+        // nothing to do: we already have cached bytes and up-to-date
+        debugPrint('ℹ️ Cached splash is up-to-date, skipping re-download');
+      } else {
+        if (mounted) {
+          setState(() {
+            _remoteLogoUrl = logoToUse;
+            _tagline = taglineToUse;
+          });
+        } else {
+          _remoteLogoUrl = logoToUse;
+          _tagline = taglineToUse;
+        }
+
+        // Attempt to GET image bytes (faster deterministic rendering) with timeout
+        try {
+          final dio = Dio();
+          dio.options.connectTimeout = const Duration(seconds: 6);
+          dio.options.receiveTimeout = const Duration(seconds: 6);
+          final resp = await dio.getUri(Uri.parse(logoToUse), options: Options(responseType: ResponseType.bytes, validateStatus: (s) => s! < 500));
+          if (resp.statusCode == 200 && resp.data != null) {
+            final bytes = resp.data as List<int>;
+            if (bytes.isNotEmpty) {
+              if (mounted) {
+                setState(() {
+                  _remoteLogoBytes = Uint8List.fromList(bytes);
+                  _isLoadingImage = false;
+                });
+              } else {
+                _remoteLogoBytes = Uint8List.fromList(bytes);
+              }
+              // Save to filesystem cache with remoteUpdatedAt
+              await _saveSplashToCache(logoToUse, bytes, taglineToUse, remoteUpdatedAt);
+              debugPrint('✅ Fetched remote splash bytes, will render Image.memory');
+            }
+          } else {
+            debugPrint('⚠️ Failed to fetch splash bytes, will rely on Image.network (status ${resp.statusCode})');
+          }
+        } catch (e) {
+          debugPrint('⚠️ Fetching remote splash bytes failed: $e');
+        }
+      }
+    }
+
+    // Remove native splash then navigate after a short delay so image is visible
+    try {
+      FlutterNativeSplash.remove();
+    } catch (_) {}
+
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (!mounted) return;
+
+    final token = await SessionManager.getToken();
+    final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
+    Navigator.pushReplacementNamed(context, next);
+  }
+
+  /// Background-only update: fetch remote splash and update cache if newer.
+  /// Does NOT perform navigation or remove native splash.
+  Future<void> _backgroundUpdateSplash() async {
+    try {
+      final adminId = appConfig.adminId;
+      final api = ApiService(Dio());
+      final data = await api.getSplashScreen(adminId);
+      debugPrint('🌊 (background) Splash API response: $data');
+      if (data == null) return;
+      final status = (data['status'] as String?)?.toLowerCase();
+      if (status != null && status != 'active') return; // no update if inactive
+
+      final candidate = data['logo'] as String?;
+      final candidateTag = data['tagline'] as String?;
+      final remoteUpdatedAt = data['updated_at'] as String?;
+      if (candidate == null || candidate.isEmpty) return;
+
+      final needsUpdate = (_cachedUpdatedAt == null || remoteUpdatedAt == null || remoteUpdatedAt != _cachedUpdatedAt) || (_remoteLogoUrl == null || _remoteLogoUrl != candidate) || _remoteLogoBytes == null;
+      if (!needsUpdate) {
+        debugPrint('🌊 (background) Splash cache up to date');
+        return;
+      }
+
+      // Try download bytes
+      try {
+        final dio = Dio();
+        dio.options.connectTimeout = const Duration(seconds: 6);
+        dio.options.receiveTimeout = const Duration(seconds: 6);
+        final resp = await dio.getUri(Uri.parse(candidate), options: Options(responseType: ResponseType.bytes, validateStatus: (s) => s! < 500));
+        if (resp.statusCode == 200 && resp.data != null) {
+          final bytes = resp.data as List<int>;
+          if (bytes.isNotEmpty) {
+            await _saveSplashToCache(candidate, bytes, candidateTag, remoteUpdatedAt);
+            if (mounted) setState(() { _remoteLogoBytes = Uint8List.fromList(bytes); _remoteLogoUrl = candidate; _tagline = candidateTag; _cachedUpdatedAt = remoteUpdatedAt; _isLoadingImage = false; });
+            debugPrint('🌊 (background) Updated cached splash successfully');
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ (background) Failed to update splash bytes: $e');
+      }
+    } catch (e) {
+      debugPrint('⚠️ (background) Splash update failed: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = appConfig.primaryColor;
-    // Membuat warna secondary yang lebih gelap untuk gradasi
-    final Color secondaryColor = HSLColor.fromColor(primaryColor)
-        .withLightness(
-          (HSLColor.fromColor(primaryColor).lightness - 0.1).clamp(0, 1),
-        )
-        .toColor();
-
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [primaryColor, secondaryColor],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Responsive larger image: up to 60% of width, max 240
+              LayoutBuilder(builder: (ctx, constraints) {
+                final width = constraints.maxWidth.isFinite ? constraints.maxWidth * 0.6 : 240.0;
+                final imageSize = width.clamp(140.0, 320.0);
+
+                if (_remoteLogoBytes != null)
+                  return Image.memory(_remoteLogoBytes!, width: imageSize, height: imageSize, fit: BoxFit.contain);
+                else if (_remoteLogoUrl != null && _remoteLogoUrl!.isNotEmpty)
+                // Try network image if bytes fetch failed – loadingBuilder keeps spinner until loaded
+                Image.network(
+                  _remoteLogoUrl!,
+                  width: imageSize,
+                  height: imageSize,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return SizedBox(width: imageSize, height: imageSize, child: const Center(child: CircularProgressIndicator(strokeWidth: 2)));
+                  },
+                  errorBuilder: (_, __, ___) => Image.asset('assets/images/logo.png', width: imageSize, height: imageSize),
+                );
+                return Image.asset('assets/images/logo.png', width: imageSize, height: imageSize);
+              }),
+
+              const SizedBox(height: 16),
+
+              Text(
+                _tagline ?? '',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.black54, fontWeight: FontWeight.w600),
+              ),
+
+              const SizedBox(height: 20),
+
+              // show spinner only if we don't already have cached image
+              if (_isLoadingImage && _remoteLogoBytes == null)
+                const SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+
+
+            ],
           ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Background Decoration (Opsional: Membuat lingkaran halus di background)
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
-            ),
-
-            // Content
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedScale(
-                  scale: _scale,
-                  duration: const Duration(milliseconds: 1000),
-                  curve: Curves.easeOutBack,
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 800),
-                    opacity: _opacity,
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 100,
-                        height: 100,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 1000),
-                  opacity: _opacity,
-                  child: Column(
-                    children: [
-                      Text(
-                        appConfig.appName.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 22,
-                          letterSpacing: 4,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 2,
-                        width: 40,
-                        color: Colors.white.withOpacity(0.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-
-            // Footer / Loading di bawah
-            Positioned(
-              bottom: 60,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 800),
-                opacity: _opacity,
-                child: Column(
-                  children: [
-                    const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white70,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      "Transaksi Mudah, Cepat, dan Aman",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.7),
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
+  }
+
+  Future<void> _clearSplashCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final filePath = prefs.getString(_kSplashFileKey);
+      if (filePath != null && filePath.isNotEmpty) {
+        final f = File(filePath);
+        if (await f.exists()) await f.delete();
+      }
+      await prefs.remove(_kSplashFileKey);
+      await prefs.remove(_kSplashUrlKey);
+      await prefs.remove(_kSplashTaglineKey);
+      await prefs.remove(_kSplashUpdatedAtKey);
+      setState(() {
+        _remoteLogoBytes = null;
+        _remoteLogoUrl = null;
+        _tagline = null;
+        _cachedUpdatedAt = null;
+        _isLoadingImage = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Splash cache cleared')));
+    } catch (e) {
+      debugPrint('⚠️ Failed to clear splash cache: $e');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to clear splash cache')));
+    }
   }
 }

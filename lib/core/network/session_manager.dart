@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class SessionManager {
   static const String _tokenKey = 'access_token';
@@ -65,5 +67,64 @@ class SessionManager {
     final exists = prefs.containsKey(_tokenKey);
     debugPrint('🔍 CEK TOKEN: ${exists ? "✅ Ada" : "❌ Tidak ada"}');
     return exists;
+  }
+
+  /// Hapus semua data SharedPreferences kecuali token login.
+  /// Digunakan untuk fitur 'Hapus Data Cache' agar tidak memaksa logout.
+  static Future<void> clearCacheExceptToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Ambil token (jika ada) supaya bisa dipertahankan
+      final token = prefs.getString(_tokenKey);
+
+      // Remove well-known cache keys used across app
+      final knownKeys = <String>[
+        'cached_products',
+        'cached_splash_file',
+        'cached_splash_url',
+        'cached_splash_tagline',
+        'cached_splash_updated_at',
+        // Add other known keys here if needed
+      ];
+
+      for (final k in knownKeys) {
+        if (prefs.containsKey(k)) await prefs.remove(k);
+      }
+
+      // Remove any keys that match `brand_*`
+      final allKeys = prefs.getKeys();
+      for (final k in allKeys) {
+        if (k == _tokenKey) continue;
+        if (k.startsWith('brand_')) {
+          await prefs.remove(k);
+        }
+      }
+
+      // Also remove any other keys except token (fallback behavior)
+      final remainingKeys = prefs.getKeys().where((k) => k != _tokenKey).toList(growable: false);
+      for (final k in remainingKeys) {
+        // skip if already removed
+        if (!prefs.containsKey(k)) continue;
+        await prefs.remove(k);
+      }
+
+      debugPrint('🧹 SharedPreferences cleared except token');
+      if (token != null && token.isNotEmpty) {
+        debugPrint('🔑 Token tetap disimpan (panjang ${token.length})');
+      }
+
+      // Delete cached files (splash) if exist in application documents
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final f = File('${dir.path}/cached_splash.png');
+        if (await f.exists()) await f.delete();
+        debugPrint('🗑️ Cached splash file removed from filesystem if it existed');
+      } catch (e) {
+        debugPrint('⚠️ Failed to remove cached splash file: $e');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Failed to clear cache except token: $e');
+    }
   }
 }

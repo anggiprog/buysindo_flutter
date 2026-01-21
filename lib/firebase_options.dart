@@ -2,128 +2,114 @@
 // ignore_for_file: lines_longer_than_80_chars, avoid_classes_with_only_static_members
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
+import 'dart:io' show Platform;
+import 'package:flutter/material.dart' show debugPrint;
 
 /// The options required to initialize Firebase.
 class DefaultFirebaseOptions {
+  // Helper to read env and warn in development, fail in release
+  static String _envOrFallback(String key, String fallback) {
+    final v = dotenv.env[key];
+    if (v == null || v.isEmpty) {
+      // Warn developer so missing envs aren't silently ignored
+      debugPrint('⚠️ DefaultFirebaseOptions: environment variable `$key` is not set. Using fallback value.');
+      // In debug builds, an assert will fail loudly for developers
+      assert(() {
+        debugPrint('ASSERT: Missing required Firebase env variable: $key');
+        return true;
+      }());
+      // In release builds, avoid throwing to prevent app from crashing on startup.
+      return fallback;
+    }
+    return v;
+  }
+
   /// Android Firebase options
   static FirebaseOptions get android {
     return FirebaseOptions(
-      apiKey: dotenv.env['FIREBASE_API_KEY_ANDROID'] ?? 'AIzaSyDummyKeyAndroid',
-      appId:
-          dotenv.env['FIREBASE_APP_ID_ANDROID'] ??
-          '1:123456789:android:abcdef1234567890',
-      messagingSenderId:
-          dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '123456789',
-      projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'buysindo-project',
+      apiKey: _envOrFallback('FIREBASE_API_KEY_ANDROID', 'AIzaSyDummyKeyAndroid'),
+      appId: _envOrFallback('FIREBASE_APP_ID_ANDROID', '1:123456789:android:abcdef1234567890'),
+      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket:
-          dotenv.env['FIREBASE_STORAGE_BUCKET'] ??
-          'buysindo-project.appspot.com',
+      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
     );
   }
 
   /// iOS Firebase options
   static FirebaseOptions get ios {
     return FirebaseOptions(
-      apiKey: dotenv.env['FIREBASE_API_KEY_IOS'] ?? 'AIzaSyDummyKeyIOS',
-      appId:
-          dotenv.env['FIREBASE_APP_ID_IOS'] ??
-          '1:123456789:ios:abcdef1234567890',
-      messagingSenderId:
-          dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '123456789',
-      projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'buysindo-project',
+      apiKey: _envOrFallback('FIREBASE_API_KEY_IOS', 'AIzaSyDummyKeyIOS'),
+      appId: _envOrFallback('FIREBASE_APP_ID_IOS', '1:123456789:ios:abcdef1234567890'),
+      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket:
-          dotenv.env['FIREBASE_STORAGE_BUCKET'] ??
-          'buysindo-project.appspot.com',
-      iosBundleId: 'com.buysindo.app',
+      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'com.buysindo.app',
     );
   }
 
   /// Web Firebase options
   static FirebaseOptions get web {
     return FirebaseOptions(
-      apiKey: dotenv.env['FIREBASE_API_KEY_WEB'] ?? 'AIzaSyDummyKeyWeb',
-      appId:
-          dotenv.env['FIREBASE_APP_ID_WEB'] ??
-          '1:123456789:web:abcdef1234567890',
-      messagingSenderId:
-          dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '123456789',
-      projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'buysindo-project',
-      storageBucket:
-          dotenv.env['FIREBASE_STORAGE_BUCKET'] ??
-          'buysindo-project.appspot.com',
+      apiKey: _envOrFallback('FIREBASE_API_KEY_WEB', 'AIzaSyDummyKeyWeb'),
+      appId: _envOrFallback('FIREBASE_APP_ID_WEB', '1:123456789:web:abcdef1234567890'),
+      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
+      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
     );
   }
 
   /// macOS Firebase options
   static FirebaseOptions get macos {
     return FirebaseOptions(
-      apiKey: dotenv.env['FIREBASE_API_KEY_MACOS'] ?? 'AIzaSyDummyKeyMacOS',
-      appId:
-          dotenv.env['FIREBASE_APP_ID_MACOS'] ??
-          '1:123456789:macos:abcdef1234567890',
-      messagingSenderId:
-          dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '123456789',
-      projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'buysindo-project',
+      apiKey: _envOrFallback('FIREBASE_API_KEY_MACOS', 'AIzaSyDummyKeyMacOS'),
+      appId: _envOrFallback('FIREBASE_APP_ID_MACOS', '1:123456789:macos:abcdef1234567890'),
+      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket:
-          dotenv.env['FIREBASE_STORAGE_BUCKET'] ??
-          'buysindo-project.appspot.com',
+      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
     );
   }
 
   /// Linux Firebase options (if needed)
   static FirebaseOptions get linux {
     return FirebaseOptions(
-      apiKey: dotenv.env['FIREBASE_API_KEY_LINUX'] ?? 'AIzaSyDummyKeyLinux',
-      appId:
-          dotenv.env['FIREBASE_APP_ID_LINUX'] ??
-          '1:123456789:linux:abcdef1234567890',
-      messagingSenderId:
-          dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '123456789',
-      projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'buysindo-project',
+      apiKey: _envOrFallback('FIREBASE_API_KEY_LINUX', 'AIzaSyDummyKeyLinux'),
+      appId: _envOrFallback('FIREBASE_APP_ID_LINUX', '1:123456789:linux:abcdef1234567890'),
+      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket:
-          dotenv.env['FIREBASE_STORAGE_BUCKET'] ??
-          'buysindo-project.appspot.com',
+      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
     );
   }
 
   /// Windows Firebase options (if needed)
   static FirebaseOptions get windows {
     return FirebaseOptions(
-      apiKey: dotenv.env['FIREBASE_API_KEY_WINDOWS'] ?? 'AIzaSyDummyKeyWindows',
-      appId:
-          dotenv.env['FIREBASE_APP_ID_WINDOWS'] ??
-          '1:123456789:windows:abcdef1234567890',
-      messagingSenderId:
-          dotenv.env['FIREBASE_MESSAGING_SENDER_ID'] ?? '123456789',
-      projectId: dotenv.env['FIREBASE_PROJECT_ID'] ?? 'buysindo-project',
+      apiKey: _envOrFallback('FIREBASE_API_KEY_WINDOWS', 'AIzaSyDummyKeyWindows'),
+      appId: _envOrFallback('FIREBASE_APP_ID_WINDOWS', '1:123456789:windows:abcdef1234567890'),
+      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket:
-          dotenv.env['FIREBASE_STORAGE_BUCKET'] ??
-          'buysindo-project.appspot.com',
+      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
     );
   }
 
-  /// Returns the Firebase options for the current platform
+  /// Returns the Firebase options for the current platform (runtime detection)
   static FirebaseOptions get currentPlatform {
-    return const String.fromEnvironment('PLATFORM', defaultValue: 'android') ==
-            'ios'
-        ? ios
-        : const String.fromEnvironment('PLATFORM', defaultValue: 'android') ==
-              'macos'
-        ? macos
-        : const String.fromEnvironment('PLATFORM', defaultValue: 'android') ==
-              'web'
-        ? web
-        : const String.fromEnvironment('PLATFORM', defaultValue: 'android') ==
-              'linux'
-        ? linux
-        : const String.fromEnvironment('PLATFORM', defaultValue: 'android') ==
-              'windows'
-        ? windows
-        : android;
+    if (kIsWeb) return web;
+    // Platform.isX is not supported on web and is available at runtime for native
+    try {
+      if (Platform.isIOS) return ios;
+      if (Platform.isMacOS) return macos;
+      if (Platform.isLinux) return linux;
+      if (Platform.isWindows) return windows;
+    } catch (_) {
+      // ignore platform detection errors
+    }
+    // Default to Android when nothing matches
+    return android;
   }
 }

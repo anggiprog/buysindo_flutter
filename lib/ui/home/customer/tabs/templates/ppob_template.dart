@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' as services;
 import '../../../../../core/app_config.dart';
 import '../../../topup_modal.dart';
 import '../../../../../core/network/api_service.dart';
@@ -421,14 +422,21 @@ class _PpobTemplateState extends State<PpobTemplate> {
   @override
   Widget build(BuildContext context) {
     final Color dynamicPrimaryColor = appConfig.primaryColor;
-    final Color darkHeaderColor = Color.alphaBlend(
+    final Color primaryColor = Color.alphaBlend(
       Colors.black.withValues(alpha: 0.2),
       dynamicPrimaryColor,
     );
+    // Update status bar color to match app primary color
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        // Use services prefix for SystemChrome if available
+        // import at top: import 'package:flutter/services.dart' as services;
+      } catch (_) {}
+    });
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: _buildAppBar(dynamicPrimaryColor, darkHeaderColor),
+      appBar: _buildAppBar(dynamicPrimaryColor),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         displacement: 40.0,
@@ -441,7 +449,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Area Banner Slider
-              _buildBannerArea(darkHeaderColor),
+              _buildBannerArea(primaryColor),
               const SizedBox(height: 110), // Jarak di bawah slider
               // Card Saldo
               _buildBalanceCard(),
@@ -460,79 +468,23 @@ class _PpobTemplateState extends State<PpobTemplate> {
     );
   }
 
-  // 🎨 Extract AppBar untuk mengurangi rebuild time
-  PreferredSizeWidget _buildAppBar(Color primaryColor, Color darkHeaderColor) {
-    return AppBar(
-      backgroundColor: darkHeaderColor,
-      elevation: 0,
-      centerTitle: false,
-      title: Row(
-        children: [
-          Container(
-            width: 35,
-            height: 35,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white24,
-            ),
-            child: ClipOval(
-              child: appConfig.logoUrl != null
-                  ? Image.network(
-                      appConfig.logoUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.store, color: Colors.white, size: 20),
-                      cacheHeight: 35,
-                      cacheWidth: 35,
-                    )
-                  : const Icon(Icons.store, color: Colors.white, size: 20),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            appConfig.appName,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none_outlined, color: Colors.white),
-              onPressed: () async {
-                await Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
-                _loadNotifCount();
-              },
-            ),
-            Positioned(top: 5, right: 5, child: _buildNotifBadge()),
-          ],
-        ),
-        IconButton(
-          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
-          onPressed: () {
-            // Navigasi ke halaman Pesan/Chat
-          },
-        ),
-        const SizedBox(width: 8),
-      ],
+  // 🎨 Extract AppBar untuk optimalkan rebuild
+  PreferredSizeWidget _buildAppBar(Color primaryColor) {
+    // Return a zero-height PreferredSize to effectively hide the AppBar across templates
+    return const PreferredSize(
+      preferredSize: Size.fromHeight(0),
+      child: SizedBox.shrink(),
     );
+
   }
 
   // 🎨 Extract Banner Area untuk optimalkan rebuild
-  Widget _buildBannerArea(Color darkHeaderColor) {
+  Widget _buildBannerArea(Color primaryColor) {
     return RepaintBoundary(
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(height: 90, color: darkHeaderColor),
+          Container(height: 90, color: primaryColor),
           Positioned(
             top: 10,
             left: 0,

@@ -4,18 +4,20 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:rutino_customer/core/network/api_service.dart';
-import 'package:rutino_customer/core/app_config.dart';
-import 'package:rutino_customer/ui/splash_screen.dart';
-import 'package:rutino_customer/ui/auth/login_screen.dart';
-import 'package:rutino_customer/ui/auth/register_screen.dart';
-import 'package:rutino_customer/ui/home/home_screen.dart';
+import 'core/network/api_service.dart';
+import 'core/network/session_manager.dart';
+import 'core/app_config.dart';
+import 'ui/splash_screen.dart';
+import 'ui/auth/login_screen.dart';
+import 'ui/auth/register_screen.dart';
+import 'ui/home/home_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
-import 'package:rutino_customer/ui/home/customer/notifications_page.dart';
+import 'dart:async';
+import 'ui/home/customer/notifications_page.dart';
 import 'dart:io';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' as services;
 import 'package:path_provider/path_provider.dart';
 
 // Global navigator key so we can navigate from background/message handlers
@@ -25,24 +27,41 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
 Future<void> main() async {
-  final mainStartTime = DateTime.now();
-
-  // 1. Ensure binding is initialized (FAST - ~1ms)
+  // Ensure Flutter bindings are initialized for native calls and plugins
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Load environment variables ASYNC in background
-  _loadEnvAsync();
+  // Load environment variables if used by DefaultFirebaseOptions
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (_) {
+    // ignore - .env may not exist in all environments (CI/tests)
+  }
 
-  // 3. Preserve native splash screen sampai Flutter UI siap (FAST - ~5ms)
-  FlutterNativeSplash.preserve(widgetsBinding: WidgetsBinding.instance);
+  // Initialize Firebase synchronously so any Firebase API usage after this
+  // point (including in tests) has a default app available.
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Register background message handler and request permission for messaging
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+  } catch (e) {
+    // Log the error but allow the app to continue. Tests or environments without
+    // Firebase credentials will still be able to run UI logic that doesn't
+    // require Firebase.
+    debugPrint('Firebase initialization error: $e');
+  }
 
   // 4. Load cached config dari SharedPreferences (FAST - dari local storage ~50-100ms)
   await appConfig.loadLocalConfig();
 
-  // 5. Start Firebase initialization in background (non-blocking)
-  _initializeFirebaseAsync();
-
-  // 6. Start API initialization in background - TANPA AWAIT
+  // 5. Start API initialization in background - TANPA AWAIT
   _fetchConfigAsync();
 
   runApp(const MyApp());
@@ -60,34 +79,46 @@ Future<void> _loadEnvAsync() async {
 /// Initialize Firebase in background (non-blocking)
 Future<void> _initializeFirebaseAsync() async {
   try {
-    final firebaseStart = DateTime.now();
-
-    // 1. Initialize Firebase
+    // 1. Initialize Firebase with timeout
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => throw TimeoutException('Firebase init timeout'),
     );
 
-    // 2. Setup notification channels for Android
-    await _initializeNotificationChannels();
+    // 2. Setup notification channels for Android with timeout
+    await _initializeNotificationChannels().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => throw TimeoutException('Notification channels timeout'),
+    );
 
     // 3. Register background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    // 4. Request notification permission
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      provisional: false,
-      sound: true,
-    );
+    // 4. Request notification permission with timeout
+    await FirebaseMessaging.instance
+        .requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          provisional: false,
+          sound: true,
+        )
+        .timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => throw TimeoutException('Permission request timeout'),
+        );
 
-    // 5. Get initial FCM token
+    // 5. Get initial FCM token with timeout
     try {
-      final token = await FirebaseMessaging.instance.getToken();
+      await FirebaseMessaging.instance.getToken().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw TimeoutException('FCM token timeout'),
+      );
     } catch (e) {
-      // Handle error silently
+      // Token fetch failed, continue anyway
     }
 
     // 6. Listen to token refresh
@@ -95,7 +126,7 @@ Future<void> _initializeFirebaseAsync() async {
       // Handle token refresh
     });
   } catch (e) {
-    // Handle error silently
+    // Firebase init failed but app should still work
   }
 }
 
@@ -166,10 +197,18 @@ Future<void> _initializeNotificationChannels() async {
 Future<void> _fetchConfigAsync() async {
   try {
     final dio = Dio();
+    dio.options.connectTimeout = const Duration(seconds: 10);
+    dio.options.receiveTimeout = const Duration(seconds: 10);
+
     final apiService = ApiService(dio);
-    await appConfig.initializeApp(apiService);
+    await appConfig
+        .initializeApp(apiService)
+        .timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => throw TimeoutException('API config timeout'),
+        );
   } catch (e) {
-    // Handle error silently
+    // API config failed, app will use cached config
   }
 }
 
@@ -196,6 +235,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Register lifecycle observer
     WidgetsBinding.instance.addObserver(this);
     _setupForegroundMessageHandler();
+    // After first frame, verify device token match and logout if mismatch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkDeviceTokenMismatch();
+    });
   }
 
   @override
@@ -221,6 +264,35 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           .catchError((e) {
             // Handle error silently
           });
+      // Also check device token mismatch whenever the app resumes
+      _checkDeviceTokenMismatch();
+    }
+  }
+
+  /// Check whether the saved auth token is still valid on the backend.
+  /// If invalid, clear local session and force navigation to /login.
+  Future<void> _checkDeviceTokenMismatch() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null || token.isEmpty) return;
+      final api = ApiService(Dio());
+      final valid = await api.isAuthTokenValid(token);
+      if (!valid) {
+        debugPrint('⚠️ Auth token is invalid or expired. Forcing logout.');
+        // Try to call logout endpoint (best-effort) but don't block on it
+        try {
+          await api.logout(token);
+        } catch (e) {
+          debugPrint('⚠️ Logout endpoint call failed (ignored): $e');
+        }
+        await SessionManager.clearSession();
+        // Navigate to login clearing navigation stack
+        if (navigatorKey.currentState != null) {
+          navigatorKey.currentState!.pushNamedAndRemoveUntil('/login', (route) => false);
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error while validating auth token: $e');
     }
   }
 
@@ -305,17 +377,44 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   /// Handle notification tap and navigate to appropriate screen
   Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
-    final route =
-        data['route'] ??
-        data['screen'] ??
-        data['click_action_activity'] ??
-        'notifications';
+    try {
+      final route =
+          data['route'] ?? data['screen'] ?? data['click_action_activity'] ?? 'notifications';
 
-    // Map different route names to the same notifications page
-    if (route.toString().toLowerCase().contains('notification') ||
-        route == 'NotificationListActivity' ||
-        route == 'notifications') {
-      await _safeNavigate('/notifications');
+      // Normalize route names
+      final routeName = route.toString();
+
+      if (routeName.toLowerCase().contains('notification') ||
+          routeName == 'NotificationListActivity' ||
+          routeName == 'notifications') {
+        // Try named navigation first, with a timeout-safe helper
+        try {
+          await _safeNavigate('/notifications');
+          return;
+        } catch (e) {
+          debugPrint('⚠️ _safeNavigate failed: $e -- falling back to direct push');
+        }
+
+        // Fallback: push MaterialPageRoute directly to avoid any route table issues
+        try {
+          if (navigatorKey.currentState != null) {
+            navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
+          } else {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              try {
+                navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
+              } catch (e) {
+                debugPrint('❌ Fallback navigation failed: $e');
+              }
+            });
+          }
+        } catch (e) {
+          debugPrint('❌ Error while navigating to NotificationsPage: $e');
+        }
+      }
+    } catch (e) {
+      // Catch any error to prevent crash on notification tap
+      debugPrint('❌ Unexpected error in _handleNotificationTap: $e');
     }
   }
 
@@ -330,8 +429,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         if (await f.exists()) return _cachedLargeIconPath;
       }
 
-      // Load asset bytes
-      final byteData = await rootBundle.load('assets/images/logo.png');
+      // Load asset bytes (use prefixed rootBundle to avoid collisions)
+      final byteData = await services.rootBundle.load('assets/images/logo.png');
       final bytes = byteData.buffer.asUint8List();
 
       final dir = await getTemporaryDirectory();
@@ -414,9 +513,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   : Brightness.dark,
             ),
             useMaterial3: true,
+            // Make the default AppBar visually removed across the app
             appBarTheme: AppBarTheme(
-              backgroundColor: appConfig.primaryColor,
+              backgroundColor: Colors.transparent,
               foregroundColor: appConfig.textColor,
+              elevation: 0,
+              toolbarHeight: 0,
+              shadowColor: Colors.transparent,
+              // Make title text take no space
+              titleTextStyle: const TextStyle(fontSize: 0, height: 0, color: Colors.transparent),
+              toolbarTextStyle: const TextStyle(fontSize: 0, height: 0, color: Colors.transparent),
+              iconTheme: const IconThemeData(color: Colors.transparent, size: 0),
+              actionsIconTheme: const IconThemeData(color: Colors.transparent, size: 0),
+              // Use prefixed SystemUiOverlayStyle to avoid collision with other symbols
+              systemOverlayStyle: services.SystemUiOverlayStyle.dark,
             ),
           ),
           routes: {

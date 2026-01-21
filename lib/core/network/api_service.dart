@@ -614,6 +614,90 @@ class ApiService {
     );
   }
 
+  /// Mengambil splash screen publik berdasarkan admin_user_id
+  /// Endpoint: GET api/splash-screens?admin_user_id=...
+  /// Mengembalikan Map<String, dynamic> dari objek `data` jika sukses, atau null jika gagal
+  Future<Map<String, dynamic>?> getSplashScreen(String adminUserId) async {
+    try {
+      final response = await _dio.get(
+        'api/splash-screens',
+        queryParameters: {'admin_user_id': adminUserId},
+        options: Options(validateStatus: (status) => status! < 500),
+      );
+
+      debugPrint('🌊 [ApiService] getSplashScreen status=${response.statusCode} data=${response.data}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        final body = response.data;
+        // response structure expected: { success: true, message: '', data: { ... } }
+        if (body is Map && body['data'] != null) {
+          final data = body['data'];
+          if (data is Map) {
+            // Normalize keys to String
+            final Map<String, dynamic> normalized = {};
+            data.forEach((k, v) => normalized[k.toString()] = v);
+            return normalized;
+          }
+        }
+      }
+
+      return null;
+    } on DioException catch (e) {
+      debugPrint('❌ [ApiService] getSplashScreen DioException: $e');
+      return null;
+    } catch (e) {
+      debugPrint('❌ [ApiService] getSplashScreen Error: $e');
+      return null;
+    }
+  }
+
+  /// Check whether the device token stored on backend differs from the current device token
+  /// Returns true when backend has a non-empty device_token and it is different from the device's token.
+  Future<bool> isDeviceTokenMismatch(String authToken) async {
+    try {
+      final response = await getProfile(authToken);
+      if (response.statusCode == 200 && response.data != null) {
+        final body = response.data;
+        // Expect body['user']['device_token'] or user.device_token
+        if (body is Map && body['user'] != null) {
+          final user = body['user'];
+          String? backendToken;
+          if (user is Map) {
+            backendToken = (user['device_token'] ?? user['deviceToken'])?.toString();
+          }
+
+          if (backendToken == null || backendToken.isEmpty) {
+            // backend has no token recorded - not considered a mismatch
+            return false;
+          }
+
+          final currentDeviceToken = await getDeviceToken();
+          // If currentDeviceToken is 'unknown_device_token' or 'error_getting_token', avoid false positives
+          if (currentDeviceToken == null || currentDeviceToken.isEmpty) return false;
+          if (currentDeviceToken.startsWith('unknown') || currentDeviceToken.startsWith('error')) return false;
+
+          return backendToken != currentDeviceToken;
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [ApiService] isDeviceTokenMismatch error: $e');
+    }
+    return false;
+  }
+
+  /// Check whether the provided auth token is still valid on backend.
+  /// Returns true when a protected endpoint (getProfile) returns 200.
+  Future<bool> isAuthTokenValid(String authToken) async {
+    try {
+      final response = await getProfile(authToken);
+      debugPrint('🔐 [ApiService] isAuthTokenValid status=${response.statusCode}');
+      return response.statusCode == 200;
+    } catch (e) {
+      debugPrint('❌ [ApiService] isAuthTokenValid error: $e');
+      return false;
+    }
+  }
+
   /// Handle Dio errors uniformly
   String _handleDioError(DioException e) {
     if (e.response != null) {

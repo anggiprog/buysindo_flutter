@@ -5,7 +5,19 @@
 ### **ISSUE #1: MethodChannel Name Mismatch**
 - **Sebelumnya**: Dart code menggunakan `com.buysindo.app/printer` 
 - **Masalahnya**: Android package adalah `com.rutino.customer`
-- **Solusi**: Ganti ke `com.rutino.customer/printer` ✅
+- **Solusi**: Ganti ke `com.buysindo.app/printer` ✅
+
+Contoh kode Dart:
+
+```dart
+static const platform = MethodChannel('com.buysindo.app/printer');
+```
+
+Contoh kode Kotlin:
+
+```kotlin
+private val CHANNEL = "com.buysindo.app/printer"
+```
 
 ### **ISSUE #2: Native Implementation Kosong**
 - **Sebelumnya**: MainActivity.kt tidak punya handler untuk Bluetooth

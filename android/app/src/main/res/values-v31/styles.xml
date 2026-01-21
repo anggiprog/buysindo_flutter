@@ -7,7 +7,5 @@
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
 
-    <style name="NormalTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-        <item name="android:windowBackground">?android:colorBackground</item>
-    </style>
+    <style name="NormalTheme" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
 </resources>

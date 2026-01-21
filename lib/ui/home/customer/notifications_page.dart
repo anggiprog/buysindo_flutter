@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' as services;
 import 'package:dio/dio.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/session_manager.dart';
@@ -30,6 +31,17 @@ class _NotificationsPageState extends State<NotificationsPage>
     _apiService = ApiService(Dio());
     _tabController = TabController(length: 3, vsync: this);
     _loadNotifications();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Set status bar color to app primary color
+    final color = appConfig.primaryColor;
+    final brightness = color.computeLuminance() > 0.5 ? Brightness.dark : Brightness.light;
+    services.SystemChrome.setSystemUIOverlayStyle(
+      services.SystemUiOverlayStyle(statusBarColor: color, statusBarIconBrightness: brightness),
+    );
   }
 
   Future<void> _loadNotifications() async {
@@ -229,7 +241,6 @@ class _NotificationsPageState extends State<NotificationsPage>
 
   Widget _buildList(List<NotificationModel> list) {
     if (list.isEmpty) {
-      // Return a scrollable ListView with AlwaysScrollableScrollPhysics so RefreshIndicator works
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
@@ -320,57 +331,38 @@ class _NotificationsPageState extends State<NotificationsPage>
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
-      backgroundColor: Colors.white, // halaman background putih
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: appConfig.primaryColor, // gunakan primary supaya teks putih terlihat
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Notifikasi'),
-        actions: [
-          IconButton(
-            tooltip: 'Tandai terpilih sebagai dibaca',
-            onPressed: _selectedIds.isEmpty ? null : _markSelectedAsRead,
-            icon: const Icon(Icons.mark_email_read_outlined),
-          ),
-          IconButton(
-            tooltip: 'Hapus terpilih',
-            onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-            icon: const Icon(Icons.delete_outline),
-          ),
-          IconButton(
-            tooltip: 'Hapus semua',
-            onPressed: _items.isEmpty ? null : _deleteAll,
-            icon: const Icon(Icons.delete_forever),
-          ),
-        ],
+        backgroundColor: appConfig.primaryColor,
+        elevation: 0,
+        centerTitle: false,
+        title: Text(appConfig.appName, style: TextStyle(color: appConfig.textColor)),
+        iconTheme: IconThemeData(color: appConfig.textColor),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          tabs: const [Tab(text: 'Semua'), Tab(text: 'Dibaca'), Tab(text: 'Belum')],
+          indicatorColor: appConfig.textColor,
+          labelColor: appConfig.textColor,
+          unselectedLabelColor: appConfig.textColor.withOpacity(0.7),
+          tabs: const [
+            Tab(text: 'Semua'),
+            Tab(text: 'Dibaca'),
+            Tab(text: 'Belum'),
+          ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                // Tambahkan RefreshIndicator di setiap tab untuk swipe-to-refresh
-                RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: _buildList(_all),
-                ),
-                RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: _buildList(_read),
-                ),
-                RefreshIndicator(
-                  onRefresh: _loadNotifications,
-                  child: _buildList(_unread),
-                ),
-              ],
-            ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          RefreshIndicator(onRefresh: _loadNotifications, child: _buildList(_all)),
+          RefreshIndicator(onRefresh: _loadNotifications, child: _buildList(_read)),
+          RefreshIndicator(onRefresh: _loadNotifications, child: _buildList(_unread)),
+        ],
+      ),
     );
   }
 }

@@ -27,7 +27,7 @@ val flutterVersionName = if (project.hasProperty("versionName")) {
 
 android {
     // Namespace default (akan dioverride oleh applicationId di bawah)
-    namespace = "com.rutino.customer" 
+    namespace = "com.buysindo.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -46,12 +46,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = if (project.hasProperty("appPackage")) project.property("appPackage").toString() else "com.rutino.customer"
-        
-         // 1. Ambil Package Name dari Laravel (-PappPackage)
+        // Determine applicationId from project property or fallback to namespace
         val customPackageName = if (project.hasProperty("appPackage")) {
             project.property("appPackage").toString()
         } else {
+            // Keep consistent with the module namespace
             "com.buysindo.app"
         }
         applicationId = customPackageName
@@ -111,6 +110,10 @@ flutter {
 dependencies {
     // Versi desugar terbaru kompatibel pada banyak proyek; ganti jika ingin versi lain
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+
+    // Ensure Material Components and AppCompat are present so Theme.MaterialComponents.* is resolved
+    implementation("com.google.android.material:material:1.9.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }
 
 // Opsional: Memastikan clean berjalan jika diperlukan,

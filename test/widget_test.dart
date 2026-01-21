@@ -7,10 +7,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:buysindo_app/main.dart';
+import 'package:buysindo_app/firebase_options.dart';
 
-import 'package:rutino_customer/main.dart';
+// Add Firebase imports for test setup
+import 'package:firebase_core/firebase_core.dart';
 
 void main() {
+  // Ensure Firebase is initialized before any tests that use Firebase APIs
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      // If initialization fails (e.g., missing env in CI), tests can still run
+      // as long as they don't exercise Firebase functionality directly.
+      debugPrint('Firebase init in tests failed: $e');
+    }
+  });
+
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());

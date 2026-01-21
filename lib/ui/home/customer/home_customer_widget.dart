@@ -3,6 +3,7 @@ import '../../../core/app_config.dart';
 import 'tabs/customer_dashboard.dart';
 import 'tabs/transaction_history_tab.dart';
 import 'tabs/account_tab.dart';
+import 'notifications_page.dart';
 
 class HomeCustomerScreen extends StatefulWidget {
   const HomeCustomerScreen({super.key});
@@ -14,10 +15,11 @@ class HomeCustomerScreen extends StatefulWidget {
 class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
   int _currentIndex = 0;
 
-  // Semua tab dalam satu list: Beranda, Riwayat, Akun
+  // Semua tab dalam satu list: Beranda, Riwayat, Notifikasi, Akun
   final List<Widget> _pages = [
     const CustomerDashboard(),
     const TransactionHistoryTab(),
+    const NotificationsPage(),
     const AccountTab(),
   ];
 
@@ -79,6 +81,13 @@ class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
                       child: Icon(Icons.receipt_long),
                     ),
                     label: "Riwayat",
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Icon(Icons.notifications),
+                    ),
+                    label: "Notifikasi",
                   ),
                   BottomNavigationBarItem(
                     icon: Padding(

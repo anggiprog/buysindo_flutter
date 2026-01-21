@@ -110,12 +110,17 @@ class _AccountTabState extends State<AccountTab> {
         duration: Duration(seconds: 1),
       ),
     );
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cache berhasil dihapus!")),
-        );
-      }
+
+    SessionManager.clearCacheExceptToken().then((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cache berhasil dihapus! (Token tetap disimpan)")),
+      );
+    }).catchError((e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Gagal menghapus cache. Coba lagi.")),
+      );
     });
   }
 

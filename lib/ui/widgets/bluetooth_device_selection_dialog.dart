@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:rutino_customer/core/services/bluetooth_printer_service.dart';
+import 'package:buysindo_app/core/services/bluetooth_printer_service.dart';
 
 class BluetoothDeviceSelectionDialog extends StatefulWidget {
   final List<BluetoothDevice> devices;
