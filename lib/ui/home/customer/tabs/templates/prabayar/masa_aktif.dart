@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-//import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -10,14 +9,14 @@ import '../../../../../../core/network/api_service.dart';
 import '../../../../../../core/network/session_manager.dart';
 import '../detail_pulsa_page.dart';
 
-class PulsaPage extends StatefulWidget {
-  const PulsaPage({super.key});
+class MasaAktifPage extends StatefulWidget {
+  const MasaAktifPage({super.key});
 
   @override
-  State<PulsaPage> createState() => _PulsaPageState();
+  State<MasaAktifPage> createState() => _MasaAktifPageState();
 }
 
-class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
+class _MasaAktifPageState extends State<MasaAktifPage> with TickerProviderStateMixin {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
 
@@ -69,15 +68,13 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
 
     try {
       final String? token = await SessionManager.getToken();
-      // Jika forceRefresh = true (dari pull-to-refresh), fetch dari API
-      // Jika forceRefresh = false (initial load), gunakan cache terlebih dahulu
       final products = await _apiService.getProducts(token, forceRefresh: forceRefresh);
 
       if (mounted) {
         setState(() {
-          // Filter awal: Hanya ambil kategori PULSA agar tidak campur dengan Voucher/Data
+          // Filter: Hanya ambil kategori MASA AKTIF
           _allProducts = products
-              .where((p) => p.category.toUpperCase().contains("PULSA"))
+              .where((p) => p.category.toUpperCase().contains("MASA AKTIF"))
               .toList();
           _isLoading = false;
         });
@@ -143,7 +140,7 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
   void _updateDynamicTabs() {
     if (_operatorName.isEmpty) return;
 
-    // Filter berdasarkan Brand dan Kategori PULSA
+    // Filter berdasarkan Brand dan Kategori MASA AKTIF
     final filteredByBrand = _allProducts.where((p) {
       return p.brand.toUpperCase() == _operatorName;
     }).toList();
@@ -177,7 +174,7 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
       backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
         title: const Text(
-          "Isi Pulsa",
+          "Masa Aktif",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -338,7 +335,7 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                 controller: _searchController,
                 style: const TextStyle(color: Colors.black),
                 decoration: InputDecoration(
-                  hintText: "Cari nominal...",
+                  hintText: "Cari paket masa aktif...",
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
@@ -397,7 +394,7 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
   }
 
   Widget _buildProductList(String type) {
-    // FILTER AKHIR: Berdasarkan Brand, Category (PULSA), dan Type (Tab)
+    // FILTER AKHIR: Berdasarkan Brand, Category (MASA AKTIF), dan Type (Tab)
     List<ProductPrabayar> filtered = _allProducts.where((p) {
       return p.brand.toUpperCase() == _operatorName &&
           p.type == type &&
@@ -482,7 +479,7 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(8),
                     color: Colors.grey.shade200,
                   ),
-                  child: Icon(Icons.phone_android, color: appConfig.primaryColor),
+                  child: Icon(Icons.schedule, color: appConfig.primaryColor),
                 ),
               Expanded(
                 child: Column(
@@ -497,83 +494,92 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(
-                          product.description,
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                        ),
-                        const SizedBox(width: 8),
-                        // STATUS BADGE DI SAMPING DESKRIPSI
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isAvailable
-                                ? Colors.green.withOpacity(0.1)
-                                : Colors.red.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isAvailable ? Icons.check_circle : Icons.error,
-                                size: 10,
-                                color: isAvailable ? Colors.green : Colors.red,
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                isAvailable ? "Tersedia" : "Gangguan",
-                                style: TextStyle(
-                                  color: isAvailable ? Colors.green : Colors.red,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    Expanded(
+                      child: Text(
+                        product.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // HARGA ASLI CORET (jika ada diskon)
-                  if (discountAmount > 0)
-                    Text(
-                      strikePrice,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 11,
-                        decoration: TextDecoration.lineThrough,
-                      ),
+              // STATUS BADGE (Tetap di kanan)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isAvailable
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isAvailable ? Icons.check_circle : Icons.error,
+                      size: 10,
+                      color: isAvailable ? Colors.green : Colors.red,
                     ),
-                  if (discountAmount > 0) const SizedBox(height: 2),
-                  // HARGA DISKON (HARGA JUAL)
-                  Text(
-                    salePrice,
-                    style: TextStyle(
-                      color: appConfig.primaryColor,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 17,
-                    ),
-                  ),
-                  if (discountAmount > 0) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(width: 2),
                     Text(
-                      "Hemat Rp ${discountAmount.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}",
+                      isAvailable ? "Tersedia" : "Gangguan",
                       style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 10,
+                        color: isAvailable ? Colors.green : Colors.red,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
-                ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              LimitedBox(
+                maxWidth: 90,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // HARGA ASLI CORET (jika ada diskon)
+                    if (discountAmount > 0)
+                      Text(
+                        strikePrice,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 11,
+                          decoration: TextDecoration.lineThrough,
+                        ),
+                      ),
+                    if (discountAmount > 0) const SizedBox(height: 2),
+                    // HARGA DISKON (HARGA JUAL)
+                    Text(
+                      salePrice,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: appConfig.primaryColor,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                      ),
+                    ),
+                    if (discountAmount > 0) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        "Hemat Rp ${discountAmount.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               const SizedBox(width: 8),
               const Icon(Icons.arrow_forward_ios, size: 12, color: Colors.grey),
@@ -589,12 +595,12 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.phonelink_ring_outlined, size: 70, color: Colors.grey.shade300),
+          Icon(Icons.schedule, size: 70, color: Colors.grey.shade300),
           const SizedBox(height: 16),
           Text(
             _operatorName.isEmpty
                 ? "Masukkan nomor untuk cek produk"
-                : "Produk Pulsa tidak ditemukan",
+                : "Produk masa aktif tidak ditemukan",
             style: TextStyle(color: Colors.grey.shade500),
           ),
         ],

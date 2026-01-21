@@ -11,6 +11,9 @@ import '../../../../../core/utils/format_util.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // Import library
 import '../../../../../core/network/session_manager.dart';
 import '../../tabs/templates/prabayar/pulsa.dart';
+import '../../tabs/templates/prabayar/data.dart';
+import '../../tabs/templates/prabayar/sms.dart';
+import '../../tabs/templates/prabayar/masa_aktif.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../notifications_page.dart';
@@ -89,12 +92,10 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (cachedMenu != null) {
           try {
             final List<dynamic> data = jsonDecode(cachedMenu);
-            _menuList = data
-                .map((item) => MenuPrabayarItem.fromJson(item))
-                .toList();
+            _menuList = data.map((item) => MenuPrabayarItem.fromJson(item)).toList();
             _isLoadingMenu = false;
           } catch (e) {
-            debugPrint('Error loading cached menu: $e');
+            // Handle error silently
           }
         }
 
@@ -108,7 +109,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 .toList();
             _isLoadingPascabayar = false;
           } catch (e) {
-            debugPrint('Error loading cached pascabayar: $e');
+            // Handle error silently
           }
         }
 
@@ -180,7 +181,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (mounted) setState(() => _isLoadingSaldo = false);
       }
     } catch (e) {
-      debugPrint('Error fetching saldo: $e');
       if (mounted) setState(() => _isLoadingSaldo = false);
     }
   }
@@ -209,7 +209,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (mounted) setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
-      debugPrint('Error fetching banners: $e');
       if (mounted) setState(() => _isLoadingBanners = false);
     }
   }
@@ -234,9 +233,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
         final data = MenuPrabayarResponse.fromJson(response.data);
 
         // Cache to SharedPreference
-        final menusJson = jsonEncode(
-          data.menus.map((m) => m.toJson()).toList(),
-        );
+        final menusJson = jsonEncode(data.menus.map((m) => m.toJson()).toList());
         await _prefs.setString('cached_menu_prabayar', menusJson);
 
         if (mounted) {
@@ -249,7 +246,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (mounted) setState(() => _isLoadingMenu = false);
       }
     } catch (e) {
-      debugPrint('Error fetching menu prabayar: $e');
       if (mounted) setState(() => _isLoadingMenu = false);
     }
   }
@@ -272,9 +268,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
             .toList();
 
         // Cache to SharedPreference
-        final pascabayarJson = jsonEncode(
-          pascabayarList.map((p) => p.toJson()).toList(),
-        );
+        final pascabayarJson = jsonEncode(pascabayarList.map((p) => p.toJson()).toList());
         await _prefs.setString('cached_menu_pascabayar', pascabayarJson);
 
         if (mounted) {
@@ -285,7 +279,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
         }
       }
     } catch (e) {
-      debugPrint('Error fetching pascabayar: $e');
       if (mounted) setState(() => _isLoadingPascabayar = false);
     }
   }
@@ -313,18 +306,15 @@ class _PpobTemplateState extends State<PpobTemplate> {
     setState(() => _isNotifLoading = true);
     try {
       final String? token = await SessionManager.getToken();
-      debugPrint('🔔 [_loadNotifCount] token from SessionManager: $token');
 
       // Panggil API meskipun token null — ApiService menangani header optional
       final count = await _api_service_getCountSafe(token);
-      debugPrint('🔔 [_loadNotifCount] fetched count: $count');
       if (!mounted) return;
       setState(() {
         _notifCount = count;
         _isNotifLoading = false;
       });
     } catch (e) {
-      debugPrint('❌ Error loading notif count: $e');
       if (!mounted) return;
       setState(() {
         _notifCount = 0;
@@ -366,7 +356,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
         return 0;
       }
       final resp = await _apiService.getUserUnreadCount(token);
-      debugPrint('🔔 [_api_service_getRaw] unread-count status: ${resp.statusCode} data: ${resp.data}');
       if (resp.statusCode == 200 && resp.data != null) {
         final data = resp.data;
         final Map<String, dynamic> map = {};
@@ -391,17 +380,17 @@ class _PpobTemplateState extends State<PpobTemplate> {
     return GestureDetector(
       onTap: () async {
         // Navigate to notifications page
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const NotificationsPage()),
-        );
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
         // refresh count when returning
         _loadNotifCount();
       },
       onLongPress: () {
         final msg = _lastNotifResponse ?? 'No response cached';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Notif debug: $msg')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Notif debug: $msg')));
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -411,7 +400,11 @@ class _PpobTemplateState extends State<PpobTemplate> {
         ),
         child: Center(
           child: _isNotifLoading
-              ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              ? const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
               : Text(
                   display,
                   style: const TextStyle(
@@ -435,85 +428,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: darkHeaderColor,
-        elevation: 0,
-        centerTitle: false, // Memastikan title tetap di kiri
-        title: Row(
-          children: [
-            // Membungkus Logo agar menjadi Bulat
-            Container(
-              width: 35,
-              height: 35,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white24, // Background tipis jika logo transparan
-              ),
-              child: ClipOval(
-                child: appConfig.logoUrl != null
-                    ? Image.network(
-                        appConfig.logoUrl!,
-                        fit: BoxFit
-                            .cover, // Memastikan gambar memenuhi lingkaran
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(
-                              Icons.store,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                      )
-                    : const Icon(Icons.store, color: Colors.white, size: 20),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              appConfig.appName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        // --- TAMBAHAN ICON NOTIFIKASI & PESAN ---
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_none_outlined,
-                  color: Colors.white,
-                ),
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
-                  );
-                  _loadNotifCount();
-                },
-              ),
-              // Badge merah dengan angka
-              Positioned(
-                top: 5, // Sesuaikan posisi agar angka terlihat jelas
-                right: 5,
-                child: _buildNotifBadge(),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              // Navigasi ke halaman Pesan/Chat
-            },
-          ),
-          const SizedBox(width: 8), // Memberi sedikit jarak di paling kanan
-        ],
-      ),
-
+      appBar: _buildAppBar(dynamicPrimaryColor, darkHeaderColor),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         displacement: 40.0,
@@ -523,39 +438,116 @@ class _PpobTemplateState extends State<PpobTemplate> {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Area Banner Slider
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(height: 90, color: darkHeaderColor),
-                  Positioned(
-                    top: 10,
-                    left: 0,
-                    right: 0,
-                    child: _isLoadingBanners
-                        ? const SizedBox(
-                            height: 160,
-                            child: Center(child: CircularProgressIndicator()),
-                          )
-                        : BannerSliderWidget(
-                            banners: _bannerList,
-                            baseUrl: apiService.imageBaseUrl,
-                          ),
-                  ),
-                ],
-              ),
+              _buildBannerArea(darkHeaderColor),
               const SizedBox(height: 110), // Jarak di bawah slider
               // Card Saldo
               _buildBalanceCard(),
 
-              // Grid Menu
+              // Grid Menu Header + Grid Content
               _buildMenuGrid(),
-              // Grid Pascabayar
+              _buildMenuGridContent(),
+
+              // Grid Pascabayar Header + Content
               _buildPascabayarGrid(),
+              _buildPascabayarGridContent(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // 🎨 Extract AppBar untuk mengurangi rebuild time
+  PreferredSizeWidget _buildAppBar(Color primaryColor, Color darkHeaderColor) {
+    return AppBar(
+      backgroundColor: darkHeaderColor,
+      elevation: 0,
+      centerTitle: false,
+      title: Row(
+        children: [
+          Container(
+            width: 35,
+            height: 35,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white24,
+            ),
+            child: ClipOval(
+              child: appConfig.logoUrl != null
+                  ? Image.network(
+                      appConfig.logoUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.store, color: Colors.white, size: 20),
+                      cacheHeight: 35,
+                      cacheWidth: 35,
+                    )
+                  : const Icon(Icons.store, color: Colors.white, size: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            appConfig.appName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_none_outlined, color: Colors.white),
+              onPressed: () async {
+                await Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
+                _loadNotifCount();
+              },
+            ),
+            Positioned(top: 5, right: 5, child: _buildNotifBadge()),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white),
+          onPressed: () {
+            // Navigasi ke halaman Pesan/Chat
+          },
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  // 🎨 Extract Banner Area untuk optimalkan rebuild
+  Widget _buildBannerArea(Color darkHeaderColor) {
+    return RepaintBoundary(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(height: 90, color: darkHeaderColor),
+          Positioned(
+            top: 10,
+            left: 0,
+            right: 0,
+            child: _isLoadingBanners
+                ? const SizedBox(
+                    height: 160,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : BannerSliderWidget(
+                    banners: _bannerList,
+                    baseUrl: apiService.imageBaseUrl,
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -596,11 +588,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildQuickAction(
-                  Icons.account_balance_wallet,
-                  "Isi Saldo",
-                  _showTopup,
-                ),
+                _buildQuickAction(Icons.account_balance_wallet, "Isi Saldo", _showTopup),
                 _buildQuickAction(Icons.history, "Riwayat", () {}),
                 _buildQuickAction(Icons.stars, "Poin: 0", () {}),
               ],
@@ -616,8 +604,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+        children: const [
+          Text(
             "Isi Ulang Harian",
             style: TextStyle(
               fontSize: 16,
@@ -625,60 +613,68 @@ class _PpobTemplateState extends State<PpobTemplate> {
               color: Colors.black,
             ),
           ),
-          const Text(
+          Text(
             "Yuk Pilih Produk Disini",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          const SizedBox(height: 16),
-          if (_isLoadingMenu)
-            const SizedBox(
-              height: 150,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_menuList.isEmpty)
-            const SizedBox(
-              height: 100,
-              child: Center(child: Text("Tidak ada menu tersedia")),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                mainAxisExtent:
-                    105, // Menentukan tinggi tetap tiap item agar tidak overflow
-              ),
-              itemCount: _showAllMenus
-                  ? _menuList.length
-                  : (_menuList.length > 8 ? 8 : _menuList.length),
-              itemBuilder: (context, index) {
-                // Jika mencapai index ke-7 dan ada lebih dari 8 menu, dan tidak sedang showAll
-                if (!_showAllMenus && _menuList.length > 8 && index == 7) {
-                  return _buildMoreMenuIcon();
-                }
-                return _buildDynamicMenuIcon(_menuList[index]);
-              },
-            ),
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
 
-          // Tombol Sembunyikan
-          if (_showAllMenus && _menuList.length > 8)
-            Padding(
-              padding: const EdgeInsets.only(top: 15),
-              child: Center(
-                child: TextButton.icon(
-                  onPressed: () => setState(() => _showAllMenus = false),
-                  icon: const Icon(Icons.expand_less),
-                  label: const Text("Sembunyikan"),
-                  style: TextButton.styleFrom(
-                    foregroundColor: appConfig.primaryColor,
+  // 🎨 Separate grid content untuk optimalkan rebuild dengan RepaintBoundary
+  Widget _buildMenuGridContent() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: RepaintBoundary(
+        child: Column(
+          children: [
+            if (_isLoadingMenu)
+              const SizedBox(
+                height: 150,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_menuList.isEmpty)
+              const SizedBox(
+                height: 100,
+                child: Center(child: Text("Tidak ada menu tersedia")),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  mainAxisExtent: 105,
+                ),
+                itemCount: _showAllMenus
+                    ? _menuList.length
+                    : (_menuList.length > 8 ? 8 : _menuList.length),
+                itemBuilder: (context, index) {
+                  if (!_showAllMenus && _menuList.length > 8 && index == 7) {
+                    return _buildMoreMenuIcon();
+                  }
+                  return _buildDynamicMenuIcon(_menuList[index]);
+                },
+              ),
+            // Tombol Sembunyikan
+            if (_showAllMenus && _menuList.length > 8)
+              Padding(
+                padding: const EdgeInsets.only(top: 15),
+                child: Center(
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _showAllMenus = false),
+                    icon: const Icon(Icons.expand_less),
+                    label: const Text("Sembunyikan"),
+                    style: TextButton.styleFrom(foregroundColor: appConfig.primaryColor),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -686,8 +682,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
   Widget _buildDynamicMenuIcon(MenuPrabayarItem menu) {
     // 👈 Use gambar_url from API if available, fallback to manual URL building
     final imageUrl =
-        menu.gambarUrl ??
-        '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
+        menu.gambarUrl ?? '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
 
     return InkWell(
       onTap: () {
@@ -696,10 +691,25 @@ class _PpobTemplateState extends State<PpobTemplate> {
             context,
             MaterialPageRoute(builder: (context) => const PulsaPage()),
           );
+        } else if (menu.namaKategori == "Data") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DataPage()),
+          );
+        } else if (menu.namaKategori == "Paket SMS & Telpon") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SmsPage()),
+          );
+        } else if (menu.namaKategori == "Masa Aktif") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MasaAktifPage()),
+          );
         } else {
-          debugPrint("Kategori ${menu.namaKategori} belum diatur");
+          // Menu category not handled
         }
-      }, // Penutup onTap yang benar
+      },
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -723,11 +733,10 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 width: 40,
                 height: 40,
                 fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Icon(
-                  Icons.image_not_supported,
-                  size: 40,
-                  color: Colors.grey[400],
-                ),
+                cacheHeight: 40,
+                cacheWidth: 40,
+                errorBuilder: (context, error, stackTrace) =>
+                    Icon(Icons.image_not_supported, size: 40, color: Colors.grey[400]),
               ),
             ),
           ),
@@ -760,11 +769,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
               color: appConfig.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(
-              Icons.more_horiz,
-              color: appConfig.primaryColor,
-              size: 40,
-            ),
+            child: Icon(Icons.more_horiz, color: appConfig.primaryColor, size: 40),
           ),
           const SizedBox(height: 6),
           Text(
@@ -795,10 +800,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
             child: Icon(icon, color: appConfig.primaryColor, size: 30),
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: Colors.black),
-          ),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black)),
         ],
       ),
     );
@@ -812,8 +814,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+        children: const [
+          Text(
             "Tagihan Pascabayar",
             style: TextStyle(
               fontSize: 16,
@@ -821,96 +823,106 @@ class _PpobTemplateState extends State<PpobTemplate> {
               color: Colors.black,
             ),
           ),
-          const Text(
+          Text(
             "Bayar tagihan bulanan lebih mudah",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          const SizedBox(height: 16),
-          if (_isLoadingPascabayar)
-            const SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_pascabayarList.isEmpty)
-            const SizedBox(
-              height: 50,
-              child: Center(child: Text("Menu tidak tersedia")),
-            )
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 10,
-                crossAxisSpacing: 10,
-                mainAxisExtent: 105,
-              ),
-              itemCount: _pascabayarList.length,
-              itemBuilder: (context, index) {
-                final menu = _pascabayarList[index];
+          SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
 
-                // PERBAIKAN DI SINI:
-                // Gunakan gambarUrl dari API jika tersedia, fallback ke manual construction
-                final imageUrl =
-                    menu.gambarUrl ??
-                    '${apiService.imagePascabayarUrl}${menu.gambarBrand}';
+  Widget _buildPascabayarGridContent() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 15),
+      child: RepaintBoundary(
+        child: Column(
+          children: [
+            if (_isLoadingPascabayar)
+              const SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_pascabayarList.isEmpty)
+              const SizedBox(
+                height: 50,
+                child: Center(child: Text("Menu tidak tersedia")),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  mainAxisExtent: 105,
+                ),
+                itemCount: _pascabayarList.length,
+                itemBuilder: (context, index) {
+                  final menu = _pascabayarList[index];
+                  final imageUrl =
+                      menu.gambarUrl ??
+                      '${apiService.imagePascabayarUrl}${menu.gambarBrand}';
 
-                // LOG UNTUK TESTING (Bisa dihapus setelah gambar muncul)
-
-                return InkWell(
-                  onTap: () => debugPrint("Klik: ${menu.namaBrand}"),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 5,
-                              offset: const Offset(0, 2),
+                  return InkWell(
+                    onTap: () {
+                      // Handle brand tap
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              imageUrl,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              cacheHeight: 40,
+                              cacheWidth: 40,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.receipt_long,
+                                  size: 40,
+                                  color: Colors.grey[400],
+                                );
+                              },
                             ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            imageUrl,
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.contain,
-                            // Jika URL salah atau 404, icon ini yang muncul
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.receipt_long,
-                                size: 40,
-                                color: Colors.grey[400],
-                              );
-                            },
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        menu.namaBrand,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
+                        const SizedBox(height: 6),
+                        Text(
+                          menu.namaBrand,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

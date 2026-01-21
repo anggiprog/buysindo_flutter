@@ -14,6 +14,9 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
 import 'package:rutino_customer/ui/home/customer/notifications_page.dart';
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
 
 // Global navigator key so we can navigate from background/message handlers
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -26,37 +29,21 @@ Future<void> main() async {
 
   // 1. Ensure binding is initialized (FAST - ~1ms)
   WidgetsFlutterBinding.ensureInitialized();
-  debugPrint('⚡ Binding initialized');
 
   // 2. Load environment variables ASYNC in background
-  debugPrint('📋 Loading .env file (background)...');
   _loadEnvAsync();
 
   // 3. Preserve native splash screen sampai Flutter UI siap (FAST - ~5ms)
-  debugPrint('🎨 Preserving native splash...');
   FlutterNativeSplash.preserve(widgetsBinding: WidgetsBinding.instance);
 
   // 4. Load cached config dari SharedPreferences (FAST - dari local storage ~50-100ms)
-  debugPrint('📥 Loading cached config...');
-  final cacheStart = DateTime.now();
   await appConfig.loadLocalConfig();
-  final cacheDuration = DateTime.now().difference(cacheStart);
-  debugPrint(
-    '✅ Cached config loaded (${cacheDuration.inMilliseconds}ms). Tampilan: "${appConfig.tampilan}"',
-  );
 
-  // 5. Initialize Firebase di background (NON-BLOCKING UI) - TANPA AWAIT
-  debugPrint('🔥 Starting Firebase initialization (background)...');
+  // 5. Start Firebase initialization in background (non-blocking)
   _initializeFirebaseAsync();
 
   // 6. Start API initialization in background - TANPA AWAIT
-  debugPrint('🌐 Starting API config fetch (background)...');
   _fetchConfigAsync();
-
-  final totalDuration = DateTime.now().difference(mainStartTime);
-  debugPrint(
-    '⏱️ Total main() duration: ${totalDuration.inMilliseconds}ms (READY TO SHOW APP)',
-  );
 
   runApp(const MyApp());
 }
@@ -65,9 +52,8 @@ Future<void> main() async {
 Future<void> _loadEnvAsync() async {
   try {
     await dotenv.load(fileName: ".env");
-    debugPrint('✅ .env loaded in background');
   } catch (e) {
-    debugPrint('⚠️ .env loading failed: $e');
+    // Handle error silently
   }
 }
 
@@ -75,60 +61,41 @@ Future<void> _loadEnvAsync() async {
 Future<void> _initializeFirebaseAsync() async {
   try {
     final firebaseStart = DateTime.now();
+
+    // 1. Initialize Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    final firebaseDuration = DateTime.now().difference(firebaseStart);
-    debugPrint('✅ Firebase initialized (${firebaseDuration.inMilliseconds}ms)');
 
-    // Setup notification channels for Android - DEFER ke later
-    debugPrint('📢 [FCM] Preparing notification channels (deferred)...');
-    Future.microtask(() => _initializeNotificationChannels());
+    // 2. Setup notification channels for Android
+    await _initializeNotificationChannels();
 
-    // Setup Firebase Messaging
-    Future.microtask(() async {
-      try {
-        // 1. Request notification permission
-        debugPrint('🔔 [FCM] Requesting notification permission...');
-        final settings = await FirebaseMessaging.instance.requestPermission(
-          alert: true,
-          announcement: false,
-          badge: true,
-          carPlay: false,
-          provisional: false,
-          sound: true,
-        );
+    // 3. Register background message handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-        debugPrint(
-          '✅ [FCM] Notification permission: ${settings.authorizationStatus}',
-        );
+    // 4. Request notification permission
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      provisional: false,
+      sound: true,
+    );
 
-        // 2. Register background message handler
-        debugPrint('📨 [FCM] Registering background message handler...');
-        FirebaseMessaging.onBackgroundMessage(
-          _firebaseMessagingBackgroundHandler,
-        );
-        debugPrint('✅ [FCM] Background message handler registered');
+    // 5. Get initial FCM token
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+    } catch (e) {
+      // Handle error silently
+    }
 
-        // 3. Get initial FCM token
-        debugPrint('🔑 [FCM] Getting initial device token...');
-        final token = await FirebaseMessaging.instance.getToken();
-        debugPrint('✅ [FCM] Device Token: $token');
-
-        // 4. Listen to token refresh
-        debugPrint('👂 [FCM] Listening to token refresh...');
-        FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-          debugPrint('🔄 [FCM] Token refreshed: $newToken');
-          // TODO: Send new token to your backend
-        });
-
-        debugPrint('✅ [FCM] Firebase Messaging fully initialized!');
-      } catch (e) {
-        debugPrint('⚠️ [FCM] Error during FCM setup: $e');
-      }
+    // 6. Listen to token refresh
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+      // Handle token refresh
     });
   } catch (e) {
-    debugPrint('❌ Firebase initialization error: $e');
+    // Handle error silently
   }
 }
 
@@ -150,8 +117,12 @@ Future<void> _initializeNotificationChannels() async {
           final payload = response.payload;
           if (payload != null && payload.isNotEmpty) {
             final Map<String, dynamic> data = jsonDecode(payload);
-            final route = data['route'] ?? data['screen'] ?? data['click_action_activity'];
-            if (route == 'notifications' || route == 'NotificationListActivity') {
+            final route =
+                data['route'] ??
+                data['screen'] ??
+                data['click_action_activity'];
+            if (route == 'notifications' ||
+                route == 'NotificationListActivity') {
               // Use navigatorKey to navigate to NotificationsPage; schedule if navigator not ready
               if (navigatorKey.currentState != null) {
                 navigatorKey.currentState?.pushNamed('/notifications');
@@ -163,7 +134,7 @@ Future<void> _initializeNotificationChannels() async {
             }
           }
         } catch (e) {
-          debugPrint('Error handling local notification tap: $e');
+          // Handle error silently
         }
       },
       // For older versions of the plugin, provide onSelectNotification fallback
@@ -186,37 +157,26 @@ Future<void> _initializeNotificationChannels() async {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.createNotificationChannel(channel);
-
-    debugPrint('✅ [Notification] Channel created: buysindo_fcm_channel');
   } catch (e) {
-    debugPrint('⚠️ [Notification] Error creating channels: $e');
+    // Silently handle notification channel creation errors
   }
 }
 
 /// Initialize Firebase & API config in background tanpa blocking UI
 Future<void> _fetchConfigAsync() async {
   try {
-    debugPrint('🌐 [BACKGROUND] Fetching config dari API...');
-    final apiStart = DateTime.now();
     final dio = Dio();
     final apiService = ApiService(dio);
     await appConfig.initializeApp(apiService);
-    final apiDuration = DateTime.now().difference(apiStart);
-    debugPrint(
-      '✅ [BACKGROUND] Config dari API selesai (${apiDuration.inMilliseconds}ms). Tampilan: "${appConfig.tampilan}"',
-    );
   } catch (e) {
-    debugPrint('❌ [BACKGROUND] API config fetch error: $e');
+    // Handle error silently
   }
 }
 
 /// Background message handler for Firebase Cloud Messaging
 /// This runs when app is in background or terminated
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('🔔 [BACKGROUND FCM] Message received: ${message.messageId}');
-  debugPrint('📌 [BACKGROUND FCM] Title: ${message.notification?.title}');
-  debugPrint('📌 [BACKGROUND FCM] Body: ${message.notification?.body}');
-  debugPrint('📌 [BACKGROUND FCM] Data: ${message.data}');
+  // Handle background message
 
   // Anda bisa add custom logic di sini untuk handle background notifications
   // Misalnya: simpan ke local storage, trigger background fetch, dll
@@ -248,31 +208,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // When returning to foreground, re-check initial message as a fallback
     if (state == AppLifecycleState.resumed) {
-      FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
-        if (message != null && message.data.isNotEmpty) {
-          // Schedule navigation after frame to ensure navigator is ready
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _handleNotificationTap(message.data);
+      FirebaseMessaging.instance
+          .getInitialMessage()
+          .then((RemoteMessage? message) {
+            if (message != null && message.data.isNotEmpty) {
+              // Schedule navigation after frame to ensure navigator is ready
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _handleNotificationTap(message.data);
+              });
+            }
+          })
+          .catchError((e) {
+            // Handle error silently
           });
-        }
-      }).catchError((e) {
-        debugPrint('⚠️ [FCM] Error checking initial message on resume: $e');
-      });
     }
   }
 
   /// Setup foreground message handler
   /// This runs when app is in foreground
   void _setupForegroundMessageHandler() {
-    debugPrint('📱 [FCM] Setting up foreground message handler...');
-
     // 1. Handle message received when app in foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('🔔 [FOREGROUND FCM] Message received: ${message.messageId}');
-      debugPrint('📌 [FOREGROUND FCM] Title: ${message.notification?.title}');
-      debugPrint('📌 [FOREGROUND FCM] Body: ${message.notification?.body}');
-      debugPrint('📌 [FOREGROUND FCM] Data: ${message.data}');
-
       // Show notification using local notifications plugin
       if (message.notification != null) {
         _displayNotification(message);
@@ -281,15 +237,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // 2. Handle notification tap when app is in foreground/background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint(
-        '👆 [FCM] Notification tapped (app running): ${message.messageId}',
-      );
-      debugPrint('📌 [FCM] Data: ${message.data}');
       // Ensure navigation occurs after frame if navigator not ready
       if (navigatorKey.currentState != null) {
         _handleNotificationTap(message.data);
       } else {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _handleNotificationTap(message.data));
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => _handleNotificationTap(message.data),
+        );
       }
     });
 
@@ -298,17 +252,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       RemoteMessage? message,
     ) {
       if (message != null) {
-        debugPrint(
-          '🔁 [FCM] App opened from terminated state by message: ${message.messageId}',
-        );
-        debugPrint('📌 [FCM] Data: ${message.data}');
         // Delay navigation slightly to allow app to finish init
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (navigatorKey.currentState != null) {
             _handleNotificationTap(message.data);
           } else {
             // try again next frame
-            WidgetsBinding.instance.addPostFrameCallback((__) => _handleNotificationTap(message.data));
+            WidgetsBinding.instance.addPostFrameCallback(
+              (__) => _handleNotificationTap(message.data),
+            );
           }
         });
       }
@@ -320,20 +272,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        debugPrint('👆 [LOCAL NOTIFICATION] Tapped: ${response.payload}');
         try {
           if (response.payload != null && response.payload!.isNotEmpty) {
             final Map<String, dynamic> data = jsonDecode(response.payload!);
-            debugPrint('📌 [LOCAL NOTIFICATION] Decoded data: $data');
             _handleNotificationTap(data);
           }
         } catch (e) {
-          debugPrint('❌ [LOCAL NOTIFICATION] Error parsing payload: $e');
+          // Handle error silently
         }
       },
     );
-
-    debugPrint('✅ [FCM] Foreground message handler setup complete');
   }
 
   /// Safe navigation helper that retries until navigatorKey.currentState is available
@@ -353,24 +301,46 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return;
       }
     }
-    debugPrint('❌ [NAVIGATION] Failed to navigate to $routeName - navigator not ready');
   }
 
   /// Handle notification tap and navigate to appropriate screen
   Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
     final route =
-        data['route'] ?? data['screen'] ?? data['click_action_activity'] ?? 'notifications';
-
-    debugPrint('🔍 [NOTIFICATION TAP] Parsed route: "$route"');
+        data['route'] ??
+        data['screen'] ??
+        data['click_action_activity'] ??
+        'notifications';
 
     // Map different route names to the same notifications page
     if (route.toString().toLowerCase().contains('notification') ||
         route == 'NotificationListActivity' ||
         route == 'notifications') {
-      debugPrint('✅ [NAVIGATION] Navigating to NotificationsPage');
       await _safeNavigate('/notifications');
-    } else {
-      debugPrint('⚠️ [NAVIGATION] Unknown route: $route');
+    }
+  }
+
+  // Cache path for the large icon file so we don't write it every time
+  String? _cachedLargeIconPath;
+
+  /// Ensure asset image is written to a file and return the file path
+  Future<String?> _ensureLargeIconFile() async {
+    try {
+      if (_cachedLargeIconPath != null) {
+        final f = File(_cachedLargeIconPath!);
+        if (await f.exists()) return _cachedLargeIconPath;
+      }
+
+      // Load asset bytes
+      final byteData = await rootBundle.load('assets/images/logo.png');
+      final bytes = byteData.buffer.asUint8List();
+
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/notif_large_icon.png');
+      await file.writeAsBytes(bytes, flush: true);
+      _cachedLargeIconPath = file.path;
+      return _cachedLargeIconPath;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -386,17 +356,31 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         'body': notification?.body ?? '',
       };
 
-      const AndroidNotificationDetails androidPlatformChannelSpecifics =
-          AndroidNotificationDetails(
-            'buysindo_fcm_channel',
-            'Buysindo Notifications',
-            channelDescription: 'Notifications from Buysindo',
-            importance: Importance.max,
-            priority: Priority.high,
-            showWhen: true,
-          );
+      // Try to include the app logo as largeIcon on Android (cached file path)
+      final largeIconPath = await _ensureLargeIconFile();
 
-      const NotificationDetails platformChannelSpecifics = NotificationDetails(
+      // Create AndroidNotificationDetails dynamically so we can include FilePathAndroidBitmap
+      final AndroidNotificationDetails androidPlatformChannelSpecifics =
+          largeIconPath != null
+          ? AndroidNotificationDetails(
+              'buysindo_fcm_channel',
+              'Buysindo Notifications',
+              channelDescription: 'Notifications from Buysindo',
+              importance: Importance.max,
+              priority: Priority.high,
+              showWhen: true,
+              largeIcon: FilePathAndroidBitmap(largeIconPath),
+            )
+          : AndroidNotificationDetails(
+              'buysindo_fcm_channel',
+              'Buysindo Notifications',
+              channelDescription: 'Notifications from Buysindo',
+              importance: Importance.max,
+              priority: Priority.high,
+              showWhen: true,
+            );
+
+      final NotificationDetails platformChannelSpecifics = NotificationDetails(
         android: androidPlatformChannelSpecifics,
       );
 
@@ -407,12 +391,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         platformChannelSpecifics,
         payload: jsonEncode(payload),
       );
-
-      debugPrint(
-        '✅ [Notification] Local notification displayed with route: ${message.data['route']}',
-      );
     } catch (e) {
-      debugPrint('❌ [Notification] Error displaying notification: $e');
+      // Handle error silently
     }
   }
 
