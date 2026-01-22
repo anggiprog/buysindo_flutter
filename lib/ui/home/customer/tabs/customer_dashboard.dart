@@ -17,10 +17,10 @@ class CustomerDashboard extends StatefulWidget {
   State<CustomerDashboard> createState() => _CustomerDashboardState();
 }
 
-class _CustomerDashboardState extends State<CustomerDashboard> with WidgetsBindingObserver {
+class _CustomerDashboardState extends State<CustomerDashboard>
+    with WidgetsBindingObserver {
   Timer? _timeoutTimer;
   int _adminNotifCount = 0;
-  bool _isLoadingNotif = true;
 
   final ApiService _apiService = ApiService(Dio());
 
@@ -62,99 +62,14 @@ class _CustomerDashboardState extends State<CustomerDashboard> with WidgetsBindi
       if (!mounted) return;
       setState(() {
         _adminNotifCount = count;
-        _isLoadingNotif = false;
       });
     } catch (e) {
       debugPrint('❌ Failed to fetch admin notif count: $e');
       if (!mounted) return;
       setState(() {
         _adminNotifCount = 0;
-        _isLoadingNotif = false;
       });
     }
-  }
-
-  Widget _buildTopNav() {
-    final Color bg = appConfig.primaryColor;
-    final Color textColor = appConfig.textColor;
-
-    return SafeArea(
-      bottom: false,
-      child: Container(
-        height: 64,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        color: bg,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Logo
-            SizedBox(
-              height: 40,
-              width: 40,
-              child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
-            ),
-            const SizedBox(width: 12),
-            // App name
-            Expanded(
-              child: Text(
-                appConfig.appName,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            // Notification icon with badge
-            GestureDetector(
-              onTap: () async {
-                // Navigate to notifications page via named route to ensure MaterialApp routing
-                try {
-                  Navigator.of(context).pushNamed('/notifications');
-                } catch (e) {
-                  // Fallback to direct push if named route not available
-                  try {
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
-                  } catch (e2) {
-                    debugPrint('❌ Navigation to NotificationsPage failed: $e / $e2');
-                  }
-                }
-              },
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Icon(Icons.notifications, color: textColor),
-                  ),
-                  if (_adminNotifCount > 0)
-                    Positioned(
-                      right: 0,
-                      top: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-                        child: Center(
-                          child: Text(
-                            _adminNotifCount > 99 ? '99+' : '$_adminNotifCount',
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -222,12 +137,98 @@ class _CustomerDashboardState extends State<CustomerDashboard> with WidgetsBindi
             content = const PpobTemplate();
         }
 
-        // Wrap template with top navbar
-        return Column(
-          children: [
-            _buildTopNav(),
-            Expanded(child: content),
-          ],
+        // Wrap template dengan Scaffold dan AppBar
+        return Scaffold(
+          backgroundColor: appConfig.primaryColor,
+          appBar: AppBar(
+            title: Row(
+              children: [
+                // Logo - Circular
+                ClipOval(
+                  child: SizedBox(
+                    height: 40,
+                    width: 40,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // App name
+                Text(
+                  appConfig.appName,
+                  style: TextStyle(
+                    color: appConfig.textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: appConfig.primaryColor,
+            elevation: 1,
+            centerTitle: false,
+            leading: null,
+            leadingWidth: 0,
+            actions: [
+              GestureDetector(
+                onTap: () {
+                  try {
+                    Navigator.of(context).pushNamed('/notifications');
+                  } catch (e) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsPage(),
+                      ),
+                    );
+                  }
+                },
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Icon(
+                        Icons.notifications,
+                        color: appConfig.textColor,
+                      ),
+                    ),
+                    if (_adminNotifCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: -4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          child: Center(
+                            child: Text(
+                              _adminNotifCount > 99
+                                  ? '99+'
+                                  : '$_adminNotifCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+          ),
+          body: Container(color: Colors.white, child: content),
         );
       },
     );

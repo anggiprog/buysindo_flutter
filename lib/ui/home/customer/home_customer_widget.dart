@@ -33,7 +33,7 @@ class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // AppBar dihilangkan - akan dibuat custom per template
+      // AppBar akan dihandle oleh setiap child tab
       appBar: null,
       body: IndexedStack(index: _currentIndex, children: _pages),
 

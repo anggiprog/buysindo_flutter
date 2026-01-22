@@ -47,7 +47,10 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
       if (status.isGranted) {
         final contact = await FlutterContacts.openExternalPick();
         if (contact != null && contact.phones.isNotEmpty) {
-          String phone = contact.phones.first.number.replaceAll(RegExp(r'[^0-9]'), '');
+          String phone = contact.phones.first.number.replaceAll(
+            RegExp(r'[^0-9]'),
+            '',
+          );
           if (phone.startsWith('62')) {
             phone = '0${phone.substring(2)}';
           } else if (phone.startsWith('8')) {
@@ -68,7 +71,10 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
 
     try {
       final String? token = await SessionManager.getToken();
-      final products = await _apiService.getProducts(token, forceRefresh: forceRefresh);
+      final products = await _apiService.getProducts(
+        token,
+        forceRefresh: forceRefresh,
+      );
 
       if (mounted) {
         setState(() {
@@ -84,7 +90,9 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
         if (forceRefresh && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Produk diperbarui (${_allProducts.length} produk)'),
+              content: Text(
+                'Produk diperbarui (${_allProducts.length} produk)',
+              ),
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
             ),
@@ -152,7 +160,10 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
         _dynamicTypes = types;
         _tabController?.dispose();
         if (_dynamicTypes.isNotEmpty) {
-          _tabController = TabController(length: _dynamicTypes.length, vsync: this);
+          _tabController = TabController(
+            length: _dynamicTypes.length,
+            vsync: this,
+          );
         }
       });
     }
@@ -184,6 +195,12 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: RefreshIndicator(
@@ -205,13 +222,17 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
                     labelColor: primaryColor,
                     unselectedLabelColor: Colors.grey,
                     indicatorColor: primaryColor,
-                    tabs: _dynamicTypes.map((t) => Tab(text: t.toUpperCase())).toList(),
+                    tabs: _dynamicTypes
+                        .map((t) => Tab(text: t.toUpperCase()))
+                        .toList(),
                   ),
                 ),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
-                  children: _dynamicTypes.map((type) => _buildProductList(type)).toList(),
+                  children: _dynamicTypes
+                      .map((type) => _buildProductList(type))
+                      .toList(),
                 ),
               ),
             ] else
@@ -265,7 +286,11 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
                   children: [
                     if (_phoneController.text.isNotEmpty)
                       IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.grey, size: 20),
+                        icon: const Icon(
+                          Icons.cancel,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
                         onPressed: () {
                           _phoneController.clear();
                           setState(() {
@@ -339,7 +364,11 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {});
@@ -347,7 +376,10 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
                 ),
                 onChanged: (value) => setState(() {}),
               ),
@@ -380,7 +412,8 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
                 Icons.filter_list,
                 color: _filterStatus != 0 ? primaryColor : Colors.grey,
               ),
-              onPressed: () => setState(() => _filterStatus = (_filterStatus + 1) % 3),
+              onPressed: () =>
+                  setState(() => _filterStatus = (_filterStatus + 1) % 3),
               tooltip: _filterStatus == 0
                   ? 'Urutkan: Normal'
                   : _filterStatus == 1
@@ -398,11 +431,15 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
     List<ProductPrabayar> filtered = _allProducts.where((p) {
       return p.brand.toUpperCase() == _operatorName &&
           p.type == type &&
-          p.productName.toLowerCase().contains(_searchController.text.toLowerCase());
+          p.productName.toLowerCase().contains(
+            _searchController.text.toLowerCase(),
+          );
     }).toList();
 
-    if (_filterStatus == 1) filtered.sort((a, b) => a.totalHarga.compareTo(b.totalHarga));
-    if (_filterStatus == 2) filtered.sort((a, b) => b.totalHarga.compareTo(a.totalHarga));
+    if (_filterStatus == 1)
+      filtered.sort((a, b) => a.totalHarga.compareTo(b.totalHarga));
+    if (_filterStatus == 2)
+      filtered.sort((a, b) => b.totalHarga.compareTo(a.totalHarga));
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -435,8 +472,10 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
             : () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      DetailPulsaPage(product: product, phone: _phoneController.text),
+                  builder: (context) => DetailPulsaPage(
+                    product: product,
+                    phone: _phoneController.text,
+                  ),
                 ),
               ),
         child: Padding(
@@ -499,7 +538,10 @@ class _DataPageState extends State<DataPage> with TickerProviderStateMixin {
                         product.description,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],

@@ -428,9 +428,25 @@ class _TransactionPascabayarDetailPageState
     }
   }
 
+  Future<void> _handleCopyReference() async {
+    try {
+      final referenceText =
+          'Ref ID: ${_transaction.refId}\nTanggal: ${_transaction.createdAt}\nTotal: ${_transaction.formattedTotal}';
+      await Clipboard.setData(ClipboardData(text: referenceText));
+      _showSuccess('Reference ID berhasil disalin ke clipboard');
+    } catch (e) {
+      debugPrint('❌ Error copying reference: $e');
+      _showError('Gagal menyalin reference ID');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = appConfig.primaryColor;
+    // Ensure primaryColor is valid, use fallback if needed
+    final Color appBarColor = primaryColor.value == 0
+        ? const Color(0xFF0D6EFD)
+        : primaryColor;
     final Color statusColor = _transaction.isSuccess
         ? Colors.green
         : (_transaction.isPending ? Colors.orange : Colors.red);
@@ -443,9 +459,15 @@ class _TransactionPascabayarDetailPageState
             'Detail Transaksi Pascabayar',
             style: TextStyle(color: Colors.white, fontSize: 16),
           ),
-          backgroundColor: primaryColor,
+          backgroundColor: appBarColor,
+          foregroundColor: Colors.white,
           iconTheme: const IconThemeData(color: Colors.white),
-          elevation: 0,
+          elevation: 4,
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: appBarColor,
+            statusBarBrightness: Brightness.dark,
+            statusBarIconBrightness: Brightness.light,
+          ),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -458,17 +480,20 @@ class _TransactionPascabayarDetailPageState
           'Detail Transaksi Pascabayar',
           style: TextStyle(color: Colors.white, fontSize: 16),
         ),
-        backgroundColor: primaryColor,
+        backgroundColor: appBarColor,
+        foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
+        elevation: 4,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: appBarColor,
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _handleSharePressed,
-          ),
-          IconButton(
-            icon: const Icon(Icons.print_rounded),
-            onPressed: _isPrinting ? null : _handlePrintPressed,
+            icon: const Icon(Icons.link),
+            tooltip: 'Salin Reference ID',
+            onPressed: _handleCopyReference,
           ),
         ],
       ),
@@ -609,7 +634,7 @@ class _TransactionPascabayarDetailPageState
                 child: Container(
                   width: double.infinity,
                   decoration: const BoxDecoration(color: Colors.white),
-                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 40),
+                  padding: const EdgeInsets.fromLTRB(24, 10, 24, 30),
                   child: Column(
                     children: [
                       Text(
@@ -621,6 +646,38 @@ class _TransactionPascabayarDetailPageState
                         ),
                       ),
                       const SizedBox(height: 20),
+                      // Share and Print Buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: _handleSharePressed,
+                            icon: const Icon(Icons.share),
+                            label: const Text('Bagikan'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue[600],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                            ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: _isPrinting ? null : _handlePrintPressed,
+                            icon: const Icon(Icons.print_rounded),
+                            label: const Text('Cetak'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[600],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 10,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -628,6 +685,38 @@ class _TransactionPascabayarDetailPageState
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: _buildBottomActionBar(),
+    );
+  }
+
+  Widget _buildBottomActionBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.home),
+            label: const Text('Beranda'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: appConfig.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -845,6 +934,13 @@ class _BluetoothDeviceDiscoveryPageState
       appBar: AppBar(
         title: const Text('Cari Printer Bluetooth'),
         backgroundColor: appConfig.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: appConfig.primaryColor,
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+        ),
       ),
       body: _isScanning
           ? Center(

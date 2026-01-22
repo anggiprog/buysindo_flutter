@@ -52,15 +52,23 @@ class ApiService {
     try {
       debugPrint('🔐 [ApiService] Starting login with email: $email');
       final deviceToken = await getDeviceToken();
-      debugPrint('📤 [ApiService] Sending login request with device_token: $deviceToken');
+      debugPrint(
+        '📤 [ApiService] Sending login request with device_token: $deviceToken',
+      );
 
       final response = await _dio.post(
         'api/login',
-        data: {'email': email, 'password': password, 'device_token': deviceToken},
+        data: {
+          'email': email,
+          'password': password,
+          'device_token': deviceToken,
+        },
       );
 
       if (response.statusCode == 200) {
-        debugPrint('✅ [ApiService] Login successful, status code: ${response.statusCode}');
+        debugPrint(
+          '✅ [ApiService] Login successful, status code: ${response.statusCode}',
+        );
         return LoginResponse.fromJson(response.data);
       } else {
         throw Exception(response.data['message'] ?? 'Login failed');
@@ -120,7 +128,10 @@ class ApiService {
   /// Resend OTP to email
   Future<void> resendOtp(String email) async {
     try {
-      final response = await _dio.post('api/resend-otp', data: {'email': email});
+      final response = await _dio.post(
+        'api/resend-otp',
+        data: {'email': email},
+      );
 
       if (response.statusCode != 200) {
         throw Exception('Resend OTP failed: ${response.statusMessage}');
@@ -447,11 +458,16 @@ class ApiService {
   /// Endpoint: POST api/lupa-password-user
   Future<String> forgotPassword(String email) async {
     try {
-      final response = await _dio.post('api/lupa-pwd-user', data: {'email': email});
+      final response = await _dio.post(
+        'api/lupa-pwd-user',
+        data: {'email': email},
+      );
       if (response.statusCode == 200) {
         return response.data['message'] ?? 'Permintaan lupa password dikirim';
       } else {
-        throw Exception(response.data['message'] ?? 'Gagal meminta lupa password');
+        throw Exception(
+          response.data['message'] ?? 'Gagal meminta lupa password',
+        );
       }
     } on DioException catch (e) {
       throw _handleDioError(e);
@@ -467,12 +483,15 @@ class ApiService {
     required String passwordConfirmation,
   }) async {
     try {
-      final response = await _dio.post('api/reset-pwd-user', data: {
-        'email': email,
-        'otp': otp,
-        'password': password,
-        'password_confirmation': passwordConfirmation,
-      });
+      final response = await _dio.post(
+        'api/reset-pwd-user',
+        data: {
+          'email': email,
+          'otp': otp,
+          'password': password,
+          'password_confirmation': passwordConfirmation,
+        },
+      );
 
       if (response.statusCode == 200) {
         return response.data['message'] ?? 'Password berhasil direset';
@@ -488,7 +507,9 @@ class ApiService {
   Future<void> updateDeviceToken(String token) async {
     try {
       debugPrint('📝 [ApiService] updateDeviceToken() called');
-      debugPrint('🔑 [ApiService] Using auth token: ${token.substring(0, 20)}...');
+      debugPrint(
+        '🔑 [ApiService] Using auth token: ${token.substring(0, 20)}...',
+      );
 
       final deviceToken = await getDeviceToken();
       debugPrint('📱 [ApiService] Device token to update: $deviceToken');
@@ -504,11 +525,17 @@ class ApiService {
         debugPrint('📌 [ApiService] Device Token: $deviceToken');
         debugPrint('📌 [ApiService] Response: ${response.data}');
       } else {
-        debugPrint('⚠️ [ApiService] Device token update returned status ${response.statusCode}');
-        throw Exception('Update device token failed: ${response.statusMessage}');
+        debugPrint(
+          '⚠️ [ApiService] Device token update returned status ${response.statusCode}',
+        );
+        throw Exception(
+          'Update device token failed: ${response.statusMessage}',
+        );
       }
     } on DioException catch (e) {
-      debugPrint('❌ [ApiService] Device token update error: ${_handleDioError(e)}');
+      debugPrint(
+        '❌ [ApiService] Device token update error: ${_handleDioError(e)}',
+      );
       // Don't throw, just log warning - not critical
     } catch (e) {
       debugPrint('❌ [ApiService] Unexpected error in updateDeviceToken: $e');
@@ -518,7 +545,10 @@ class ApiService {
   /// Logout user
   Future<void> logout(String token) async {
     try {
-      await _dio.post('api/logout', options: Options(headers: {'Authorization': 'Bearer $token'}));
+      await _dio.post(
+        'api/logout',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
       await SessionManager.clearSession();
     } on DioException catch (e) {
       await SessionManager.clearSession();
@@ -531,7 +561,9 @@ class ApiService {
   /// Jika token == null maka akan memanggil tanpa header Authorization
   Future<int> getAdminNotificationCount([String? token]) async {
     try {
-      debugPrint('🔔 [ApiService] getAdminNotificationCount() called (token present: ${token != null && token.isNotEmpty})');
+      debugPrint(
+        '🔔 [ApiService] getAdminNotificationCount() called (token present: ${token != null && token.isNotEmpty})',
+      );
 
       final options = token != null && token.isNotEmpty
           ? Options(headers: {'Authorization': 'Bearer $token'})
@@ -555,10 +587,14 @@ class ApiService {
               mapData[k.toString()] = v;
             });
             final parsed = NotificationCountResponse.fromJson(mapData);
-            debugPrint('🔔 [ApiService] jumlah_belum_dibaca: ${parsed.jumlahBelumDibaca}');
+            debugPrint(
+              '🔔 [ApiService] jumlah_belum_dibaca: ${parsed.jumlahBelumDibaca}',
+            );
             return parsed.jumlahBelumDibaca;
           } catch (e) {
-            debugPrint('⚠️ [ApiService] Failed to parse NotificationCountResponse: $e');
+            debugPrint(
+              '⚠️ [ApiService] Failed to parse NotificationCountResponse: $e',
+            );
           }
         }
 
@@ -570,7 +606,9 @@ class ApiService {
         if (data is int) return data;
         if (data is String) return int.tryParse(data) ?? 0;
       }
-      debugPrint('⚠️ [ApiService] getAdminNotificationCount unexpected status: ${response.statusCode}');
+      debugPrint(
+        '⚠️ [ApiService] getAdminNotificationCount unexpected status: ${response.statusCode}',
+      );
       return 0;
     } on DioException catch (e) {
       debugPrint('❌ [ApiService] getAdminNotificationCount error: $e');
@@ -598,7 +636,10 @@ class ApiService {
   }
 
   /// Mark single notification as read (POST id)
-  Future<Response> markNotificationAsRead({required int id, required String token}) {
+  Future<Response> markNotificationAsRead({
+    required int id,
+    required String token,
+  }) {
     return _dio.post(
       'api/user/notification/read',
       data: {'id': id},
@@ -625,7 +666,9 @@ class ApiService {
         options: Options(validateStatus: (status) => status! < 500),
       );
 
-      debugPrint('🌊 [ApiService] getSplashScreen status=${response.statusCode} data=${response.data}');
+      debugPrint(
+        '🌊 [ApiService] getSplashScreen status=${response.statusCode} data=${response.data}',
+      );
 
       if (response.statusCode == 200 && response.data != null) {
         final body = response.data;
@@ -663,7 +706,8 @@ class ApiService {
           final user = body['user'];
           String? backendToken;
           if (user is Map) {
-            backendToken = (user['device_token'] ?? user['deviceToken'])?.toString();
+            backendToken = (user['device_token'] ?? user['deviceToken'])
+                ?.toString();
           }
 
           if (backendToken == null || backendToken.isEmpty) {
@@ -673,8 +717,13 @@ class ApiService {
 
           final currentDeviceToken = await getDeviceToken();
           // If currentDeviceToken is 'unknown_device_token' or 'error_getting_token', avoid false positives
-          if (currentDeviceToken == null || currentDeviceToken.isEmpty) return false;
-          if (currentDeviceToken.startsWith('unknown') || currentDeviceToken.startsWith('error')) return false;
+          if (currentDeviceToken.isEmpty) {
+            return false;
+          }
+          if (currentDeviceToken.startsWith('unknown') ||
+              currentDeviceToken.startsWith('error')) {
+            return false;
+          }
 
           return backendToken != currentDeviceToken;
         }
@@ -690,7 +739,9 @@ class ApiService {
   Future<bool> isAuthTokenValid(String authToken) async {
     try {
       final response = await getProfile(authToken);
-      debugPrint('🔐 [ApiService] isAuthTokenValid status=${response.statusCode}');
+      debugPrint(
+        '🔐 [ApiService] isAuthTokenValid status=${response.statusCode}',
+      );
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('❌ [ApiService] isAuthTokenValid error: $e');
@@ -701,7 +752,9 @@ class ApiService {
   /// Handle Dio errors uniformly
   String _handleDioError(DioException e) {
     if (e.response != null) {
-      return e.response?.data['message'] ?? e.response?.statusMessage ?? 'Unknown error';
+      return e.response?.data['message'] ??
+          e.response?.statusMessage ??
+          'Unknown error';
     }
     return e.message ?? 'Network error';
   }
@@ -709,7 +762,6 @@ class ApiService {
   // =============================================
   // High-level models: LoginResponse & OtpResponse
   // =============================================
-
 }
 
 /// Model for Login Response
@@ -720,12 +772,21 @@ class LoginResponse {
   final String? accessToken;
   final Map<String, dynamic>? user;
 
-  LoginResponse({this.status, this.message, this.requireOtp, this.accessToken, this.user});
+  LoginResponse({
+    this.status,
+    this.message,
+    this.requireOtp,
+    this.accessToken,
+    this.user,
+  });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
     debugPrint('📦 Login Response JSON: $json');
 
-    String? token = json['access_token'] as String? ?? json['token'] as String? ?? json['accessToken'] as String?;
+    String? token =
+        json['access_token'] as String? ??
+        json['token'] as String? ??
+        json['accessToken'] as String?;
 
     return LoginResponse(
       status: json['status'] as bool?,

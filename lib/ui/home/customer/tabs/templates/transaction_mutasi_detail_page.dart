@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../../features/customer/data/models/transaction_mutasi_model.dart';
 import '../../../../../core/app_config.dart';
 import '../../../../../core/services/bluetooth_printer_service.dart';
@@ -32,17 +33,23 @@ class _TransactionMutasiDetailPageState
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: appConfig.primaryColor,
+        backgroundColor: _getValidAppBarColor(),
         title: const Text(
           'Detail Mutasi',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        elevation: 0,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: _getValidAppBarColor(),
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.print, color: Colors.white),
-            onPressed: _handlePrint,
-            tooltip: 'Cetak',
+            icon: const Icon(Icons.link),
+            tooltip: 'Salin Reference ID',
+            onPressed: _handleCopyReference,
           ),
         ],
       ),
@@ -64,27 +71,51 @@ class _TransactionMutasiDetailPageState
 
             // Fee Details Card
             _buildFeeCard(),
-            const SizedBox(height: 20),
-
-            // Print Button
-            ElevatedButton.icon(
-              onPressed: _handlePrint,
-              icon: const Icon(Icons.print),
-              label: const Text('Cetak Detail'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: appConfig.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 24,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
+            const SizedBox(height: 80), // Add space for bottom bar
           ],
         ),
+      ),
+      bottomNavigationBar: _buildBottomActionBar(),
+    );
+  }
+
+  Widget _buildBottomActionBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _handlePrint,
+            icon: const Icon(Icons.print),
+            label: const Text('Cetak'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[600],
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.home),
+            label: const Text('Beranda'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: appConfig.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -359,8 +390,42 @@ class _TransactionMutasiDetailPageState
     );
   }
 
+  Color _getValidAppBarColor() {
+    final primaryColor = appConfig.primaryColor;
+    // Check for invalid values: 0, white, or transparent
+    if (primaryColor.value == 0 ||
+        primaryColor.value == 0xFFFFFFFF || // Not white
+        primaryColor.alpha < 200) {
+      // Not too transparent
+      return const Color(0xFF0D6EFD);
+    }
+    // Ensure color has sufficient brightness for contrast
+    if (primaryColor.computeLuminance() >= 0.9) {
+      return const Color(0xFF0D6EFD);
+    }
+    return primaryColor;
+  }
+
   void _handlePrint() {
     _handlePrintPressed();
+  }
+
+  Future<void> _handleCopyReference() async {
+    try {
+      final referenceText =
+          'Trx ID: ${transaction.trxId}\nTanggal: ${transaction.createdAt}\nJumlah: ${transaction.formattedJumlah}';
+      await Clipboard.setData(ClipboardData(text: referenceText));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Reference ID berhasil disalin ke clipboard'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      debugPrint('❌ Error copying reference: $e');
+      _showError('Gagal menyalin reference ID');
+    }
   }
 
   Future<void> _handlePrintPressed() async {

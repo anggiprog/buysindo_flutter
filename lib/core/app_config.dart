@@ -149,12 +149,28 @@ class AppConfig with ChangeNotifier {
   // --- HELPER PARSE COLOR ---
   static Color _parseColor(String hex) {
     try {
+      // Handle empty or null hex
+      if (hex.isEmpty) {
+        debugPrint('⚠️ Empty hex color, using default blue');
+        return const Color(0xFF0D6EFD);
+      }
+
       final cleanHex = hex.replaceAll('#', '').padLeft(8, 'FF');
       String formatHex = cleanHex.length > 8
           ? cleanHex.substring(cleanHex.length - 8)
           : cleanHex;
-      return Color(int.parse(formatHex, radix: 16));
+
+      final parsedColor = Color(int.parse(formatHex, radix: 16));
+
+      // Check if color is completely transparent or black
+      if (parsedColor.value == 0 || parsedColor.alpha == 0) {
+        debugPrint('⚠️ Invalid color (transparent/black), using default blue');
+        return const Color(0xFF0D6EFD);
+      }
+
+      return parsedColor;
     } catch (e) {
+      debugPrint('⚠️ Failed to parse color "$hex": $e, using default blue');
       return const Color(0xFF0D6EFD); // Default Blue
     }
   }

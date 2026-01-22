@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/network/api_service.dart';
@@ -111,22 +112,35 @@ class _AccountTabState extends State<AccountTab> {
       ),
     );
 
-    SessionManager.clearCacheExceptToken().then((_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cache berhasil dihapus! (Token tetap disimpan)")),
-      );
-    }).catchError((e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gagal menghapus cache. Coba lagi.")),
-      );
-    });
+    SessionManager.clearCacheExceptToken()
+        .then((_) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Cache berhasil dihapus! (Token tetap disimpan)"),
+            ),
+          );
+        })
+        .catchError((e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Gagal menghapus cache. Coba lagi.")),
+          );
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = appConfig.primaryColor;
+    final primaryColor = appConfig.primaryColor;
+
+    // Robust color validation
+    Color themeColor = const Color(0xFF0D6EFD); // Default blue
+    if (primaryColor.value != 0 &&
+        primaryColor.value != 0xFFFFFFFF &&
+        primaryColor.alpha > 200 &&
+        primaryColor.computeLuminance() < 0.9) {
+      themeColor = primaryColor;
+    }
 
     if (_isLoading) {
       return Scaffold(
@@ -180,42 +194,14 @@ class _AccountTabState extends State<AccountTab> {
           ),
           backgroundColor: themeColor,
           foregroundColor: Colors.white,
-          elevation: 0,
+          elevation: 4,
           centerTitle: false, // Set true jika ingin judul di tengah
-          actions: [
-            // TOMBOL EDIT
-            IconButton(
-              icon: const Icon(
-                Icons.edit_square,
-              ), // Icon edit yang lebih modern
-              tooltip: 'Edit Profil',
-              onPressed: () {
-                // Navigasi ke halaman edit profil di sini
-                debugPrint("Tombol Edit ditekan");
-                if (_profileData != null) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EditProfileScreen(
-                        profile: _profileData!.profile,
-                        user: _profileData!.user,
-                        onProfileUpdated: _fetchProfile,
-                      ),
-                    ),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Silakan tunggu sampai data profil dimuat"),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-            ),
-            // Anda bisa menambah icon lain jika perlu
-            const SizedBox(width: 8),
-          ],
+          systemOverlayStyle: SystemUiOverlayStyle(
+            statusBarColor: themeColor,
+            statusBarBrightness: Brightness.dark,
+            statusBarIconBrightness: Brightness.light,
+          ),
+          actions: [],
         ),
         body: Column(
           children: [
@@ -266,21 +252,70 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   Widget _buildAvatar(models.ProfileModel? profile) {
-    return CircleAvatar(
-      radius: 50,
-      backgroundColor: Colors.white24,
-      child: ClipOval(
-        child: profile?.profilePicture != null
-            ? Image.network(
-                profile!.profilePicture!,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                errorBuilder: (c, e, s) =>
-                    const Icon(Icons.person, size: 60, color: Colors.white),
-              )
-            : const Icon(Icons.person, size: 60, color: Colors.white),
-      ),
+    return Stack(
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: Colors.white24,
+          child: ClipOval(
+            child: profile?.profilePicture != null
+                ? Image.network(
+                    profile!.profilePicture!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) =>
+                        const Icon(Icons.person, size: 60, color: Colors.white),
+                  )
+                : const Icon(Icons.person, size: 60, color: Colors.white),
+          ),
+        ),
+        // Floating Edit Button
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: GestureDetector(
+            onTap: () {
+              debugPrint("Tombol Edit ditekan");
+              if (_profileData != null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileScreen(
+                      profile: _profileData!.profile,
+                      user: _profileData!.user,
+                      onProfileUpdated: _fetchProfile,
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Silakan tunggu sampai data profil dimuat"),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: appConfig.primaryColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.edit, color: Colors.white, size: 20),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

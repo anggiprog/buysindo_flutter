@@ -334,6 +334,22 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     }
   }
 
+  Future<void> _handleCopyReference() async {
+    if (_transaction == null) {
+      _showError('Data transaksi tidak tersedia');
+      return;
+    }
+    try {
+      final referenceText =
+          'Ref ID: ${_transaction!.refId}\nTanggal: ${_transaction!.tanggalTransaksi}\nTotal: ${_transaction!.formattedPrice}';
+      await Clipboard.setData(ClipboardData(text: referenceText));
+      _showSuccess('Reference ID berhasil disalin ke clipboard');
+    } catch (e) {
+      debugPrint('❌ Error copying reference: $e');
+      _showError('Gagal menyalin reference ID');
+    }
+  }
+
   Future<void> _handlePrintPressed() async {
     if (_transaction == null) {
       _showError('Data transaksi tidak tersedia');
@@ -431,24 +447,50 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   Widget build(BuildContext context) {
     final Color primaryColor = appConfig.primaryColor;
 
+    // Ensure primaryColor is valid, use fallback if needed
+    // Check for invalid values: 0, white, or transparent
+    Color appBarColor = const Color(0xFF0D6EFD); // Default blue
+
+    if (primaryColor.value != 0 &&
+        primaryColor.value != 0xFFFFFFFF && // Not white
+        primaryColor.alpha > 200) {
+      // Not too transparent
+      // Additional check: ensure color has sufficient brightness for contrast
+      if (primaryColor.computeLuminance() < 0.9) {
+        appBarColor = primaryColor;
+      }
+    }
+
+    debugPrint(
+      '🎨 AppBar Color: ${appBarColor.value.toRadixString(16)}, '
+      'PrimaryColor: ${primaryColor.value.toRadixString(16)}',
+    );
+
     return Scaffold(
       backgroundColor: Colors.grey[200],
       appBar: AppBar(
         title: const Text(
           'Detail Transaksi',
-          style: TextStyle(color: Colors.white, fontSize: 16),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: primaryColor,
+        backgroundColor: appBarColor,
+        foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
+        elevation: 4,
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: appBarColor,
+          statusBarBrightness: Brightness.dark,
+          statusBarIconBrightness: Brightness.light,
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            onPressed: _handleSharePressed,
-          ),
-          IconButton(
-            icon: const Icon(Icons.print_rounded),
-            onPressed: _isPrinting ? null : _handlePrintPressed,
+            icon: const Icon(Icons.link),
+            tooltip: 'Salin Reference ID',
+            onPressed: _handleCopyReference,
           ),
         ],
       ),
@@ -566,7 +608,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                       child: Container(
                         width: double.infinity,
                         decoration: const BoxDecoration(color: Colors.white),
-                        padding: const EdgeInsets.fromLTRB(24, 10, 24, 40),
+                        padding: const EdgeInsets.fromLTRB(24, 10, 24, 30),
                         child: Column(
                           children: [
                             Text(
@@ -578,6 +620,40 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                               ),
                             ),
                             const SizedBox(height: 20),
+                            // Share and Print Buttons
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: _handleSharePressed,
+                                  icon: const Icon(Icons.share),
+                                  label: const Text('Bagikan'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue[600],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                ),
+                                ElevatedButton.icon(
+                                  onPressed: _isPrinting
+                                      ? null
+                                      : _handlePrintPressed,
+                                  icon: const Icon(Icons.print_rounded),
+                                  label: const Text('Cetak'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green[600],
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -586,6 +662,38 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 ),
               ),
             ),
+      bottomNavigationBar: _buildBottomActionBar(),
+    );
+  }
+
+  Widget _buildBottomActionBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.home),
+            label: const Text('Beranda'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: appConfig.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -2,7 +2,7 @@
 // ignore_for_file: lines_longer_than_80_chars, avoid_classes_with_only_static_members
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart' show debugPrint;
 
@@ -13,7 +13,9 @@ class DefaultFirebaseOptions {
     final v = dotenv.env[key];
     if (v == null || v.isEmpty) {
       // Warn developer so missing envs aren't silently ignored
-      debugPrint('⚠️ DefaultFirebaseOptions: environment variable `$key` is not set. Using fallback value.');
+      debugPrint(
+        '⚠️ DefaultFirebaseOptions: environment variable `$key` is not set. Using fallback value.',
+      );
       // In debug builds, an assert will fail loudly for developers
       assert(() {
         debugPrint('ASSERT: Missing required Firebase env variable: $key');
@@ -28,12 +30,24 @@ class DefaultFirebaseOptions {
   /// Android Firebase options
   static FirebaseOptions get android {
     return FirebaseOptions(
-      apiKey: _envOrFallback('FIREBASE_API_KEY_ANDROID', 'AIzaSyDummyKeyAndroid'),
-      appId: _envOrFallback('FIREBASE_APP_ID_ANDROID', '1:123456789:android:abcdef1234567890'),
-      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      apiKey: _envOrFallback(
+        'FIREBASE_API_KEY_ANDROID',
+        'AIzaSyDummyKeyAndroid',
+      ),
+      appId: _envOrFallback(
+        'FIREBASE_APP_ID_ANDROID',
+        '1:123456789:android:abcdef1234567890',
+      ),
+      messagingSenderId: _envOrFallback(
+        'FIREBASE_MESSAGING_SENDER_ID',
+        '123456789',
+      ),
       projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      storageBucket: _envOrFallback(
+        'FIREBASE_STORAGE_BUCKET',
+        'buysindo-project.appspot.com',
+      ),
     );
   }
 
@@ -41,11 +55,20 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get ios {
     return FirebaseOptions(
       apiKey: _envOrFallback('FIREBASE_API_KEY_IOS', 'AIzaSyDummyKeyIOS'),
-      appId: _envOrFallback('FIREBASE_APP_ID_IOS', '1:123456789:ios:abcdef1234567890'),
-      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      appId: _envOrFallback(
+        'FIREBASE_APP_ID_IOS',
+        '1:123456789:ios:abcdef1234567890',
+      ),
+      messagingSenderId: _envOrFallback(
+        'FIREBASE_MESSAGING_SENDER_ID',
+        '123456789',
+      ),
       projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      storageBucket: _envOrFallback(
+        'FIREBASE_STORAGE_BUCKET',
+        'buysindo-project.appspot.com',
+      ),
       iosBundleId: dotenv.env['IOS_BUNDLE_ID'] ?? 'com.buysindo.app',
     );
   }
@@ -54,10 +77,19 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get web {
     return FirebaseOptions(
       apiKey: _envOrFallback('FIREBASE_API_KEY_WEB', 'AIzaSyDummyKeyWeb'),
-      appId: _envOrFallback('FIREBASE_APP_ID_WEB', '1:123456789:web:abcdef1234567890'),
-      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      appId: _envOrFallback(
+        'FIREBASE_APP_ID_WEB',
+        '1:123456789:web:abcdef1234567890',
+      ),
+      messagingSenderId: _envOrFallback(
+        'FIREBASE_MESSAGING_SENDER_ID',
+        '123456789',
+      ),
       projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
-      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      storageBucket: _envOrFallback(
+        'FIREBASE_STORAGE_BUCKET',
+        'buysindo-project.appspot.com',
+      ),
     );
   }
 
@@ -65,11 +97,20 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get macos {
     return FirebaseOptions(
       apiKey: _envOrFallback('FIREBASE_API_KEY_MACOS', 'AIzaSyDummyKeyMacOS'),
-      appId: _envOrFallback('FIREBASE_APP_ID_MACOS', '1:123456789:macos:abcdef1234567890'),
-      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      appId: _envOrFallback(
+        'FIREBASE_APP_ID_MACOS',
+        '1:123456789:macos:abcdef1234567890',
+      ),
+      messagingSenderId: _envOrFallback(
+        'FIREBASE_MESSAGING_SENDER_ID',
+        '123456789',
+      ),
       projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      storageBucket: _envOrFallback(
+        'FIREBASE_STORAGE_BUCKET',
+        'buysindo-project.appspot.com',
+      ),
     );
   }
 
@@ -77,23 +118,44 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get linux {
     return FirebaseOptions(
       apiKey: _envOrFallback('FIREBASE_API_KEY_LINUX', 'AIzaSyDummyKeyLinux'),
-      appId: _envOrFallback('FIREBASE_APP_ID_LINUX', '1:123456789:linux:abcdef1234567890'),
-      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      appId: _envOrFallback(
+        'FIREBASE_APP_ID_LINUX',
+        '1:123456789:linux:abcdef1234567890',
+      ),
+      messagingSenderId: _envOrFallback(
+        'FIREBASE_MESSAGING_SENDER_ID',
+        '123456789',
+      ),
       projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      storageBucket: _envOrFallback(
+        'FIREBASE_STORAGE_BUCKET',
+        'buysindo-project.appspot.com',
+      ),
     );
   }
 
   /// Windows Firebase options (if needed)
   static FirebaseOptions get windows {
     return FirebaseOptions(
-      apiKey: _envOrFallback('FIREBASE_API_KEY_WINDOWS', 'AIzaSyDummyKeyWindows'),
-      appId: _envOrFallback('FIREBASE_APP_ID_WINDOWS', '1:123456789:windows:abcdef1234567890'),
-      messagingSenderId: _envOrFallback('FIREBASE_MESSAGING_SENDER_ID', '123456789'),
+      apiKey: _envOrFallback(
+        'FIREBASE_API_KEY_WINDOWS',
+        'AIzaSyDummyKeyWindows',
+      ),
+      appId: _envOrFallback(
+        'FIREBASE_APP_ID_WINDOWS',
+        '1:123456789:windows:abcdef1234567890',
+      ),
+      messagingSenderId: _envOrFallback(
+        'FIREBASE_MESSAGING_SENDER_ID',
+        '123456789',
+      ),
       projectId: _envOrFallback('FIREBASE_PROJECT_ID', 'buysindo-project'),
       databaseURL: dotenv.env['FIREBASE_DATABASE_URL'],
-      storageBucket: _envOrFallback('FIREBASE_STORAGE_BUCKET', 'buysindo-project.appspot.com'),
+      storageBucket: _envOrFallback(
+        'FIREBASE_STORAGE_BUCKET',
+        'buysindo-project.appspot.com',
+      ),
     );
   }
 

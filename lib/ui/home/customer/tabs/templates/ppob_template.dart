@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' as services;
 import '../../../../../core/app_config.dart';
 import '../../../topup_modal.dart';
 import '../../../../../core/network/api_service.dart';
@@ -15,9 +14,9 @@ import '../../tabs/templates/prabayar/pulsa.dart';
 import '../../tabs/templates/prabayar/data.dart';
 import '../../tabs/templates/prabayar/sms.dart';
 import '../../tabs/templates/prabayar/masa_aktif.dart';
+import '../../tabs/templates/prabayar/e_money.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../../notifications_page.dart';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -29,8 +28,6 @@ class PpobTemplate extends StatefulWidget {
 class _PpobTemplateState extends State<PpobTemplate> {
   final storage = const FlutterSecureStorage();
   late SharedPreferences _prefs;
-  // Langsung inisialisasi di sini agar instance selalu siap
-  late ApiService _apiService;
   final ApiService apiService = ApiService(Dio());
 
   List<String> _bannerList = [];
@@ -52,15 +49,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
   // Refresh controller
   bool _isRefreshing = false;
 
-  // Notifikasi
-  int _notifCount = 0;
-  bool _isNotifLoading = false;
-  String? _lastNotifResponse;
-
   @override
   void initState() {
     super.initState();
-    _apiService = ApiService(Dio());
     _initializeApp();
   }
 
@@ -93,7 +84,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
         if (cachedMenu != null) {
           try {
             final List<dynamic> data = jsonDecode(cachedMenu);
-            _menuList = data.map((item) => MenuPrabayarItem.fromJson(item)).toList();
+            _menuList = data
+                .map((item) => MenuPrabayarItem.fromJson(item))
+                .toList();
             _isLoadingMenu = false;
           } catch (e) {
             // Handle error silently
@@ -131,7 +124,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
       _fetchSaldo(),
       _fetchMenuPrabayar(),
       _fetchPascabayar(),
-      _loadNotifCount(),
     ]);
   }
 
@@ -234,7 +226,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
         final data = MenuPrabayarResponse.fromJson(response.data);
 
         // Cache to SharedPreference
-        final menusJson = jsonEncode(data.menus.map((m) => m.toJson()).toList());
+        final menusJson = jsonEncode(
+          data.menus.map((m) => m.toJson()).toList(),
+        );
         await _prefs.setString('cached_menu_prabayar', menusJson);
 
         if (mounted) {
@@ -269,7 +263,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
             .toList();
 
         // Cache to SharedPreference
-        final pascabayarJson = jsonEncode(pascabayarList.map((p) => p.toJson()).toList());
+        final pascabayarJson = jsonEncode(
+          pascabayarList.map((p) => p.toJson()).toList(),
+        );
         await _prefs.setString('cached_menu_pascabayar', pascabayarJson);
 
         if (mounted) {
@@ -299,131 +295,13 @@ class _PpobTemplateState extends State<PpobTemplate> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Pastikan memanggil ulang saat dependencies berubah (mis. token tersimpan setelah login)
-    _loadNotifCount();
-  }
-
-  Future<void> _loadNotifCount() async {
-    setState(() => _isNotifLoading = true);
-    try {
-      final String? token = await SessionManager.getToken();
-
-      // Panggil API meskipun token null — ApiService menangani header optional
-      final count = await _api_service_getCountSafe(token);
-      if (!mounted) return;
-      setState(() {
-        _notifCount = count;
-        _isNotifLoading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _notifCount = 0;
-        _isNotifLoading = false;
-      });
-    }
-  }
-
-  // Wrapper yang menyimpan last response string untuk debug dan mengembalikan count
-  Future<int> _api_service_getCountSafe(String? token) async {
-    try {
-      final dioCount = await _api_service_getCount(token);
-      _lastNotifResponse = 'OK: $dioCount';
-      return dioCount;
-    } catch (e) {
-      _lastNotifResponse = 'Error: $e';
-      return 0;
-    }
-  }
-
-  // Memanggil ApiService dan juga menyimpan raw response jika memungkinkan
-  Future<int> _api_service_getCount(String? token) async {
-    // langsung gunakan apiService yang sudah ada
-    final count = await _api_service_call(token: token);
-    return count;
-  }
-
-  Future<int> _api_service_call({String? token}) async {
-    // ApiService sudah mengeluarkan debugPrint dari response; tapi kembalikan count
-    final count = await _api_service_getRaw(token);
-    return count;
-  }
-
-  // Akhir: panggil langsung ApiService.getAdminNotificationCount dan simpan string respons
-  Future<int> _api_service_getRaw(String? token) async {
-    try {
-      if (token == null || token.isEmpty) {
-        _lastNotifResponse = 'No token';
-        return 0;
-      }
-      final resp = await _apiService.getUserUnreadCount(token);
-      if (resp.statusCode == 200 && resp.data != null) {
-        final data = resp.data;
-        final Map<String, dynamic> map = {};
-        if (data is Map) {
-          data.forEach((k, v) => map[k.toString()] = v);
-        }
-        final possible = map['jumlah_belum_dibaca'] ?? map['data'] ?? map['count'] ?? 0;
-        final parsed = int.tryParse(possible?.toString() ?? '0') ?? 0;
-        _lastNotifResponse = 'count=$parsed';
-        return parsed;
-      }
-      _lastNotifResponse = 'unexpected status ${resp.statusCode}';
-      return 0;
-    } catch (e) {
-      _lastNotifResponse = 'error: $e';
-      return 0;
-    }
-  }
-
-  Widget _buildNotifBadge() {
-    final display = _notifCount > 99 ? '99+' : _notifCount.toString();
-    return GestureDetector(
-      onTap: () async {
-        // Navigate to notifications page
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const NotificationsPage()));
-        // refresh count when returning
-        _loadNotifCount();
-      },
-      onLongPress: () {
-        final msg = _lastNotifResponse ?? 'No response cached';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Notif debug: $msg')));
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: _isNotifLoading
-              ? const SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
-              : Text(
-                  display,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     final Color dynamicPrimaryColor = appConfig.primaryColor;
     final Color primaryColor = Color.alphaBlend(
-      Colors.black.withValues(alpha: 0.2),
+      Colors.black.withValues(alpha: 0.0),
       dynamicPrimaryColor,
     );
     // Update status bar color to match app primary color
@@ -434,48 +312,34 @@ class _PpobTemplateState extends State<PpobTemplate> {
       } catch (_) {}
     });
 
-    return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: _buildAppBar(dynamicPrimaryColor),
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        displacement: 40.0,
-        strokeWidth: 2.5,
-        color: dynamicPrimaryColor,
-        backgroundColor: Colors.white,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Area Banner Slider
-              _buildBannerArea(primaryColor),
-              const SizedBox(height: 110), // Jarak di bawah slider
-              // Card Saldo
-              _buildBalanceCard(),
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      displacement: 40.0,
+      strokeWidth: 2.5,
+      color: dynamicPrimaryColor,
+      backgroundColor: Colors.white,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Area Banner Slider
+            _buildBannerArea(primaryColor),
+            const SizedBox(height: 110), // Jarak di bawah slider
+            // Card Saldo
+            _buildBalanceCard(),
 
-              // Grid Menu Header + Grid Content
-              _buildMenuGrid(),
-              _buildMenuGridContent(),
+            // Grid Menu Header + Grid Content
+            _buildMenuGrid(),
+            _buildMenuGridContent(),
 
-              // Grid Pascabayar Header + Content
-              _buildPascabayarGrid(),
-              _buildPascabayarGridContent(),
-            ],
-          ),
+            // Grid Pascabayar Header + Content
+            _buildPascabayarGrid(),
+            _buildPascabayarGridContent(),
+          ],
         ),
       ),
     );
-  }
-
-  // 🎨 Extract AppBar untuk optimalkan rebuild
-  PreferredSizeWidget _buildAppBar(Color primaryColor) {
-    // Return a zero-height PreferredSize to effectively hide the AppBar across templates
-    return const PreferredSize(
-      preferredSize: Size.fromHeight(0),
-      child: SizedBox.shrink(),
-    );
-
   }
 
   // 🎨 Extract Banner Area untuk optimalkan rebuild
@@ -540,7 +404,11 @@ class _PpobTemplateState extends State<PpobTemplate> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildQuickAction(Icons.account_balance_wallet, "Isi Saldo", _showTopup),
+                _buildQuickAction(
+                  Icons.account_balance_wallet,
+                  "Isi Saldo",
+                  _showTopup,
+                ),
                 _buildQuickAction(Icons.history, "Riwayat", () {}),
                 _buildQuickAction(Icons.stars, "Poin: 0", () {}),
               ],
@@ -621,7 +489,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
                     onPressed: () => setState(() => _showAllMenus = false),
                     icon: const Icon(Icons.expand_less),
                     label: const Text("Sembunyikan"),
-                    style: TextButton.styleFrom(foregroundColor: appConfig.primaryColor),
+                    style: TextButton.styleFrom(
+                      foregroundColor: appConfig.primaryColor,
+                    ),
                   ),
                 ),
               ),
@@ -634,7 +504,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
   Widget _buildDynamicMenuIcon(MenuPrabayarItem menu) {
     // 👈 Use gambar_url from API if available, fallback to manual URL building
     final imageUrl =
-        menu.gambarUrl ?? '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
+        menu.gambarUrl ??
+        '${apiService.imageBannerBaseUrl}${menu.gambarKategori}';
 
     return InkWell(
       onTap: () {
@@ -657,6 +528,11 @@ class _PpobTemplateState extends State<PpobTemplate> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const MasaAktifPage()),
+          );
+        } else if (menu.namaKategori == "E-Money") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const EMoneyPage()),
           );
         } else {
           // Menu category not handled
@@ -687,8 +563,11 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 fit: BoxFit.contain,
                 cacheHeight: 40,
                 cacheWidth: 40,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.image_not_supported, size: 40, color: Colors.grey[400]),
+                errorBuilder: (context, error, stackTrace) => Icon(
+                  Icons.image_not_supported,
+                  size: 40,
+                  color: Colors.grey[400],
+                ),
               ),
             ),
           ),
@@ -721,7 +600,11 @@ class _PpobTemplateState extends State<PpobTemplate> {
               color: appConfig.primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(15),
             ),
-            child: Icon(Icons.more_horiz, color: appConfig.primaryColor, size: 40),
+            child: Icon(
+              Icons.more_horiz,
+              color: appConfig.primaryColor,
+              size: 40,
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -752,7 +635,10 @@ class _PpobTemplateState extends State<PpobTemplate> {
             child: Icon(icon, color: appConfig.primaryColor, size: 30),
           ),
           const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Colors.black),
+          ),
         ],
       ),
     );

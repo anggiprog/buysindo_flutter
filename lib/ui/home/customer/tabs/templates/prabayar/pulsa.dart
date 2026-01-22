@@ -187,6 +187,12 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: RefreshIndicator(

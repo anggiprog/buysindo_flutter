@@ -23,7 +23,8 @@ class _SplashScreenState extends State<SplashScreen> {
   String? _tagline;
   Uint8List? _remoteLogoBytes; // prefer memory image when available
   String? _cachedUpdatedAt;
-  bool _isLoadingImage = true; // controls showing spinner when we don't have cache
+  bool _isLoadingImage =
+      true; // controls showing spinner when we don't have cache
 
   static const _kSplashUrlKey = 'cached_splash_url';
   static const _kSplashTaglineKey = 'cached_splash_tagline';
@@ -109,7 +110,12 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-  Future<void> _saveSplashToCache(String url, List<int> bytes, String? tagline, String? updatedAt) async {
+  Future<void> _saveSplashToCache(
+    String url,
+    List<int> bytes,
+    String? tagline,
+    String? updatedAt,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final dir = await getApplicationDocumentsDirectory();
@@ -174,8 +180,15 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // If we found a usable remote logo, consider if we need to fetch/update cache
     if (logoToUse != null) {
-      final needsUpdate = (_cachedUpdatedAt == null || remoteUpdatedAt == null || remoteUpdatedAt != _cachedUpdatedAt) || (_remoteLogoUrl == null || _remoteLogoUrl != logoToUse) || _remoteLogoBytes == null;
-      debugPrint('ℹ️ Splash needsUpdate=$needsUpdate cachedUpdated=$_cachedUpdatedAt remoteUpdated=$remoteUpdatedAt');
+      final needsUpdate =
+          (_cachedUpdatedAt == null ||
+              remoteUpdatedAt == null ||
+              remoteUpdatedAt != _cachedUpdatedAt) ||
+          (_remoteLogoUrl == null || _remoteLogoUrl != logoToUse) ||
+          _remoteLogoBytes == null;
+      debugPrint(
+        'ℹ️ Splash needsUpdate=$needsUpdate cachedUpdated=$_cachedUpdatedAt remoteUpdated=$remoteUpdatedAt',
+      );
       if (!needsUpdate) {
         // nothing to do: we already have cached bytes and up-to-date
         debugPrint('ℹ️ Cached splash is up-to-date, skipping re-download');
@@ -195,7 +208,13 @@ class _SplashScreenState extends State<SplashScreen> {
           final dio = Dio();
           dio.options.connectTimeout = const Duration(seconds: 6);
           dio.options.receiveTimeout = const Duration(seconds: 6);
-          final resp = await dio.getUri(Uri.parse(logoToUse), options: Options(responseType: ResponseType.bytes, validateStatus: (s) => s! < 500));
+          final resp = await dio.getUri(
+            Uri.parse(logoToUse),
+            options: Options(
+              responseType: ResponseType.bytes,
+              validateStatus: (s) => s! < 500,
+            ),
+          );
           if (resp.statusCode == 200 && resp.data != null) {
             final bytes = resp.data as List<int>;
             if (bytes.isNotEmpty) {
@@ -208,11 +227,20 @@ class _SplashScreenState extends State<SplashScreen> {
                 _remoteLogoBytes = Uint8List.fromList(bytes);
               }
               // Save to filesystem cache with remoteUpdatedAt
-              await _saveSplashToCache(logoToUse, bytes, taglineToUse, remoteUpdatedAt);
-              debugPrint('✅ Fetched remote splash bytes, will render Image.memory');
+              await _saveSplashToCache(
+                logoToUse,
+                bytes,
+                taglineToUse,
+                remoteUpdatedAt,
+              );
+              debugPrint(
+                '✅ Fetched remote splash bytes, will render Image.memory',
+              );
             }
           } else {
-            debugPrint('⚠️ Failed to fetch splash bytes, will rely on Image.network (status ${resp.statusCode})');
+            debugPrint(
+              '⚠️ Failed to fetch splash bytes, will rely on Image.network (status ${resp.statusCode})',
+            );
           }
         } catch (e) {
           debugPrint('⚠️ Fetching remote splash bytes failed: $e');
@@ -251,7 +279,12 @@ class _SplashScreenState extends State<SplashScreen> {
       final remoteUpdatedAt = data['updated_at'] as String?;
       if (candidate == null || candidate.isEmpty) return;
 
-      final needsUpdate = (_cachedUpdatedAt == null || remoteUpdatedAt == null || remoteUpdatedAt != _cachedUpdatedAt) || (_remoteLogoUrl == null || _remoteLogoUrl != candidate) || _remoteLogoBytes == null;
+      final needsUpdate =
+          (_cachedUpdatedAt == null ||
+              remoteUpdatedAt == null ||
+              remoteUpdatedAt != _cachedUpdatedAt) ||
+          (_remoteLogoUrl == null || _remoteLogoUrl != candidate) ||
+          _remoteLogoBytes == null;
       if (!needsUpdate) {
         debugPrint('🌊 (background) Splash cache up to date');
         return;
@@ -262,12 +295,30 @@ class _SplashScreenState extends State<SplashScreen> {
         final dio = Dio();
         dio.options.connectTimeout = const Duration(seconds: 6);
         dio.options.receiveTimeout = const Duration(seconds: 6);
-        final resp = await dio.getUri(Uri.parse(candidate), options: Options(responseType: ResponseType.bytes, validateStatus: (s) => s! < 500));
+        final resp = await dio.getUri(
+          Uri.parse(candidate),
+          options: Options(
+            responseType: ResponseType.bytes,
+            validateStatus: (s) => s! < 500,
+          ),
+        );
         if (resp.statusCode == 200 && resp.data != null) {
           final bytes = resp.data as List<int>;
           if (bytes.isNotEmpty) {
-            await _saveSplashToCache(candidate, bytes, candidateTag, remoteUpdatedAt);
-            if (mounted) setState(() { _remoteLogoBytes = Uint8List.fromList(bytes); _remoteLogoUrl = candidate; _tagline = candidateTag; _cachedUpdatedAt = remoteUpdatedAt; _isLoadingImage = false; });
+            await _saveSplashToCache(
+              candidate,
+              bytes,
+              candidateTag,
+              remoteUpdatedAt,
+            );
+            if (mounted)
+              setState(() {
+                _remoteLogoBytes = Uint8List.fromList(bytes);
+                _remoteLogoUrl = candidate;
+                _tagline = candidateTag;
+                _cachedUpdatedAt = remoteUpdatedAt;
+                _isLoadingImage = false;
+              });
             debugPrint('🌊 (background) Updated cached splash successfully');
           }
         }
@@ -289,34 +340,61 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Responsive larger image: up to 60% of width, max 240
-              LayoutBuilder(builder: (ctx, constraints) {
-                final width = constraints.maxWidth.isFinite ? constraints.maxWidth * 0.6 : 240.0;
-                final imageSize = width.clamp(140.0, 320.0);
+              LayoutBuilder(
+                builder: (ctx, constraints) {
+                  final width = constraints.maxWidth.isFinite
+                      ? constraints.maxWidth * 0.6
+                      : 240.0;
+                  final imageSize = width.clamp(140.0, 320.0);
 
-                if (_remoteLogoBytes != null)
-                  return Image.memory(_remoteLogoBytes!, width: imageSize, height: imageSize, fit: BoxFit.contain);
-                else if (_remoteLogoUrl != null && _remoteLogoUrl!.isNotEmpty)
-                // Try network image if bytes fetch failed – loadingBuilder keeps spinner until loaded
-                Image.network(
-                  _remoteLogoUrl!,
-                  width: imageSize,
-                  height: imageSize,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return SizedBox(width: imageSize, height: imageSize, child: const Center(child: CircularProgressIndicator(strokeWidth: 2)));
-                  },
-                  errorBuilder: (_, __, ___) => Image.asset('assets/images/logo.png', width: imageSize, height: imageSize),
-                );
-                return Image.asset('assets/images/logo.png', width: imageSize, height: imageSize);
-              }),
+                  if (_remoteLogoBytes != null)
+                    return Image.memory(
+                      _remoteLogoBytes!,
+                      width: imageSize,
+                      height: imageSize,
+                      fit: BoxFit.contain,
+                    );
+                  else if (_remoteLogoUrl != null && _remoteLogoUrl!.isNotEmpty)
+                    // Try network image if bytes fetch failed – loadingBuilder keeps spinner until loaded
+                    Image.network(
+                      _remoteLogoUrl!,
+                      width: imageSize,
+                      height: imageSize,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return SizedBox(
+                          width: imageSize,
+                          height: imageSize,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => Image.asset(
+                        'assets/images/logo.png',
+                        width: imageSize,
+                        height: imageSize,
+                      ),
+                    );
+                  return Image.asset(
+                    'assets/images/logo.png',
+                    width: imageSize,
+                    height: imageSize,
+                  );
+                },
+              ),
 
               const SizedBox(height: 16),
 
               Text(
                 _tagline ?? '',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, color: Colors.black54, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
 
               const SizedBox(height: 20),
@@ -328,38 +406,10 @@ class _SplashScreenState extends State<SplashScreen> {
                   height: 36,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-
-
             ],
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _clearSplashCache() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final filePath = prefs.getString(_kSplashFileKey);
-      if (filePath != null && filePath.isNotEmpty) {
-        final f = File(filePath);
-        if (await f.exists()) await f.delete();
-      }
-      await prefs.remove(_kSplashFileKey);
-      await prefs.remove(_kSplashUrlKey);
-      await prefs.remove(_kSplashTaglineKey);
-      await prefs.remove(_kSplashUpdatedAtKey);
-      setState(() {
-        _remoteLogoBytes = null;
-        _remoteLogoUrl = null;
-        _tagline = null;
-        _cachedUpdatedAt = null;
-        _isLoadingImage = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Splash cache cleared')));
-    } catch (e) {
-      debugPrint('⚠️ Failed to clear splash cache: $e');
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to clear splash cache')));
-    }
   }
 }

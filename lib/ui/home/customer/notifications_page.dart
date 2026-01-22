@@ -29,146 +29,144 @@ class _NotificationsPageState extends State<NotificationsPage>
   void initState() {
     super.initState();
     _apiService = ApiService(Dio());
-    _tabController = TabController(length: 3, vsync: this);
+    try {
+      _tabController = TabController(length: 3, vsync: this);
+    } catch (e) {
+      debugPrint('❌ Error creating TabController: $e');
+      _tabController = TabController(length: 3, vsync: this);
+    }
     _loadNotifications();
+  }
+
+  @override
+  void dispose() {
+    try {
+      _tabController.dispose();
+    } catch (e) {
+      debugPrint('⚠️ Error disposing TabController: $e');
+    }
+    super.dispose();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Set status bar color to app primary color
-    final color = appConfig.primaryColor;
-    final brightness = color.computeLuminance() > 0.5 ? Brightness.dark : Brightness.light;
-    services.SystemChrome.setSystemUIOverlayStyle(
-      services.SystemUiOverlayStyle(statusBarColor: color, statusBarIconBrightness: brightness),
-    );
+    try {
+      // Set status bar color to app primary color
+      final color = appConfig.primaryColor;
+      // Validate color - use fallback if invalid
+      final validColor = color.value == 0 ? const Color(0xFF0D6EFD) : color;
+      final brightness = validColor.computeLuminance() > 0.5
+          ? Brightness.dark
+          : Brightness.light;
+      services.SystemChrome.setSystemUIOverlayStyle(
+        services.SystemUiOverlayStyle(
+          statusBarColor: validColor,
+          statusBarIconBrightness: brightness,
+        ),
+      );
+      debugPrint('✅ Status bar color set');
+    } catch (e) {
+      debugPrint('⚠️ Error setting status bar color: $e');
+    }
   }
 
   Future<void> _loadNotifications() async {
-    setState(() => _isLoading = true);
     try {
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+
       final token = await SessionManager.getToken();
       if (token == null) {
+        debugPrint('⚠️ No token available for loading notifications');
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
+      debugPrint('📲 Loading notifications...');
       final response = await _apiService.getUserNotifications(token);
+
+      if (!mounted) return;
+
+      debugPrint('📲 API Response Status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = response.data;
-        if (data is Map && data['status'] == 'success' && data['data'] != null) {
+        debugPrint('📲 API Response Data Type: ${data.runtimeType}');
+
+        if (data is Map &&
+            data['status'] == 'success' &&
+            data['data'] != null) {
           final List raw = data['data'];
-          final List<NotificationModel> list = raw
-              .map((e) => NotificationModel.fromJson(Map<String, dynamic>.from(e)))
-              .toList();
-          if (mounted) {
-            setState(() {
-              _items = list;
-              _isLoading = false;
-              _selectedIds.clear();
-            });
+          try {
+            final List<NotificationModel> list = raw
+                .map(
+                  (e) =>
+                      NotificationModel.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList();
+            if (mounted) {
+              setState(() {
+                _items = list;
+                _isLoading = false;
+                _selectedIds.clear();
+              });
+              debugPrint('✅ Notifications loaded: ${list.length} items');
+            }
+          } catch (e) {
+            debugPrint('❌ Error parsing notification list: $e');
+            if (mounted) setState(() => _isLoading = false);
           }
         } else if (data is List) {
           // fallback jika endpoint return array langsung
           final List raw = data;
-          final list = raw
-              .map((e) => NotificationModel.fromJson(Map<String, dynamic>.from(e)))
-              .toList();
-          if (mounted) setState(() {
-            _items = list;
-            _isLoading = false;
-            _selectedIds.clear();
-          });
+          try {
+            final list = raw
+                .map(
+                  (e) =>
+                      NotificationModel.fromJson(Map<String, dynamic>.from(e)),
+                )
+                .toList();
+            if (mounted) {
+              setState(() {
+                _items = list;
+                _isLoading = false;
+                _selectedIds.clear();
+              });
+              debugPrint(
+                '✅ Notifications loaded (array fallback): ${list.length} items',
+              );
+            }
+          } catch (e) {
+            debugPrint('❌ Error parsing notification array: $e');
+            if (mounted) setState(() => _isLoading = false);
+          }
         } else {
+          debugPrint('⚠️ Unexpected data format from API: $data');
           if (mounted) setState(() => _isLoading = false);
         }
       } else {
-        debugPrint('Failed to load notifications: ${response.statusCode}');
+        debugPrint('❌ Failed to load notifications: ${response.statusCode}');
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint('Error loading notifications: $e');
+      debugPrint('❌ Error loading notifications: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   List<NotificationModel> get _all => _items;
   List<NotificationModel> get _read => _items.where((i) => i.isRead).toList();
-  List<NotificationModel> get _unread => _items.where((i) => !i.isRead).toList();
+  List<NotificationModel> get _unread =>
+      _items.where((i) => !i.isRead).toList();
 
   Future<void> _toggleSelect(int id, bool selected) async {
     setState(() {
-      if (selected) _selectedIds.add(id); else _selectedIds.remove(id);
+      if (selected)
+        _selectedIds.add(id);
+      else
+        _selectedIds.remove(id);
     });
-  }
-
-  Future<void> _deleteSelected() async {
-    if (_selectedIds.isEmpty) return;
-    final token = await SessionManager.getToken();
-    if (token == null) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Hapus notifikasi terpilih'),
-        content: const Text('Yakin ingin menghapus notifikasi yang dipilih?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Hapus')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    // Jika semua dipilih, panggil deleteAll di backend
-    if (_selectedIds.length == _items.length) {
-      final resp = await _apiService.deleteAllUserNotifications(token);
-      if (resp.statusCode == 200) {
-        await _loadNotifications();
-        return;
-      }
-    }
-
-    // Backend tidak mendukung delete-by-ids -> fallback: mark as read on server for each selected, then remove locally
-    for (final id in List<int>.from(_selectedIds)) {
-      try {
-        await _apiService.markNotificationAsRead(id: id, token: token);
-      } catch (e) {
-        debugPrint('Failed mark read for $id: $e');
-      }
-    }
-
-    setState(() {
-      _items.removeWhere((i) => _selectedIds.contains(i.id));
-      _selectedIds.clear();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifikasi dihapus secara lokal (server tidak mendukung delete-by-ids)')));
-  }
-
-  Future<void> _markSelectedAsRead() async {
-    if (_selectedIds.isEmpty) return;
-    final token = await SessionManager.getToken();
-    if (token == null) return;
-
-    for (final id in List<int>.from(_selectedIds)) {
-      final resp = await _apiService.markNotificationAsRead(id: id, token: token);
-      if (resp.statusCode == 200) {
-        final idx = _items.indexWhere((e) => e.id == id);
-        if (idx >= 0) {
-          _items[idx] = NotificationModel(
-            id: _items[idx].id,
-            judul: _items[idx].judul,
-            message: _items[idx].message,
-            imageUrl: _items[idx].imageUrl,
-            isRead: true,
-            createdAt: _items[idx].createdAt,
-          );
-        }
-      }
-    }
-    setState(() => _selectedIds.clear());
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Notifikasi ditandai sebagai dibaca')));
   }
 
   // Mark a single notification as read (used when tapping an item)
@@ -176,7 +174,10 @@ class _NotificationsPageState extends State<NotificationsPage>
     final token = await SessionManager.getToken();
     if (token == null) return;
     try {
-      final resp = await _apiService.markNotificationAsRead(id: item.id, token: token);
+      final resp = await _apiService.markNotificationAsRead(
+        id: item.id,
+        token: token,
+      );
       if (resp.statusCode == 200) {
         final idx = _items.indexWhere((e) => e.id == item.id);
         if (idx >= 0) {
@@ -199,52 +200,15 @@ class _NotificationsPageState extends State<NotificationsPage>
     }
   }
 
-  // Delete all notifications via API with confirmation
-  Future<void> _deleteAll() async {
-    final token = await SessionManager.getToken();
-    if (token == null) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Hapus semua notifikasi'),
-        content: const Text('Semua notifikasi akan dihapus. Lanjutkan?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Hapus Semua')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
-    try {
-      final resp = await _apiService.deleteAllUserNotifications(token);
-      if (resp.statusCode == 200) {
-        // Hapus langsung di UI agar user tidak perlu manual refresh
-        if (mounted) {
-          setState(() {
-            _items.clear();
-            _selectedIds.clear();
-            _isLoading = false;
-          });
-        }
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Semua notifikasi berhasil dihapus')));
-        return;
-      } else {
-        debugPrint('Failed delete all: ${resp.statusCode} ${resp.data}');
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal menghapus notifikasi')));
-      }
-    } catch (e) {
-      debugPrint('Error deleting all notifications: $e');
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal menghapus notifikasi')));
-    }
-  }
-
   Widget _buildList(List<NotificationModel> list) {
     if (list.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: const [
-          SizedBox(height: 200, child: Center(child: Text('Belum ada notifikasi'))),
+          SizedBox(
+            height: 200,
+            child: Center(child: Text('Belum ada notifikasi')),
+          ),
         ],
       );
     }
@@ -259,7 +223,9 @@ class _NotificationsPageState extends State<NotificationsPage>
         return Card(
           elevation: 2,
           color: Colors.grey[100], // abu-abu lembut untuk tampilan buram
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           child: InkWell(
             onTap: () async {
               if (!item.isRead) await _markAsRead(item);
@@ -269,7 +235,12 @@ class _NotificationsPageState extends State<NotificationsPage>
                 builder: (_) => AlertDialog(
                   title: Text(item.judul),
                   content: Text(item.message),
-                  actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup'))],
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Tutup'),
+                    ),
+                  ],
                 ),
               );
             },
@@ -278,7 +249,10 @@ class _NotificationsPageState extends State<NotificationsPage>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Checkbox(value: selected, onChanged: (v) => _toggleSelect(item.id, v ?? false)),
+                  Checkbox(
+                    value: selected,
+                    onChanged: (v) => _toggleSelect(item.id, v ?? false),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -290,7 +264,9 @@ class _NotificationsPageState extends State<NotificationsPage>
                               child: Text(
                                 item.judul,
                                 style: TextStyle(
-                                  fontWeight: item.isRead ? FontWeight.normal : FontWeight.bold,
+                                  fontWeight: item.isRead
+                                      ? FontWeight.normal
+                                      : FontWeight.bold,
                                   fontSize: 16,
                                   color: Colors.black,
                                 ),
@@ -299,9 +275,21 @@ class _NotificationsPageState extends State<NotificationsPage>
                             if (!item.isRead)
                               Container(
                                 margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
-                                child: const Text('Baru', style: TextStyle(color: Colors.white, fontSize: 11)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  'Baru',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -315,7 +303,10 @@ class _NotificationsPageState extends State<NotificationsPage>
                         const SizedBox(height: 8),
                         Text(
                           '${item.createdAt.day.toString().padLeft(2, '0')}-${item.createdAt.month.toString().padLeft(2, '0')}-${item.createdAt.year} ${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(fontSize: 12, color: Colors.black54),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
                         ),
                       ],
                     ),
@@ -329,40 +320,107 @@ class _NotificationsPageState extends State<NotificationsPage>
     );
   }
 
+  Color _getValidAppBarColor() {
+    final primaryColor = appConfig.primaryColor;
+    if (primaryColor.value == 0 ||
+        primaryColor.value == 0xFFFFFFFF ||
+        primaryColor.alpha < 200) {
+      return const Color(0xFF0D6EFD);
+    }
+    if (primaryColor.computeLuminance() >= 0.9) {
+      return const Color(0xFF0D6EFD);
+    }
+    return primaryColor;
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
+    try {
+      if (_isLoading) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: appConfig.primaryColor,
-        elevation: 0,
-        centerTitle: false,
-        title: Text(appConfig.appName, style: TextStyle(color: appConfig.textColor)),
-        iconTheme: IconThemeData(color: appConfig.textColor),
-        bottom: TabBar(
+      final Color appBarColor = _getValidAppBarColor();
+
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: appBarColor,
+          foregroundColor: appConfig.textColor,
+          elevation: 4,
+          centerTitle: false,
+          title: Text(
+            appConfig.appName,
+            style: TextStyle(color: appConfig.textColor),
+          ),
+          iconTheme: IconThemeData(color: appConfig.textColor),
+          systemOverlayStyle: services.SystemUiOverlayStyle(
+            statusBarColor: appBarColor,
+            statusBarBrightness: appBarColor.computeLuminance() > 0.5
+                ? Brightness.light
+                : Brightness.dark,
+            statusBarIconBrightness: appBarColor.computeLuminance() > 0.5
+                ? Brightness.dark
+                : Brightness.light,
+          ),
+          bottom: TabBar(
+            controller: _tabController,
+            indicatorColor: appConfig.textColor,
+            labelColor: appConfig.textColor,
+            unselectedLabelColor: appConfig.textColor.withOpacity(0.7),
+            tabs: const [
+              Tab(text: 'Semua'),
+              Tab(text: 'Dibaca'),
+              Tab(text: 'Belum'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          indicatorColor: appConfig.textColor,
-          labelColor: appConfig.textColor,
-          unselectedLabelColor: appConfig.textColor.withOpacity(0.7),
-          tabs: const [
-            Tab(text: 'Semua'),
-            Tab(text: 'Dibaca'),
-            Tab(text: 'Belum'),
+          children: [
+            RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: _buildList(_all),
+            ),
+            RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: _buildList(_read),
+            ),
+            RefreshIndicator(
+              onRefresh: _loadNotifications,
+              child: _buildList(_unread),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          RefreshIndicator(onRefresh: _loadNotifications, child: _buildList(_all)),
-          RefreshIndicator(onRefresh: _loadNotifications, child: _buildList(_read)),
-          RefreshIndicator(onRefresh: _loadNotifications, child: _buildList(_unread)),
-        ],
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('❌ Error building NotificationsPage: $e');
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Notifikasi'),
+          backgroundColor: appConfig.primaryColor,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text('Terjadi kesalahan'),
+              const SizedBox(height: 8),
+              Text('$e'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() => _isLoading = true);
+                  _loadNotifications();
+                },
+                child: const Text('Coba Lagi'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 }
