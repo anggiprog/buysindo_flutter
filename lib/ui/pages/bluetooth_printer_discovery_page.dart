@@ -299,7 +299,7 @@ class _BluetoothPrinterDiscoveryPageState
                               ),
                             ),
                           );
-                        }).toList(),
+                        }),
                       ],
                     ),
                   const SizedBox(height: 12),

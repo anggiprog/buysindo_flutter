@@ -1,11 +1,30 @@
 import 'dart:convert';
+import 'dart:math';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
 import '../../features/customer/data/models/notification_count_model.dart';
+import '../../features/topup/models/topup_response_models.dart';
+import '../../models/topup_history_models.dart';
 import 'session_manager.dart';
+
+// Silence all debug logging in this service
+void _noopLog(Object? _) {}
+
+// Temporary helper to surface tokens in console for debugging/Postman
+void _debugTokenLog(String? token, {String source = ''}) {
+  if (token == null || token.isEmpty) return;
+  final prefix = source.isNotEmpty ? ' ($source)' : '';
+  // Using print (not debugPrint) to avoid log throttling
+  print('\nBUYSINDO-LOG: ═══════════════════════════════════');
+  print('BUYSINDO-LOG: TOKEN${prefix.isEmpty ? '' : prefix}');
+  print('BUYSINDO-LOG: $token');
+  print('BUYSINDO-LOG: LENGTH ${token.length}');
+  print('BUYSINDO-LOG: ═══════════════════════════════════\n');
+}
 
 class ApiService {
   final Dio _dio;
@@ -50,9 +69,9 @@ class ApiService {
   /// High-level Login: sends device token and returns LoginResponse
   Future<LoginResponse> login(String email, String password) async {
     try {
-      debugPrint('🔐 [ApiService] Starting login with email: $email');
+      _noopLog('🔐 [ApiService] Starting login with email: $email');
       final deviceToken = await getDeviceToken();
-      debugPrint(
+      _noopLog(
         '📤 [ApiService] Sending login request with device_token: $deviceToken',
       );
 
@@ -66,10 +85,12 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint(
+        _noopLog(
           '✅ [ApiService] Login successful, status code: ${response.statusCode}',
         );
-        return LoginResponse.fromJson(response.data);
+        final loginResponse = LoginResponse.fromJson(response.data);
+        _debugTokenLog(loginResponse.accessToken, source: 'login');
+        return loginResponse;
       } else {
         throw Exception(response.data['message'] ?? 'Login failed');
       }
@@ -81,18 +102,18 @@ class ApiService {
   /// Get Firebase Device Token safely
   Future<String> getDeviceToken() async {
     try {
-      debugPrint('📱 [ApiService] Fetching Firebase device token...');
+      _noopLog('📱 [ApiService] Fetching Firebase device token...');
       final token = await FirebaseMessaging.instance.getToken();
 
       if (token != null && token.isNotEmpty) {
-        debugPrint('✅ [ApiService] Device token fetched: $token');
+        _noopLog('✅ [ApiService] Device token fetched: $token');
         return token;
       } else {
-        debugPrint('⚠️ [ApiService] Firebase device token is empty/null');
+        _noopLog('⚠️ [ApiService] Firebase device token is empty/null');
         return 'unknown_device_token';
       }
     } catch (e) {
-      debugPrint('❌ [ApiService] Error getting device token: $e');
+      _noopLog('❌ [ApiService] Error getting device token: $e');
       return 'error_getting_token';
     }
   }
@@ -115,6 +136,7 @@ class ApiService {
         final otpResponse = OtpResponse.fromJson(response.data);
         if (otpResponse.status == true && otpResponse.token != null) {
           await SessionManager.saveToken(otpResponse.token!);
+          _debugTokenLog(otpResponse.token, source: 'verify-otp');
         }
         return otpResponse;
       } else {
@@ -175,6 +197,15 @@ class ApiService {
   /// Mengambil saldo user
 
   Future<Response> getSaldo(String token) {
+    print('\n\n');
+    print('BUYSINDO-LOG: ═══════════════════════════════════════════════════');
+    print('BUYSINDO-LOG: 💰 GET SALDO DIPANGGIL');
+    print('BUYSINDO-LOG: Token = $token');
+    print('BUYSINDO-LOG: Token Length = ${token.length} karakter');
+    print('BUYSINDO-LOG: Endpoint = api/saldo');
+    print('BUYSINDO-LOG: ═══════════════════════════════════════════════════');
+    print('\n\n');
+
     return _dio.get(
       'api/saldo',
       options: Options(
@@ -212,14 +243,14 @@ class ApiService {
 
     // 2. Cek Cache terlebih dahulu
     if (cachedData != null) {
-      debugPrint(
+      _noopLog(
         '📦 Menggunakan cache produk (${_parseProducts(cachedData).length} produk)',
       );
       return _parseProducts(cachedData);
     }
 
     // 3. Jika cache kosong, ambil dari API
-    debugPrint('🔄 Cache kosong, fetch dari API...');
+    _noopLog('🔄 Cache kosong, fetch dari API...');
     return await _fetchProductsFromApi(token, prefs);
   }
 
@@ -240,18 +271,18 @@ class ApiService {
           final String productsJson = json.encode(data['products']);
           await prefs.setString(_prefKey, productsJson);
           final products = _parseProducts(productsJson);
-          debugPrint(
+          _noopLog(
             '✅ Produk berhasil di-fetch dari API (${products.length} produk)',
           );
           return products;
         }
       }
     } catch (e) {
-      debugPrint("❌ Error Fetching Products: $e");
+      _noopLog("❌ Error Fetching Products: $e");
       // Fallback ke cache jika API gagal
       final String? cachedData = prefs.getString(_prefKey);
       if (cachedData != null) {
-        debugPrint('⚠️ API gagal, fallback ke cache');
+        _noopLog('⚠️ API gagal, fallback ke cache');
         return _parseProducts(cachedData);
       }
     }
@@ -266,7 +297,7 @@ class ApiService {
   Future<void> clearProductCache() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefKey);
-    debugPrint('🗑️ Cache produk telah dihapus');
+    _noopLog('🗑️ Cache produk telah dihapus');
   }
 
   //detect brand
@@ -300,7 +331,7 @@ class ApiService {
         return detectedBrand;
       }
     } catch (e) {
-      debugPrint("❌ Gagal deteksi brand: $e");
+      _noopLog("❌ Gagal deteksi brand: $e");
     }
     return null;
   }
@@ -506,13 +537,13 @@ class ApiService {
   /// Update or register device token
   Future<void> updateDeviceToken(String token) async {
     try {
-      debugPrint('📝 [ApiService] updateDeviceToken() called');
-      debugPrint(
+      _noopLog('📝 [ApiService] updateDeviceToken() called');
+      _noopLog(
         '🔑 [ApiService] Using auth token: ${token.substring(0, 20)}...',
       );
 
       final deviceToken = await getDeviceToken();
-      debugPrint('📱 [ApiService] Device token to update: $deviceToken');
+      _noopLog('📱 [ApiService] Device token to update: $deviceToken');
 
       final response = await _dio.post(
         'api/device-token/update',
@@ -521,11 +552,11 @@ class ApiService {
       );
 
       if (response.statusCode == 200) {
-        debugPrint('✅ [ApiService] Device token updated successfully!');
-        debugPrint('📌 [ApiService] Device Token: $deviceToken');
-        debugPrint('📌 [ApiService] Response: ${response.data}');
+        _noopLog('✅ [ApiService] Device token updated successfully!');
+        _noopLog('📌 [ApiService] Device Token: $deviceToken');
+        _noopLog('📌 [ApiService] Response: ${response.data}');
       } else {
-        debugPrint(
+        _noopLog(
           '⚠️ [ApiService] Device token update returned status ${response.statusCode}',
         );
         throw Exception(
@@ -533,12 +564,12 @@ class ApiService {
         );
       }
     } on DioException catch (e) {
-      debugPrint(
+      _noopLog(
         '❌ [ApiService] Device token update error: ${_handleDioError(e)}',
       );
       // Don't throw, just log warning - not critical
     } catch (e) {
-      debugPrint('❌ [ApiService] Unexpected error in updateDeviceToken: $e');
+      _noopLog('❌ [ApiService] Unexpected error in updateDeviceToken: $e');
     }
   }
 
@@ -561,7 +592,7 @@ class ApiService {
   /// Jika token == null maka akan memanggil tanpa header Authorization
   Future<int> getAdminNotificationCount([String? token]) async {
     try {
-      debugPrint(
+      _noopLog(
         '🔔 [ApiService] getAdminNotificationCount() called (token present: ${token != null && token.isNotEmpty})',
       );
 
@@ -574,8 +605,8 @@ class ApiService {
         options: options,
       );
 
-      debugPrint('🔔 [ApiService] Response status: ${response.statusCode}');
-      debugPrint('🔔 [ApiService] Response data: ${response.data}');
+      _noopLog('🔔 [ApiService] Response status: ${response.statusCode}');
+      _noopLog('🔔 [ApiService] Response data: ${response.data}');
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -587,12 +618,12 @@ class ApiService {
               mapData[k.toString()] = v;
             });
             final parsed = NotificationCountResponse.fromJson(mapData);
-            debugPrint(
+            _noopLog(
               '🔔 [ApiService] jumlah_belum_dibaca: ${parsed.jumlahBelumDibaca}',
             );
             return parsed.jumlahBelumDibaca;
           } catch (e) {
-            debugPrint(
+            _noopLog(
               '⚠️ [ApiService] Failed to parse NotificationCountResponse: $e',
             );
           }
@@ -606,16 +637,58 @@ class ApiService {
         if (data is int) return data;
         if (data is String) return int.tryParse(data) ?? 0;
       }
-      debugPrint(
+      _noopLog(
         '⚠️ [ApiService] getAdminNotificationCount unexpected status: ${response.statusCode}',
       );
       return 0;
     } on DioException catch (e) {
-      debugPrint('❌ [ApiService] getAdminNotificationCount error: $e');
+      _noopLog('❌ [ApiService] getAdminNotificationCount error: $e');
       return 0;
     } catch (e) {
-      debugPrint('❌ [ApiService] getAdminNotificationCount unknown error: $e');
+      _noopLog('❌ [ApiService] getAdminNotificationCount unknown error: $e');
       return 0;
+    }
+  }
+
+  // ===========================================================================
+  // ENDPOINTS TOPUP HISTORY
+  // ===========================================================================
+
+  /// Mengambil histori topup manual
+  Future<TopupManualHistoryResponse> getTopupManualHistory(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/user/history-topup-manual',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        return TopupManualHistoryResponse.fromJson(response.data);
+      } else {
+        throw Exception('Failed to load manual topup history');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
+  }
+
+  /// Mengambil histori topup otomatis
+  Future<TopupOtomatisHistoryResponse> getTopupOtomatisHistory(
+    String token,
+  ) async {
+    try {
+      final response = await _dio.get(
+        'api/topup-history',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.statusCode == 200) {
+        return TopupOtomatisHistoryResponse.fromJson(response.data);
+      } else {
+        throw Exception('Failed to load otomatis topup history');
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
     }
   }
 
@@ -647,12 +720,147 @@ class ApiService {
     );
   }
 
+  /// Delete a single notification by ID
+  Future<Response> deleteNotification({
+    required int id,
+    required String token,
+  }) async {
+    try {
+      _noopLog('📤 [API] Sending delete request for notification ID: $id');
+      _noopLog('📤 [API] Endpoint: api/user/notification/delete');
+      _noopLog('📤 [API] Data: {"notification_id": $id}');
+      _noopLog('📤 [API] Token present: ${token.isNotEmpty}');
+
+      final response = await _dio.post(
+        'api/user/notification/delete',
+        data: {'notification_id': id},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      _noopLog('📥 [API] Raw status code: ${response.statusCode}');
+      _noopLog('📥 [API] Raw response body: ${response.data}');
+
+      return response;
+    } on DioException catch (e) {
+      _noopLog('❌ [API] DioException during delete: ${e.message}');
+      _noopLog('❌ [API] Exception type: ${e.type}');
+      _noopLog('❌ [API] Response status: ${e.response?.statusCode}');
+      _noopLog('❌ [API] Response data: ${e.response?.data}');
+      rethrow;
+    } catch (e) {
+      _noopLog('❌ [API] Unexpected error during delete: $e');
+      rethrow;
+    }
+  }
+
   /// Delete all notifications for user
   Future<Response> deleteAllUserNotifications(String token) {
     return _dio.post(
       'api/user/notification/delete-all',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
+  }
+
+  // ===========================================================================
+  // TOPUP ENDPOINTS
+  // ===========================================================================
+
+  /// Ambil minimal topup berdasarkan amount
+  Future<MinimalTopupResponse> getMinimalTopup(
+    int? amount,
+    String token,
+  ) async {
+    try {
+      final queryParams = amount != null
+          ? {'amount': amount}
+          : <String, dynamic>{};
+      final response = await _dio.get(
+        'api/minimal-topup',
+        queryParameters: queryParams,
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return MinimalTopupResponse.fromJson(response.data);
+    } catch (e) {
+      _noopLog('❌ Error get minimal topup: $e');
+      rethrow;
+    }
+  }
+
+  /// Ambil biaya admin untuk topup manual
+  Future<AdminFeeResponse> getAdminFee(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/admin-fee',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return AdminFeeResponse.fromJson(response.data);
+    } catch (e) {
+      _noopLog('❌ Error get admin fee: $e');
+      rethrow;
+    }
+  }
+
+  /// Ambil status rekening untuk topup manual
+  Future<RekeningStatusResponse> getRekeningStatus(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/rekening/status',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return RekeningStatusResponse.fromJson(response.data);
+    } catch (e) {
+      _noopLog('❌ Error get rekening status: $e');
+      rethrow;
+    }
+  }
+
+  /// Ambil status pembayaran otomatis
+  Future<StatusPaymentResponse> getStatusPayment(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/status-payment',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return StatusPaymentResponse.fromJson(response.data);
+    } catch (e) {
+      _noopLog('❌ Error get status payment: $e');
+      rethrow;
+    }
+  }
+
+  /// Ambil daftar rekening bank untuk pembayaran manual
+  Future<BankAccountResponse> getBankAccounts(String token) async {
+    try {
+      print('🔍 [API] ===== FETCHING BANK ACCOUNTS START =====');
+      print('🔍 [API] Endpoint: api/rekening-bank');
+      print('🔍 [API] Token: ${token.substring(0, 20)}...');
+
+      final response = await _dio.get(
+        'api/rekening-bank',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      print('🔍 [API] Status Code: ${response.statusCode}');
+      print('🔍 [API] Response Data: ${response.data}');
+
+      final bankResponse = BankAccountResponse.fromJson(response.data);
+      print(
+        '🔍 [API] Parsed Bank Accounts Count: ${bankResponse.data?.length}',
+      );
+      if (bankResponse.data != null) {
+        for (var i = 0; i < bankResponse.data!.length; i++) {
+          final bank = bankResponse.data![i];
+          print('🔍 [API]   [$i] ${bank.namaBank} - ${bank.nomorRekening}');
+        }
+      }
+      print('🔍 [API] ===== FETCHING BANK ACCOUNTS END =====');
+
+      return bankResponse;
+    } catch (e) {
+      print('❌ [API] Error get bank accounts: $e');
+      print('❌ [API] Error type: ${e.runtimeType}');
+      rethrow;
+    }
   }
 
   /// Mengambil splash screen publik berdasarkan admin_user_id
@@ -686,10 +894,10 @@ class ApiService {
 
       return null;
     } on DioException catch (e) {
-      debugPrint('❌ [ApiService] getSplashScreen DioException: $e');
+      _noopLog('❌ [ApiService] getSplashScreen DioException: $e');
       return null;
     } catch (e) {
-      debugPrint('❌ [ApiService] getSplashScreen Error: $e');
+      _noopLog('❌ [ApiService] getSplashScreen Error: $e');
       return null;
     }
   }
@@ -729,7 +937,7 @@ class ApiService {
         }
       }
     } catch (e) {
-      debugPrint('❌ [ApiService] isDeviceTokenMismatch error: $e');
+      _noopLog('❌ [ApiService] isDeviceTokenMismatch error: $e');
     }
     return false;
   }
@@ -739,13 +947,208 @@ class ApiService {
   Future<bool> isAuthTokenValid(String authToken) async {
     try {
       final response = await getProfile(authToken);
-      debugPrint(
+      _noopLog(
         '🔐 [ApiService] isAuthTokenValid status=${response.statusCode}',
       );
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('❌ [ApiService] isAuthTokenValid error: $e');
+      _noopLog('❌ [ApiService] isAuthTokenValid error: $e');
       return false;
+    }
+  }
+
+  /// Proses topup saldo ke rekening bank
+  /// Endpoint: POST api/topup
+  /// Requires: Authorization (user token) dan X-Admin-Token
+  /// batasWaktu otomatis diset ke 3 hari dari sekarang
+  /// nomorTransaksi otomatis generate: {adminId}_Trxtopup_{randomString}
+  /// Returns both the response and the generated transaction number
+  Future<TopupResponseWithTrxId> topUpSaldo({
+    required String amount,
+    required String bankName,
+    required String nomorRekening,
+    required String namaRekening,
+    required String userToken,
+    required String adminUserId,
+  }) async {
+    try {
+      // Generate nomorTransaksi: TRX{adminId}{randomString} - only letters and numbers
+      final random = Random().nextInt(999999);
+      final nomorTransaksi =
+          'TRX${adminUserId}${random.toString().padLeft(6, '0')}';
+
+      print('🔍 [API] ===== TOP UP SALDO START =====');
+      print('🔍 [API] Endpoint: api/topup');
+      print('🔍 [API] Amount: $amount');
+      print('🔍 [API] Bank Name: $bankName');
+      print('🔍 [API] No. Rekening: $nomorRekening');
+      print('🔍 [API] Atas Nama: $namaRekening');
+      print('🔍 [API] No. Transaksi: $nomorTransaksi (auto-generated)');
+
+      // Ambil admin token
+      final adminTokenResponse = await getAdminToken(adminUserId);
+      if (adminTokenResponse.statusCode != 200) {
+        throw Exception('Gagal mengambil admin token');
+      }
+
+      // Parse admin token dari struktur response: {status: "success", data: [{token: "..."}]}
+      String? adminToken;
+      try {
+        final responseData = adminTokenResponse.data;
+        print('🔍 [API] Admin Token Response: $responseData');
+
+        if (responseData is Map) {
+          // Cek struktur: data['data'] adalah array
+          final dataArray = responseData['data'];
+          if (dataArray is List && dataArray.isNotEmpty) {
+            final firstItem = dataArray[0];
+            if (firstItem is Map) {
+              adminToken = firstItem['token'] as String?;
+            }
+          }
+          // Fallback: cek langsung di root level
+          if (adminToken == null || adminToken.isEmpty) {
+            adminToken = responseData['token'] as String?;
+          }
+        }
+      } catch (e) {
+        print('⚠️ [API] Error parsing admin token: $e');
+      }
+
+      if (adminToken == null || adminToken.isEmpty) {
+        throw Exception('Admin token kosong - gagal parse dari response');
+      }
+
+      print('🔍 [API] Admin Token: ${adminToken.substring(0, 20)}...');
+
+      // Hitung batas waktu (3 hari dari sekarang) - format: Y-m-d H:i:s
+      final batasWaktuDateTime = DateTime.now().add(const Duration(days: 3));
+      final batasWaktu =
+          '${batasWaktuDateTime.year}-${batasWaktuDateTime.month.toString().padLeft(2, '0')}-${batasWaktuDateTime.day.toString().padLeft(2, '0')} '
+          '${batasWaktuDateTime.hour.toString().padLeft(2, '0')}:${batasWaktuDateTime.minute.toString().padLeft(2, '0')}:${batasWaktuDateTime.second.toString().padLeft(2, '0')}';
+      print('🔍 [API] Batas Waktu: $batasWaktu');
+
+      // Buat form data
+      final formData = FormData.fromMap({
+        'amount': amount,
+        'bank_name': bankName,
+        'nomor_rekening': nomorRekening,
+        'nama_rekening': namaRekening,
+        'nomor_transaksi': nomorTransaksi,
+        'batas_waktu': batasWaktu,
+      });
+
+      // Kirim request dengan dua header authorization
+      final response = await _dio.post(
+        'api/topup',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $userToken',
+            'X-Admin-Token': adminToken,
+          },
+        ),
+      );
+
+      print('🔍 [API] Status Code: ${response.statusCode}');
+      print('🔍 [API] Response Data: ${response.data}');
+
+      final topupResponse = TopupResponse.fromJson(response.data);
+      print('🔍 [API] Transaction Number: $nomorTransaksi (for proof upload)');
+      print('🔍 [API] ===== TOP UP SALDO END =====');
+
+      // Return both response and the generated transaction number
+      return TopupResponseWithTrxId(
+        response: topupResponse,
+        generatedTrxId: nomorTransaksi,
+      );
+    } on DioException catch (e) {
+      print('❌ [API] DioException during topup: ${e.message}');
+      print('❌ [API] Response status: ${e.response?.statusCode}');
+      print('❌ [API] Response data: ${e.response?.data}');
+      rethrow;
+    } catch (e) {
+      print('❌ [API] Error top up saldo: $e');
+      print('❌ [API] Error type: ${e.runtimeType}');
+      rethrow;
+    }
+  }
+
+  /// Upload bukti transfer (foto)
+  /// Endpoint: POST api/foto-bukti-transfer
+  /// Requires: Authorization (user token), nomor_transaksi, dan photo as base64 string
+  /// Backend expects photo field as base64 string, not file upload
+  Future<Response> uploadPaymentProof({
+    required String nomorTransaksi,
+    String? photoPath, // For mobile
+    List<int>? photoBytes, // For web
+    String? photoFileName, // For web
+    required String userToken,
+  }) async {
+    try {
+      print('🔍 [API] ===== UPLOAD PAYMENT PROOF START =====');
+      print('🔍 [API] Endpoint: api/foto-bukti-transfer');
+      print('🔍 [API] Transaction Number: $nomorTransaksi');
+      print('🔍 [API] User Token: ${userToken.substring(0, 20)}...');
+      print('🔍 [API] Platform: ${kIsWeb ? 'WEB' : 'MOBILE'}');
+      print('🔍 [API] Photo Path: ${photoPath ?? 'null'}');
+      print('🔍 [API] Photo Bytes Size: ${photoBytes?.length ?? 0} bytes');
+
+      // Convert image to base64 string (backend expects base64)
+      String base64Photo;
+
+      if (photoBytes != null) {
+        // Use provided bytes (web or already loaded)
+        print('🔍 [API] Converting bytes to base64...');
+        base64Photo = base64Encode(photoBytes);
+      } else if (photoPath != null && photoPath.isNotEmpty) {
+        // Read file from path (mobile)
+        print('🔍 [API] Reading file from path: $photoPath');
+        final file = File(photoPath);
+        final bytes = await file.readAsBytes();
+        base64Photo = base64Encode(bytes);
+      } else {
+        throw Exception('Foto tidak tersedia (tidak ada path atau bytes)');
+      }
+
+      print('🔍 [API] Base64 photo length: ${base64Photo.length} characters');
+
+      // Send as JSON with base64 string
+      final response = await _dio.post(
+        'api/foto-bukti-transfer',
+        data: {'nomor_transaksi': nomorTransaksi, 'photo': base64Photo},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $userToken',
+            'Content-Type': 'application/json',
+          },
+          validateStatus: (status) => status! < 500,
+        ),
+      );
+
+      print('✅ [API] Status Code: ${response.statusCode}');
+      print('✅ [API] Response Data: ${response.data}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ [API] Upload successful!');
+      } else {
+        print('⚠️ [API] Upload returned status ${response.statusCode}');
+      }
+
+      print('✅ [API] ===== UPLOAD PAYMENT PROOF END =====');
+
+      return response;
+    } on DioException catch (e) {
+      print('❌ [API] DioException during upload proof: ${e.message}');
+      print('❌ [API] Exception type: ${e.type}');
+      print('❌ [API] Response status: ${e.response?.statusCode}');
+      print('❌ [API] Response data: ${e.response?.data}');
+      print('❌ [API] Response headers: ${e.response?.headers}');
+      rethrow;
+    } catch (e) {
+      print('❌ [API] Error uploading payment proof: $e');
+      print('❌ [API] Error type: ${e.runtimeType}');
+      rethrow;
     }
   }
 
@@ -781,7 +1184,7 @@ class LoginResponse {
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
-    debugPrint('📦 Login Response JSON: $json');
+    _noopLog('📦 Login Response JSON: $json');
 
     String? token =
         json['access_token'] as String? ??
@@ -815,4 +1218,15 @@ class OtpResponse {
       user: json['user'] as Map<String, dynamic>?,
     );
   }
+}
+
+/// Helper class to wrap TopupResponse with the client-generated transaction ID
+class TopupResponseWithTrxId {
+  final TopupResponse response;
+  final String generatedTrxId;
+
+  TopupResponseWithTrxId({
+    required this.response,
+    required this.generatedTrxId,
+  });
 }

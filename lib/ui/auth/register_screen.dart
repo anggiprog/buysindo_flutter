@@ -435,12 +435,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'Username akan otomatis dibuat lowercase tanpa spasi (mis: Ahwan Hawari → ahwanhawari)',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(height: 18),
-
+                  
                   // Email
                   _buildLabel('Email'),
                   const SizedBox(height: 8),

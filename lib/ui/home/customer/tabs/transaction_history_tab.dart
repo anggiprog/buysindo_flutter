@@ -88,19 +88,22 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Riwayat Transaksi",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: appConfig.textColor,
+          ),
         ),
         backgroundColor: appConfig.primaryColor,
         elevation: 0,
         centerTitle: false,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: Colors.white,
+          indicatorColor: appConfig.textColor,
           indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          labelColor: appConfig.textColor,
+          unselectedLabelColor: appConfig.textColor.withOpacity(0.7),
           labelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,

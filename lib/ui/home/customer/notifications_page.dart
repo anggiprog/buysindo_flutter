@@ -32,7 +32,6 @@ class _NotificationsPageState extends State<NotificationsPage>
     try {
       _tabController = TabController(length: 3, vsync: this);
     } catch (e) {
-      debugPrint('❌ Error creating TabController: $e');
       _tabController = TabController(length: 3, vsync: this);
     }
     _loadNotifications();
@@ -43,7 +42,7 @@ class _NotificationsPageState extends State<NotificationsPage>
     try {
       _tabController.dispose();
     } catch (e) {
-      debugPrint('⚠️ Error disposing TabController: $e');
+      // Ignore disposal errors
     }
     super.dispose();
   }
@@ -52,9 +51,7 @@ class _NotificationsPageState extends State<NotificationsPage>
   void didChangeDependencies() {
     super.didChangeDependencies();
     try {
-      // Set status bar color to app primary color
       final color = appConfig.primaryColor;
-      // Validate color - use fallback if invalid
       final validColor = color.value == 0 ? const Color(0xFF0D6EFD) : color;
       final brightness = validColor.computeLuminance() > 0.5
           ? Brightness.dark
@@ -65,9 +62,8 @@ class _NotificationsPageState extends State<NotificationsPage>
           statusBarIconBrightness: brightness,
         ),
       );
-      debugPrint('✅ Status bar color set');
     } catch (e) {
-      debugPrint('⚠️ Error setting status bar color: $e');
+      // Ignore status bar color errors
     }
   }
 
@@ -78,21 +74,16 @@ class _NotificationsPageState extends State<NotificationsPage>
 
       final token = await SessionManager.getToken();
       if (token == null) {
-        debugPrint('⚠️ No token available for loading notifications');
         if (mounted) setState(() => _isLoading = false);
         return;
       }
 
-      debugPrint('📲 Loading notifications...');
       final response = await _apiService.getUserNotifications(token);
 
       if (!mounted) return;
 
-      debugPrint('📲 API Response Status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         final data = response.data;
-        debugPrint('📲 API Response Data Type: ${data.runtimeType}');
 
         if (data is Map &&
             data['status'] == 'success' &&
@@ -111,14 +102,11 @@ class _NotificationsPageState extends State<NotificationsPage>
                 _isLoading = false;
                 _selectedIds.clear();
               });
-              debugPrint('✅ Notifications loaded: ${list.length} items');
             }
           } catch (e) {
-            debugPrint('❌ Error parsing notification list: $e');
             if (mounted) setState(() => _isLoading = false);
           }
         } else if (data is List) {
-          // fallback jika endpoint return array langsung
           final List raw = data;
           try {
             final list = raw
@@ -133,25 +121,21 @@ class _NotificationsPageState extends State<NotificationsPage>
                 _isLoading = false;
                 _selectedIds.clear();
               });
-              debugPrint(
-                '✅ Notifications loaded (array fallback): ${list.length} items',
-              );
             }
           } catch (e) {
-            debugPrint('❌ Error parsing notification array: $e');
             if (mounted) setState(() => _isLoading = false);
           }
         } else {
-          debugPrint('⚠️ Unexpected data format from API: $data');
           if (mounted) setState(() => _isLoading = false);
         }
       } else {
-        debugPrint('❌ Failed to load notifications: ${response.statusCode}');
         if (mounted) setState(() => _isLoading = false);
       }
     } catch (e) {
-      debugPrint('❌ Error loading notifications: $e');
-      if (mounted) setState(() => _isLoading = false);
+      // Handle network errors gracefully
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -178,7 +162,7 @@ class _NotificationsPageState extends State<NotificationsPage>
         id: item.id,
         token: token,
       );
-      if (resp.statusCode == 200) {
+      if (resp.statusCode == 200 && mounted) {
         final idx = _items.indexWhere((e) => e.id == item.id);
         if (idx >= 0) {
           setState(() {
@@ -192,131 +176,333 @@ class _NotificationsPageState extends State<NotificationsPage>
             );
           });
         }
-      } else {
-        debugPrint('Mark as read failed: ${resp.statusCode} ${resp.data}');
       }
     } catch (e) {
-      debugPrint('Error mark as read: $e');
+      // Silently fail - marking as read is not critical
+    }
+  }
+
+  // Delete notifications (selected or all)
+  Future<void> _deleteNotifications() async {
+    final token = await SessionManager.getToken();
+    if (token == null) return;
+
+    final bool hasSelection = _selectedIds.isNotEmpty;
+    final String title = hasSelection
+        ? 'Hapus ${_selectedIds.length} Notifikasi?'
+        : 'Hapus Semua Notifikasi?';
+    final String message = hasSelection
+        ? 'Notifikasi yang dipilih akan dihapus secara permanen.'
+        : 'Semua notifikasi akan dihapus secara permanen.';
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      if (hasSelection) {
+        // Delete selected notifications
+        int successCount = 0;
+        int failCount = 0;
+        final List<int> failedIds = [];
+        final List<int> selectedList = _selectedIds.toList();
+
+        for (final id in selectedList) {
+          try {
+            print('\n📤 Attempting to delete notification ID: $id');
+            final response = await _apiService.deleteNotification(
+              id: id,
+              token: token,
+            );
+
+            print('📥 Response status: ${response.statusCode}');
+            print('📥 Response data: ${response.data}');
+            print('📥 Response headers: ${response.headers}');
+
+            // Check if response indicates success
+            bool isSuccess = false;
+
+            if (response.statusCode == 200 || response.statusCode == 201) {
+              isSuccess = true;
+            } else if (response.data is Map) {
+              final data = response.data as Map;
+              // Check for success in response body
+              if (data['success'] == true ||
+                  data['status'] == 'success' ||
+                  data['message'] == 'Notification deleted successfully') {
+                isSuccess = true;
+              }
+            }
+
+            if (isSuccess) {
+              print('✅ Notification $id deleted successfully');
+              successCount++;
+            } else {
+              print('❌ Notification $id delete returned unexpected response');
+              failCount++;
+              failedIds.add(id);
+            }
+          } catch (e) {
+            print('❌ Error deleting notification $id: $e');
+            failCount++;
+            failedIds.add(id);
+          }
+        }
+
+        if (mounted) {
+          // Hapus notifikasi yang berhasil dihapus dari UI
+          setState(() {
+            _items.removeWhere(
+              (item) =>
+                  _selectedIds.contains(item.id) &&
+                  !failedIds.contains(item.id),
+            );
+            _selectedIds.clear();
+          });
+
+          // Tampilkan hasil dengan detail
+          String feedbackMessage;
+          Color feedbackColor;
+
+          if (failCount == 0) {
+            feedbackMessage = 'Semua notifikasi berhasil dihapus';
+            feedbackColor = Colors.green;
+          } else if (successCount == 0) {
+            feedbackMessage = 'Gagal menghapus semua notifikasi';
+            feedbackColor = Colors.red;
+          } else {
+            feedbackMessage =
+                '$successCount berhasil, $failCount gagal dihapus';
+            feedbackColor = Colors.orange;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(feedbackMessage),
+              backgroundColor: feedbackColor,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Delete all notifications via single endpoint
+        try {
+          print('\n📤 Attempting to delete ALL notifications');
+          final response = await _apiService.deleteAllUserNotifications(token);
+
+          print('📥 Response status: ${response.statusCode}');
+          print('📥 Response data: ${response.data}');
+          print('📥 Response headers: ${response.headers}');
+
+          bool isSuccess = false;
+
+          if (response.statusCode == 200 || response.statusCode == 201) {
+            isSuccess = true;
+          } else if (response.data is Map) {
+            final data = response.data as Map;
+            if (data['success'] == true ||
+                data['status'] == 'success' ||
+                data['message'] == 'All notifications deleted successfully') {
+              isSuccess = true;
+            }
+          }
+
+          if (mounted) {
+            if (isSuccess) {
+              // Clear all items from UI
+              setState(() {
+                _items.clear();
+                _selectedIds.clear();
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Semua notifikasi berhasil dihapus'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Gagal menghapus semua notifikasi'),
+                  backgroundColor: Colors.red,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          print('❌ Error deleting all notifications: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Gagal menghapus semua notifikasi'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Gagal menghapus notifikasi. Periksa koneksi internet Anda.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Widget _buildList(List<NotificationModel> list) {
     if (list.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: const [
-          SizedBox(
-            height: 200,
-            child: Center(child: Text('Belum ada notifikasi')),
-          ),
-        ],
+      return Container(
+        color: const Color(0xFFFFFFFF),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(
+              height: 200,
+              child: Center(child: Text('Belum ada notifikasi')),
+            ),
+          ],
+        ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(8),
-      itemCount: list.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (context, idx) {
-        final item = list[idx];
-        final selected = _selectedIds.contains(item.id);
-        return Card(
-          elevation: 2,
-          color: Colors.grey[100], // abu-abu lembut untuk tampilan buram
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: InkWell(
-            onTap: () async {
-              if (!item.isRead) await _markAsRead(item);
-              // show detail
-              showDialog(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: Text(item.judul),
-                  content: Text(item.message),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Tutup'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Checkbox(
-                    value: selected,
-                    onChanged: (v) => _toggleSelect(item.id, v ?? false),
+    return Container(
+      color: const Color(0xFFFFFFFF),
+      child: ListView.separated(
+        padding: const EdgeInsets.all(8),
+        itemCount: list.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, idx) {
+          final item = list[idx];
+          final selected = _selectedIds.contains(item.id);
+          return Card(
+            elevation: 2,
+            color: Colors.grey[100], // abu-abu lembut untuk tampilan buram
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: InkWell(
+              onTap: () async {
+                if (!item.isRead) await _markAsRead(item);
+                // show detail
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: Text(item.judul),
+                    content: Text(item.message),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Tutup'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                item.judul,
-                                style: TextStyle(
-                                  fontWeight: item.isRead
-                                      ? FontWeight.normal
-                                      : FontWeight.bold,
-                                  fontSize: 16,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ),
-                            if (!item.isRead)
-                              Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: const Text(
-                                  'Baru',
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Checkbox(
+                      value: selected,
+                      onChanged: (v) => _toggleSelect(item.id, v ?? false),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  item.judul,
                                   style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
+                                    fontWeight: item.isRead
+                                        ? FontWeight.normal
+                                        : FontWeight.bold,
+                                    fontSize: 16,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          item.message,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.black87),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${item.createdAt.day.toString().padLeft(2, '0')}-${item.createdAt.month.toString().padLeft(2, '0')}-${item.createdAt.year} ${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
+                              if (!item.isRead)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Text(
+                                    'Baru',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            item.message,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: Colors.black87),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${item.createdAt.day.toString().padLeft(2, '0')}-${item.createdAt.month.toString().padLeft(2, '0')}-${item.createdAt.year} ${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -343,17 +529,30 @@ class _NotificationsPageState extends State<NotificationsPage>
       final Color appBarColor = _getValidAppBarColor();
 
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFFFFFF),
         appBar: AppBar(
           backgroundColor: appBarColor,
           foregroundColor: appConfig.textColor,
           elevation: 4,
           centerTitle: false,
           title: Text(
-            appConfig.appName,
-            style: TextStyle(color: appConfig.textColor),
+            "Notifikasi",
+            style: TextStyle(
+              color: appConfig.textColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           iconTheme: IconThemeData(color: appConfig.textColor),
+          actions: [
+            if (_items.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: appConfig.textColor),
+                tooltip: _selectedIds.isEmpty
+                    ? 'Hapus Semua'
+                    : 'Hapus ${_selectedIds.length} Terpilih',
+                onPressed: _deleteNotifications,
+              ),
+          ],
           systemOverlayStyle: services.SystemUiOverlayStyle(
             statusBarColor: appBarColor,
             statusBarBrightness: appBarColor.computeLuminance() > 0.5
@@ -375,26 +574,43 @@ class _NotificationsPageState extends State<NotificationsPage>
             ],
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            RefreshIndicator(
-              onRefresh: _loadNotifications,
-              child: _buildList(_all),
-            ),
-            RefreshIndicator(
-              onRefresh: _loadNotifications,
-              child: _buildList(_read),
-            ),
-            RefreshIndicator(
-              onRefresh: _loadNotifications,
-              child: _buildList(_unread),
-            ),
-          ],
+        body: Container(
+          color: const Color(0xFFFFFFFF),
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              Container(
+                color: const Color(0xFFFFFFFF),
+                child: RefreshIndicator(
+                  onRefresh: _loadNotifications,
+                  color: appConfig.primaryColor,
+                  backgroundColor: Colors.white,
+                  child: _buildList(_all),
+                ),
+              ),
+              Container(
+                color: const Color(0xFFFFFFFF),
+                child: RefreshIndicator(
+                  onRefresh: _loadNotifications,
+                  color: appConfig.primaryColor,
+                  backgroundColor: Colors.white,
+                  child: _buildList(_read),
+                ),
+              ),
+              Container(
+                color: const Color(0xFFFFFFFF),
+                child: RefreshIndicator(
+                  onRefresh: _loadNotifications,
+                  color: appConfig.primaryColor,
+                  backgroundColor: Colors.white,
+                  child: _buildList(_unread),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     } catch (e) {
-      debugPrint('❌ Error building NotificationsPage: $e');
       return Scaffold(
         appBar: AppBar(
           title: const Text('Notifikasi'),

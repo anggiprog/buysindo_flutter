@@ -48,6 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Future.delayed(const Duration(milliseconds: 800), () async {
           if (!mounted) return;
           final token = await SessionManager.getToken();
+          if (!mounted) return;
           final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
           Navigator.pushReplacementNamed(context, next);
         });
@@ -173,6 +174,7 @@ class _SplashScreenState extends State<SplashScreen> {
       } catch (_) {}
       if (!mounted) return;
       final token = await SessionManager.getToken();
+      if (!mounted) return;
       final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
       Navigator.pushReplacementNamed(context, next);
       return;
@@ -258,6 +260,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final token = await SessionManager.getToken();
+    if (!mounted) return;
     final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
     Navigator.pushReplacementNamed(context, next);
   }

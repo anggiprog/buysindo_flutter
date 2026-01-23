@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/material.dart';
+//import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
@@ -12,12 +12,12 @@ class SessionManager {
     await prefs.setString(_tokenKey, token);
 
     // 🔴 LOG: Tampilkan token yang disimpan
-    debugPrint('═══════════════════════════════════════════════════');
-    debugPrint('✅ TOKEN DISIMPAN');
-    debugPrint('Token: $token');
-    debugPrint('Panjang Token: ${token.length}');
-    debugPrint('Waktu: ${DateTime.now()}');
-    debugPrint('═══════════════════════════════════════════════════');
+    print('═══════════════════════════════════════════════════');
+    print('✅ TOKEN DISIMPAN');
+    print('Token: $token');
+    print('Panjang Token: ${token.length}');
+    print('Waktu: ${DateTime.now()}');
+    print('═══════════════════════════════════════════════════');
   }
 
   // Mengambil token saat aplikasi dibuka
@@ -27,17 +27,17 @@ class SessionManager {
 
     // 🔴 LOG: Tampilkan token saat diambil
     if (token != null && token.isNotEmpty) {
-      debugPrint('═══════════════════════════════════════════════════');
-      debugPrint('🔑 TOKEN DIAMBIL');
-      debugPrint('Token: $token');
-      debugPrint('Panjang Token: ${token.length}');
-      debugPrint('Status: ✅ Ada');
-      debugPrint('═══════════════════════════════════════════════════');
+      print('═══════════════════════════════════════════════════');
+      print('🔑 TOKEN DIAMBIL');
+      print('Token: $token');
+      print('Panjang Token: ${token.length}');
+      print('Status: ✅ Ada');
+      print('═══════════════════════════════════════════════════');
     } else {
-      debugPrint('═══════════════════════════════════════════════════');
-      debugPrint('❌ TOKEN TIDAK DITEMUKAN');
-      debugPrint('Status: Token kosong atau tidak tersimpan');
-      debugPrint('═══════════════════════════════════════════════════');
+      print('═══════════════════════════════════════════════════');
+      print('❌ TOKEN TIDAK DITEMUKAN');
+      print('Status: Token kosong atau tidak tersimpan');
+      print('═══════════════════════════════════════════════════');
     }
 
     return token;
@@ -51,21 +51,21 @@ class SessionManager {
     await prefs.remove(_tokenKey);
 
     // 🔴 LOG: Konfirmasi token dihapus
-    debugPrint('═══════════════════════════════════════════════════');
-    debugPrint('🔴 TOKEN DIHAPUS (LOGOUT)');
+    print('═══════════════════════════════════════════════════');
+    print('🔴 TOKEN DIHAPUS (LOGOUT)');
     if (tokenBefore != null) {
-      debugPrint('Token sebelumnya: $tokenBefore');
+      print('Token sebelumnya: $tokenBefore');
     }
-    debugPrint('Status: ✅ Cleared');
-    debugPrint('Waktu: ${DateTime.now()}');
-    debugPrint('═══════════════════════════════════════════════════');
+    print('Status: ✅ Cleared');
+    print('Waktu: ${DateTime.now()}');
+    print('═══════════════════════════════════════════════════');
   }
 
   // 🆕 Bonus: Cek status token tanpa mengambilnya
   static Future<bool> isTokenExist() async {
     final prefs = await SharedPreferences.getInstance();
     final exists = prefs.containsKey(_tokenKey);
-    debugPrint('🔍 CEK TOKEN: ${exists ? "✅ Ada" : "❌ Tidak ada"}');
+    print('🔍 CEK TOKEN: ${exists ? "✅ Ada" : "❌ Tidak ada"}');
     return exists;
   }
 
@@ -102,16 +102,19 @@ class SessionManager {
       }
 
       // Also remove any other keys except token (fallback behavior)
-      final remainingKeys = prefs.getKeys().where((k) => k != _tokenKey).toList(growable: false);
+      final remainingKeys = prefs
+          .getKeys()
+          .where((k) => k != _tokenKey)
+          .toList(growable: false);
       for (final k in remainingKeys) {
         // skip if already removed
         if (!prefs.containsKey(k)) continue;
         await prefs.remove(k);
       }
 
-      debugPrint('🧹 SharedPreferences cleared except token');
+      print('🧹 SharedPreferences cleared except token');
       if (token != null && token.isNotEmpty) {
-        debugPrint('🔑 Token tetap disimpan (panjang ${token.length})');
+        print('🔑 Token tetap disimpan (panjang ${token.length})');
       }
 
       // Delete cached files (splash) if exist in application documents
@@ -119,12 +122,12 @@ class SessionManager {
         final dir = await getApplicationDocumentsDirectory();
         final f = File('${dir.path}/cached_splash.png');
         if (await f.exists()) await f.delete();
-        debugPrint('🗑️ Cached splash file removed from filesystem if it existed');
+        print('🗑️ Cached splash file removed from filesystem if it existed');
       } catch (e) {
-        debugPrint('⚠️ Failed to remove cached splash file: $e');
+        print('⚠️ Failed to remove cached splash file: $e');
       }
     } catch (e) {
-      debugPrint('⚠️ Failed to clear cache except token: $e');
+      print('⚠️ Failed to clear cache except token: $e');
     }
   }
 }

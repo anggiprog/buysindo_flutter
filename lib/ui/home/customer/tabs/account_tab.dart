@@ -33,7 +33,6 @@ class _AccountTabState extends State<AccountTab> {
       String? token = await SessionManager.getToken();
 
       if (token == null) {
-        debugPrint('  - Status: ❌ Token null, tidak bisa fetch profile');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -49,9 +48,6 @@ class _AccountTabState extends State<AccountTab> {
 
       final response = await apiService.getProfile(token);
 
-      debugPrint('  - Response received');
-      debugPrint('  - Status code: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         try {
           final profileResponse = models.ProfileResponse.fromJson(
@@ -59,9 +55,7 @@ class _AccountTabState extends State<AccountTab> {
           );
 
           setState(() => _profileData = profileResponse);
-          debugPrint('✅ Profile data loaded');
         } catch (e) {
-          debugPrint('  - ❌ Parsing error: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -74,7 +68,6 @@ class _AccountTabState extends State<AccountTab> {
           }
         }
       } else {
-        debugPrint('  - ❌ Response status: ${response.statusCode}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -87,7 +80,6 @@ class _AccountTabState extends State<AccountTab> {
         }
       }
     } catch (e) {
-      debugPrint("❌ Error load profile: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -230,8 +222,9 @@ class _AccountTabState extends State<AccountTab> {
               ),
             ),
             // ... TabBar dan TabBarView Anda ...
-            const TabBar(
-              labelColor: Color(0xFF00897B), // Atau gunakan themeColor
+            TabBar(
+              labelColor: themeColor,
+              unselectedLabelColor: Colors.grey,
               tabs: [
                 Tab(text: "MENU"),
                 Tab(text: "PROFIL"),
@@ -276,7 +269,6 @@ class _AccountTabState extends State<AccountTab> {
           bottom: 0,
           child: GestureDetector(
             onTap: () {
-              debugPrint("Tombol Edit ditekan");
               if (_profileData != null) {
                 Navigator.push(
                   context,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../../core/app_config.dart';
 import '../../../topup_modal.dart';
 import '../../../../../core/network/api_service.dart';
@@ -17,6 +18,7 @@ import '../../tabs/templates/prabayar/masa_aktif.dart';
 import '../../tabs/templates/prabayar/e_money.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../../../../../features/topup/screens/topup_history_screen.dart';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -288,13 +290,118 @@ class _PpobTemplateState extends State<PpobTemplate> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => TopupModal(primaryColor: appConfig.primaryColor),
+      builder: (context) => TopupModal(
+        primaryColor: appConfig.primaryColor,
+        apiService: apiService,
+      ),
     );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+  }
+
+  // Shimmer loaders
+  Widget _buildBannerShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+        child: Container(
+          height: 160,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          mainAxisExtent: 105,
+        ),
+        itemCount: 8,
+        itemBuilder: (context, index) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: 50,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPascabayarShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 4,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          mainAxisExtent: 105,
+        ),
+        itemCount: 4,
+        itemBuilder: (context, index) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: 50,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   @override
@@ -354,10 +461,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
             left: 0,
             right: 0,
             child: _isLoadingBanners
-                ? const SizedBox(
-                    height: 160,
-                    child: Center(child: CircularProgressIndicator()),
-                  )
+                ? _buildBannerShimmer()
                 : BannerSliderWidget(
                     banners: _bannerList,
                     baseUrl: apiService.imageBaseUrl,
@@ -377,6 +481,15 @@ class _PpobTemplateState extends State<PpobTemplate> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -385,13 +498,20 @@ class _PpobTemplateState extends State<PpobTemplate> {
               children: [
                 const Text("Saldo Anda", style: TextStyle(color: Colors.black)),
                 _isLoadingSaldo
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    ? Shimmer.fromColors(
+                        baseColor: Colors.grey[300]!,
+                        highlightColor: Colors.grey[100]!,
+                        child: Container(
+                          width: 150,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
                       )
                     : Text(
-                        FormatUtil.formatRupiah(_saldo), // Hasil: Rp 858.560
+                        FormatUtil.formatRupiah(_saldo),
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -409,7 +529,14 @@ class _PpobTemplateState extends State<PpobTemplate> {
                   "Isi Saldo",
                   _showTopup,
                 ),
-                _buildQuickAction(Icons.history, "Riwayat", () {}),
+                _buildQuickAction(Icons.history, "Histori", () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const TopupHistoryScreen(),
+                    ),
+                  );
+                }),
                 _buildQuickAction(Icons.stars, "Poin: 0", () {}),
               ],
             ),
@@ -451,10 +578,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
         child: Column(
           children: [
             if (_isLoadingMenu)
-              const SizedBox(
-                height: 150,
-                child: Center(child: CircularProgressIndicator()),
-              )
+              _buildMenuShimmer()
             else if (_menuList.isEmpty)
               const SizedBox(
                 height: 100,
@@ -678,10 +802,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
         child: Column(
           children: [
             if (_isLoadingPascabayar)
-              const SizedBox(
-                height: 100,
-                child: Center(child: CircularProgressIndicator()),
-              )
+              _buildPascabayarShimmer()
             else if (_pascabayarList.isEmpty)
               const SizedBox(
                 height: 50,

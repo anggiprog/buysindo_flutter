@@ -5,7 +5,9 @@ import 'driver/home_driver_widget.dart';
 import 'mitra/home_mitra_widget.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final int? initialTab;
+
+  const HomeScreen({super.key, this.initialTab});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +26,7 @@ class HomeScreen extends StatelessWidget {
             return const HomeMitraWidget();
           case 'app':
           default:
-            return const HomeCustomerScreen();
+            return HomeCustomerScreen(initialTab: initialTab);
         }
       },
     );

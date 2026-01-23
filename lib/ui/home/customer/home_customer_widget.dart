@@ -6,14 +6,26 @@ import 'tabs/account_tab.dart';
 import 'notifications_page.dart';
 
 class HomeCustomerScreen extends StatefulWidget {
-  const HomeCustomerScreen({super.key});
+  final int? initialTab;
+
+  const HomeCustomerScreen({super.key, this.initialTab});
 
   @override
   State<HomeCustomerScreen> createState() => _HomeCustomerScreenState();
 }
 
 class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use initialTab if provided, otherwise default to 0 (Beranda)
+    _currentIndex = widget.initialTab ?? 0;
+    debugPrint(
+      '🎯 HomeCustomerScreen initialized with tab index: $_currentIndex',
+    );
+  }
 
   // Semua tab dalam satu list: Beranda, Riwayat, Notifikasi, Akun
   final List<Widget> _pages = [

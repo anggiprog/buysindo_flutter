@@ -287,6 +287,63 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       debugPrint('📲 Route extracted: $route');
 
+      // Handle transaction history route (from topup success notification)
+      if (route.toString().toLowerCase().contains('transaction') ||
+          route == 'transaction_history' ||
+          route == 'HistoryTopupActivity') {
+        debugPrint('✅ Transaction history route confirmed');
+
+        // Extract tab index if provided
+        final tabIndex =
+            int.tryParse(data['tab_index']?.toString() ?? '1') ?? 1;
+        debugPrint('📲 Tab index: $tabIndex');
+
+        try {
+          if (navigatorKey.currentState != null) {
+            debugPrint(
+              '✅ Navigator state available - navigating to home with transaction tab',
+            );
+            // Navigate to home with transaction history tab selected
+            navigatorKey.currentState!.pushNamedAndRemoveUntil(
+              '/home',
+              (route) => false,
+              arguments: {
+                'initialTab': tabIndex,
+              }, // Pass tab index to home screen
+            );
+            return;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Direct navigation failed: $e');
+        }
+
+        // Fallback: Wait for navigator to be ready
+        debugPrint(
+          '⚠️ Using fallback navigation method for transaction history',
+        );
+        int retries = 0;
+        while (retries < 50 && navigatorKey.currentState == null) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          retries++;
+        }
+
+        if (navigatorKey.currentState != null) {
+          try {
+            debugPrint(
+              '✅ Navigator ready after ${retries * 100}ms - navigating to transaction history',
+            );
+            navigatorKey.currentState!.pushNamedAndRemoveUntil(
+              '/home',
+              (route) => false,
+              arguments: {'initialTab': tabIndex},
+            );
+          } catch (e) {
+            debugPrint('❌ Navigation failed even after waiting: $e');
+          }
+        }
+        return;
+      }
+
       // Check if it's a notification route
       if (route.toString().toLowerCase().contains('notification') ||
           route == 'NotificationListActivity' ||
@@ -462,11 +519,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               ),
             ),
           ),
-          routes: {
-            '/login': (ctx) => const LoginScreen(),
-            '/register': (ctx) => const RegisterScreen(),
-            '/notifications': (ctx) => const NotificationsPage(),
-            '/home': (context) => const HomeScreen(),
+          onGenerateRoute: (settings) {
+            switch (settings.name) {
+              case '/login':
+                return MaterialPageRoute(builder: (_) => const LoginScreen());
+              case '/register':
+                return MaterialPageRoute(
+                  builder: (_) => const RegisterScreen(),
+                );
+              case '/notifications':
+                return MaterialPageRoute(
+                  builder: (_) => const NotificationsPage(),
+                );
+              case '/home':
+                final args = settings.arguments as Map<String, dynamic>?;
+                final initialTab = args?['initialTab'] as int?;
+                return MaterialPageRoute(
+                  builder: (_) => HomeScreen(initialTab: initialTab),
+                );
+              default:
+                return null;
+            }
           },
           home: const SplashScreen(),
         );

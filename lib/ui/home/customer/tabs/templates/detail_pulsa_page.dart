@@ -76,7 +76,10 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => TopupModal(primaryColor: appConfig.primaryColor),
+      builder: (context) => TopupModal(
+        primaryColor: appConfig.primaryColor,
+        apiService: _apiService,
+      ),
     );
   }
 
