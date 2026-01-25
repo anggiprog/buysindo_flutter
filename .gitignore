@@ -59,4 +59,4 @@ android/app/src/main/res/values/*.xml
 assets/images/logo.png
 
 # Abaikan file lock
-pubspec.lock
+pubspec.lockandroid/build/
