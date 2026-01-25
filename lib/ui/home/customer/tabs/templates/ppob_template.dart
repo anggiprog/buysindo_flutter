@@ -1,3 +1,4 @@
+import 'package:buysindo_app/ui/home/customer/tabs/templates/pascabayar/gas_pascabayar.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../../core/app_config.dart';
@@ -26,6 +27,12 @@ import '../../tabs/templates/prabayar/tv.dart';
 import '../../tabs/templates/prabayar/streaming.dart';
 import '../../tabs/templates/pascabayar/pln_pascabayar.dart';
 import '../../tabs/templates/pascabayar/pdam_pascabayar.dart';
+import '../../tabs/templates/pascabayar/bpjs_kesehatan.dart';
+import '../../tabs/templates/pascabayar/hp_pascabayar.dart';
+import '../../tabs/templates/pascabayar/multifinance_pascabayar.dart';
+import '../../tabs/templates/pascabayar/pbb_pascabayar.dart';
+import '../../tabs/templates/pascabayar/tv_pascabayar.dart';
+import '../../tabs/templates/pascabayar/pln_nontaglis_pascabayar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../../../../features/topup/screens/topup_history_screen.dart';
@@ -882,20 +889,70 @@ class _PpobTemplateState extends State<PpobTemplate> {
                   return InkWell(
                     onTap: () {
                       // Handle brand tap - Navigate based on brand name
-                      if (menu.namaBrand.toLowerCase().contains('pln')) {
+                      final brand = menu.namaBrand.toLowerCase();
+                      if (brand.contains('nontaglis')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const PlnNontaglisPascabayarPage(),
+                          ),
+                        );
+                      } else if (brand.contains('pln')) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const PlnPascabayarPage(),
                           ),
                         );
-                      } else if (menu.namaBrand.toLowerCase().contains(
-                        'pdam',
-                      )) {
+                      } else if (brand.contains('pdam')) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const PdamPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('bpjs')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BpjsKesehatanPage(),
+                          ),
+                        );
+                      } else if (brand.contains('hp')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const HpPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('multifinance')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MultifinancePascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('pbb')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PbbPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('tv')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TvPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('gas')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const GasPascabayar(),
                           ),
                         );
                       } else {
