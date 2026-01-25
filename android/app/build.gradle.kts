@@ -38,11 +38,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    // PERBAIKAN: kotlinOptions dihapus, diganti dengan compilerOptions di dalam blok android
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
-        }
+    kotlinOptions {
+        jvmTarget = "17"
+        // Suppress warnings about obsolete options
+        freeCompilerArgs += listOf("-Xlint:-options")
     }
 
     defaultConfig {

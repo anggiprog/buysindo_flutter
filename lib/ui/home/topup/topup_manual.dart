@@ -745,11 +745,6 @@ class _BankDetailCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = selectedBank?.id == bank.id;
 
-    print('🔍 [BANK] Building card for: ${bank.namaBank} (ID: ${bank.id})');
-    print('🔍 [BANK] Logo URL: ${bank.logoBank}');
-    print('🔍 [BANK] Account: ${bank.nomorRekening}');
-    print('🔍 [BANK] Is Selected: $isSelected');
-
     return GestureDetector(
       onTap: () {
         print('🔍 [BANK] Bank selected: ${bank.namaBank}');

@@ -488,6 +488,25 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: 'Bagikan',
+            onPressed: _handleSharePressed,
+          ),
+          IconButton(
+            icon: _isPrinting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.print_rounded),
+            tooltip: 'Cetak',
+            onPressed: _isPrinting ? null : _handlePrintPressed,
+          ),
+          IconButton(
             icon: const Icon(Icons.link),
             tooltip: 'Salin Reference ID',
             onPressed: _handleCopyReference,
@@ -619,41 +638,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                                 fontSize: 12,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            // Share and Print Buttons
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: _handleSharePressed,
-                                  icon: const Icon(Icons.share),
-                                  label: const Text('Bagikan'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[600],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 10,
-                                    ),
-                                  ),
-                                ),
-                                ElevatedButton.icon(
-                                  onPressed: _isPrinting
-                                      ? null
-                                      : _handlePrintPressed,
-                                  icon: const Icon(Icons.print_rounded),
-                                  label: const Text('Cetak'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green[600],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                      vertical: 10,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                       ),
@@ -662,38 +646,6 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 ),
               ),
             ),
-      bottomNavigationBar: _buildBottomActionBar(),
-    );
-  }
-
-  Widget _buildBottomActionBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.home),
-            label: const Text('Beranda'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: appConfig.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

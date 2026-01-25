@@ -47,6 +47,11 @@ class _TransactionMutasiDetailPageState
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.print_rounded),
+            tooltip: 'Cetak',
+            onPressed: _handlePrint,
+          ),
+          IconButton(
             icon: const Icon(Icons.link),
             tooltip: 'Salin Reference ID',
             onPressed: _handleCopyReference,
@@ -71,51 +76,9 @@ class _TransactionMutasiDetailPageState
 
             // Fee Details Card
             _buildFeeCard(),
-            const SizedBox(height: 80), // Add space for bottom bar
+            const SizedBox(height: 20),
           ],
         ),
-      ),
-      bottomNavigationBar: _buildBottomActionBar(),
-    );
-  }
-
-  Widget _buildBottomActionBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ElevatedButton.icon(
-            onPressed: _handlePrint,
-            icon: const Icon(Icons.print),
-            label: const Text('Cetak'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green[600],
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.home),
-            label: const Text('Beranda'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: appConfig.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -330,6 +293,7 @@ class _TransactionMutasiDetailPageState
               fontWeight: FontWeight.w500,
               fontSize: 13,
               fontFamily: isMono ? 'monospace' : null,
+              color: Colors.black,
             ),
           ),
         ),

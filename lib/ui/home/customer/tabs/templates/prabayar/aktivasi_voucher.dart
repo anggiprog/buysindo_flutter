@@ -1,0 +1,1237 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../../../../../../core/app_config.dart';
+import '../../../../../../features/customer/data/models/product_prabayar_model.dart';
+import '../../../../../../core/network/api_service.dart';
+import '../../../../../../core/network/session_manager.dart';
+import '../detail_pulsa_page.dart';
+
+class AktivasiVoucherPage extends StatefulWidget {
+  const AktivasiVoucherPage({super.key});
+
+  @override
+  State<AktivasiVoucherPage> createState() => _AktivasiVoucherPageState();
+}
+
+class _AktivasiVoucherPageState extends State<AktivasiVoucherPage>
+    with TickerProviderStateMixin {
+  final TextEditingController _voucherController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
+
+  String _selectedBrand = "";
+  TabController? _tabController;
+  int _filterStatus = 0;
+
+  List<ProductPrabayar> _allProducts = [];
+  List<String> _dynamicTypes = [];
+  List<String> _availableBrands = [];
+
+  bool _isLoading = false;
+  late ApiService _apiService;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiService = ApiService(Dio());
+    _searchController.addListener(() => setState(() {}));
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _voucherController.dispose();
+    _searchController.dispose();
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final String? token = await SessionManager.getToken();
+
+      if (forceRefresh) {
+        await _clearProductsCache();
+      }
+
+      final products = await _apiService.getProducts(
+        token,
+        forceRefresh: forceRefresh,
+      );
+
+      if (mounted) {
+        setState(() {
+          _allProducts = products
+              .where(
+                (p) =>
+                    p.category.toUpperCase().contains("AKTIVASI") &&
+                    p.category.toUpperCase().contains("VOUCHER"),
+              )
+              .toList();
+
+          _availableBrands = _allProducts.map((p) => p.brand).toSet().toList()
+            ..sort();
+
+          _isLoading = false;
+        });
+
+        if (forceRefresh && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Produk diperbarui (${_allProducts.length} produk)',
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal memperbarui produk'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _clearProductsCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('cached_products');
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  void _selectBrand(String brand) {
+    setState(() {
+      _selectedBrand = brand;
+      _voucherController.clear();
+      _updateDynamicTabs();
+    });
+  }
+
+  void _updateDynamicTabs() {
+    if (_selectedBrand.isEmpty) return;
+
+    final filteredByBrand = _allProducts.where((p) {
+      return p.brand.toUpperCase() == _selectedBrand.toUpperCase();
+    }).toList();
+
+    final types = filteredByBrand.map((p) => p.type).toSet().toList();
+
+    if (mounted) {
+      setState(() {
+        _dynamicTypes = types;
+        _tabController?.dispose();
+        if (_dynamicTypes.isNotEmpty) {
+          _tabController = TabController(
+            length: _dynamicTypes.length,
+            vsync: this,
+          );
+        }
+      });
+    }
+  }
+
+  Future<void> _scanBarcode() async {
+    try {
+      final status = await Permission.camera.request();
+
+      if (status.isDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin kamera diperlukan untuk scan barcode'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Izin Kamera Diperlukan'),
+              content: const Text(
+                'Aplikasi memerlukan akses kamera untuk scan barcode. '
+                'Silakan aktifkan izin kamera di pengaturan aplikasi.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: const Text('Buka Pengaturan'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      final result = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (context) => const _BarcodeScannerScreen()),
+      );
+
+      if (result != null && result.isNotEmpty && mounted) {
+        setState(() {
+          _voucherController.text = result;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kode Voucher: $result'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error scanning: ${e.message ?? e.code}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka scanner: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleProductTap(ProductPrabayar product) {
+    if (_voucherController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Masukkan kode voucher terlebih dahulu'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            DetailPulsaPage(product: product, phone: _voucherController.text),
+      ),
+    );
+  }
+
+  String _formatDiscount(num amount) {
+    final intAmount = amount.toStringAsFixed(0);
+    final formatted = intAmount.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    return formatted;
+  }
+
+  List<ProductPrabayar> _getFilteredProducts(String type) {
+    var filtered = _allProducts.where((p) {
+      return p.brand.toUpperCase() == _selectedBrand.toUpperCase() &&
+          p.type == type;
+    }).toList();
+
+    if (_searchController.text.isNotEmpty) {
+      filtered = filtered.where((p) {
+        return p.productName.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            ) ||
+            p.description.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            );
+      }).toList();
+    }
+
+    if (_filterStatus == 1) {
+      filtered.sort((a, b) => a.price.compareTo(b.price));
+    } else if (_filterStatus == 2) {
+      filtered.sort((a, b) => b.price.compareTo(a.price));
+    }
+
+    return filtered;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color primaryColor = appConfig.primaryColor;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7F9),
+      appBar: AppBar(
+        title: const Text(
+          "Aktivasi Voucher",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        backgroundColor: primaryColor,
+        elevation: 0,
+        centerTitle: true,
+        leading: Navigator.of(context).canPop()
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            tooltip: 'Refresh Data',
+            onPressed: () => _loadData(forceRefresh: true),
+          ),
+        ],
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: RefreshIndicator(
+        onRefresh: () => _loadData(forceRefresh: true),
+        color: primaryColor,
+        child: Column(
+          children: [
+            _buildBrandSelector(primaryColor),
+            if (_isLoading)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else if (_selectedBrand.isEmpty) ...[
+              Expanded(child: _buildEmptyStateBrand(primaryColor)),
+            ] else if (_dynamicTypes.isNotEmpty) ...[
+              _buildPhoneNumberInput(primaryColor),
+              _buildSearchAndFilterBar(primaryColor),
+              if (_tabController != null)
+                Container(
+                  color: Colors.white,
+                  child: TabBar(
+                    controller: _tabController,
+                    isScrollable: true,
+                    labelColor: primaryColor,
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: primaryColor,
+                    tabs: _dynamicTypes
+                        .map((t) => Tab(text: t.toUpperCase()))
+                        .toList(),
+                  ),
+                ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: _dynamicTypes
+                      .map((type) => _buildProductList(type, primaryColor))
+                      .toList(),
+                ),
+              ),
+            ] else
+              Expanded(child: _buildEmptyState(primaryColor)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandSelector(Color primaryColor) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 15, 20, 15),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Pilih Operator",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 80,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _availableBrands.length,
+              itemBuilder: (context, index) {
+                final brand = _availableBrands[index];
+                final isSelected = _selectedBrand == brand;
+
+                // Get icon_url from first product of this brand
+                final brandProduct = _allProducts.firstWhere(
+                  (p) => p.brand == brand,
+                  orElse: () => _allProducts.first,
+                );
+                final iconUrl = brandProduct.iconUrl;
+
+                return GestureDetector(
+                  onTap: () => _selectBrand(brand),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    width: 90,
+                    decoration: BoxDecoration(
+                      color: isSelected ? primaryColor : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected ? primaryColor : Colors.grey[300]!,
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (iconUrl != null && iconUrl.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              iconUrl,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.confirmation_number,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : primaryColor,
+                                  size: 32,
+                                );
+                              },
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return SizedBox(
+                                      width: 32,
+                                      height: 32,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : primaryColor,
+                                      ),
+                                    );
+                                  },
+                            ),
+                          )
+                        else
+                          Icon(
+                            Icons.confirmation_number,
+                            color: isSelected ? Colors.white : primaryColor,
+                            size: 32,
+                          ),
+                        const SizedBox(height: 6),
+                        Text(
+                          brand,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhoneNumberInput(Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.card_giftcard, color: primaryColor, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Kode Voucher',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _voucherController,
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 20,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: ABC123XYZ',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    counterText: '',
+                    prefixIcon: Icon(
+                      Icons.confirmation_number,
+                      color: primaryColor,
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey[200]!),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: primaryColor, width: 2),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _scanBarcode,
+                    borderRadius: BorderRadius.circular(12),
+                    child: const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Icon(
+                        Icons.qr_code_scanner,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilterBar(Color primaryColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.black),
+              decoration: InputDecoration(
+                hintText: 'Cari paket...',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          PopupMenuButton<int>(
+            icon: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.filter_list, color: primaryColor),
+            ),
+            onSelected: (value) => setState(() => _filterStatus = value),
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 0, child: Text('Normal')),
+              const PopupMenuItem(value: 1, child: Text('Termurah')),
+              const PopupMenuItem(value: 2, child: Text('Termahal')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductList(String type, Color primaryColor) {
+    final products = _getFilteredProducts(type);
+
+    if (products.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: Text(
+            'Tidak ada produk tersedia',
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: products.length,
+      itemBuilder: (context, index) {
+        return _buildProductCard(products[index], primaryColor);
+      },
+    );
+  }
+
+  Widget _buildProductCard(ProductPrabayar product, Color primaryColor) {
+    final hasDiscount = product.produkDiskon > 0;
+    final int originalPrice = product.totalHarga + product.produkDiskon;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _handleProductTap(product),
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(right: 12),
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: primaryColor.withOpacity(0.1),
+                ),
+                child: product.iconUrl != null && product.iconUrl!.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          product.iconUrl!,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.confirmation_number,
+                              color: primaryColor,
+                              size: 28,
+                            );
+                          },
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: primaryColor,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      )
+                    : Icon(
+                        Icons.confirmation_number,
+                        color: primaryColor,
+                        size: 28,
+                      ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.productName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      product.description,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (hasDiscount) ...[
+                    Text(
+                      'Rp ${originalPrice.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green[800],
+                      ),
+                    ),
+                  ),
+                  if (hasDiscount) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.local_offer,
+                            size: 10,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            'Hemat ${_formatDiscount(product.produkDiskon)}',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateBrand(Color primaryColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.confirmation_number_outlined,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Pilih operator terlebih dahulu',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Silakan pilih operator di atas',
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(Color primaryColor) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Tidak ada produk tersedia',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BarcodeScannerScreen extends StatefulWidget {
+  const _BarcodeScannerScreen();
+
+  @override
+  State<_BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
+}
+
+class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
+    with SingleTickerProviderStateMixin {
+  MobileScannerController cameraController = MobileScannerController();
+  bool _isProcessing = false;
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    cameraController.dispose();
+    super.dispose();
+  }
+
+  void _handleBarcode(BarcodeCapture capture) {
+    if (_isProcessing) return;
+
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final String? code = barcodes.first.rawValue;
+    if (code != null && code.isNotEmpty) {
+      _isProcessing = true;
+      Navigator.pop(context, code);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Scan Barcode',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.close, color: Colors.white, size: 20),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.flash_on, color: Colors.white, size: 20),
+            ),
+            tooltip: 'Flash',
+            onPressed: () => cameraController.toggleTorch(),
+          ),
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.flip_camera_ios,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            tooltip: 'Flip',
+            onPressed: () => cameraController.switchCamera(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // Camera preview
+          MobileScanner(controller: cameraController, onDetect: _handleBarcode),
+
+          // Dark overlay with transparent center
+          CustomPaint(painter: _ScannerOverlayPainter(), child: Container()),
+
+          // Scanner frame and UI
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Spacer(flex: 2),
+
+                // Scanner frame with corner brackets
+                SizedBox(
+                  width: 280,
+                  height: 280,
+                  child: Stack(
+                    children: [
+                      // Corner brackets
+                      ..._buildCornerBrackets(primaryColor),
+
+                      // Animated scanning line
+                      AnimatedBuilder(
+                        animation: _animationController,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: _animationController.value * 260,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              height: 3,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.transparent,
+                                    primaryColor.withOpacity(0.8),
+                                    Colors.transparent,
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: primaryColor.withOpacity(0.5),
+                                    blurRadius: 8,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // Instructions
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Arahkan Kamera ke Barcode',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pastikan barcode berada di dalam frame',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const Spacer(flex: 3),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCornerBrackets(Color color) {
+    const double size = 40;
+    const double thickness = 4.0;
+
+    return [
+      // Top-left
+      Positioned(
+        top: 0,
+        left: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(2)),
+          ),
+        ),
+      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(2)),
+          ),
+        ),
+      ),
+
+      // Top-right
+      Positioned(
+        top: 0,
+        right: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topRight: Radius.circular(2)),
+          ),
+        ),
+      ),
+      Positioned(
+        top: 0,
+        right: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topRight: Radius.circular(2)),
+          ),
+        ),
+      ),
+
+      // Bottom-left
+      Positioned(
+        bottom: 0,
+        left: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: 0,
+        left: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+
+      // Bottom-right
+      Positioned(
+        bottom: 0,
+        right: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: 0,
+        right: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+}
+
+// Custom painter for scanner overlay
+class _ScannerOverlayPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.black.withOpacity(0.6);
+
+    const scanAreaSize = 280.0;
+    final left = (size.width - scanAreaSize) / 2;
+    final top = (size.height - scanAreaSize) / 2;
+    final scanRect = Rect.fromLTWH(left, top, scanAreaSize, scanAreaSize);
+
+    final path = Path()
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRRect(RRect.fromRectAndRadius(scanRect, const Radius.circular(12)))
+      ..fillType = PathFillType.evenOdd;
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

@@ -16,6 +16,16 @@ import '../../tabs/templates/prabayar/data.dart';
 import '../../tabs/templates/prabayar/sms.dart';
 import '../../tabs/templates/prabayar/masa_aktif.dart';
 import '../../tabs/templates/prabayar/e_money.dart';
+import '../../tabs/templates/prabayar/games.dart';
+import '../../tabs/templates/prabayar/pln.dart';
+import '../../tabs/templates/prabayar/aktivasi_voucher.dart';
+import '../../tabs/templates/prabayar/aktivasi_perdana.dart';
+import '../../tabs/templates/prabayar/gas.dart';
+import '../../tabs/templates/prabayar/voucher.dart';
+import '../../tabs/templates/prabayar/tv.dart';
+import '../../tabs/templates/prabayar/streaming.dart';
+import '../../tabs/templates/pascabayar/pln_pascabayar.dart';
+import '../../tabs/templates/pascabayar/pdam_pascabayar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../../../../features/topup/screens/topup_history_screen.dart';
@@ -658,6 +668,50 @@ class _PpobTemplateState extends State<PpobTemplate> {
             context,
             MaterialPageRoute(builder: (context) => const EMoneyPage()),
           );
+        } else if (menu.namaKategori == "Games") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const GamesPage()),
+          );
+        } else if (menu.namaKategori == "PLN") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PLNPage()),
+          );
+        } else if (menu.namaKategori == "Aktivasi Voucher") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AktivasiVoucherPage(),
+            ),
+          );
+        } else if (menu.namaKategori == "Aktivasi Perdana") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AktivasiPerdanaPage(),
+            ),
+          );
+        } else if (menu.namaKategori == "Gas") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const GasPage()),
+          );
+        } else if (menu.namaKategori == "Voucher") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const VoucherPage()),
+          );
+        } else if (menu.namaKategori == "TV") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const TVPage()),
+          );
+        } else if (menu.namaKategori == "Streaming") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const StreamingPage()),
+          );
         } else {
           // Menu category not handled
         }
@@ -827,7 +881,33 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
                   return InkWell(
                     onTap: () {
-                      // Handle brand tap
+                      // Handle brand tap - Navigate based on brand name
+                      if (menu.namaBrand.toLowerCase().contains('pln')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PlnPascabayarPage(),
+                          ),
+                        );
+                      } else if (menu.namaBrand.toLowerCase().contains(
+                        'pdam',
+                      )) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PdamPascabayar(),
+                          ),
+                        );
+                      } else {
+                        // For other pascabayar brands, show coming soon
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${menu.namaBrand} coming soon'),
+                            backgroundColor: appConfig.primaryColor,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
                     },
                     child: Column(
                       children: [

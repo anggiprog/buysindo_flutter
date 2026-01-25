@@ -15,6 +15,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'ui/home/customer/notifications_page.dart';
+import 'features/topup/screens/topup_history_screen.dart';
+import 'features/customer/data/models/transaction_pascabayar_model.dart';
+import 'ui/home/customer/tabs/templates/transaction_pascabayar_detail_page.dart';
+import 'ui/home/customer/tabs/templates/transaction_detail_page.dart';
 import 'dart:io';
 import 'package:flutter/services.dart' as services;
 import 'package:path_provider/path_provider.dart';
@@ -177,18 +181,38 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void _setupForegroundMessageHandler() {
     // 1. Handle message received when app in foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('\n========================================');
+      debugPrint('🔔 [FCM] NOTIFIKASI DITERIMA (Foreground)');
+      debugPrint('========================================');
+      debugPrint('📩 Title: ${message.notification?.title ?? "NO TITLE"}');
+      debugPrint('💬 Body: ${message.notification?.body ?? "NO BODY"}');
+      debugPrint('📦 Data: ${message.data}');
+      debugPrint('🎯 Message ID: ${message.messageId}');
+      debugPrint('========================================\n');
+
       // Show notification using local notifications plugin
       if (message.notification != null) {
         _displayNotification(message);
+      } else {
+        debugPrint('⚠️ [FCM] Tidak ada notification payload, hanya data');
       }
     });
 
     // 2. Handle notification tap when app is in foreground/background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('\n========================================');
+      debugPrint('👆 [FCM] NOTIFIKASI DI-TAP (Background)');
+      debugPrint('========================================');
+      debugPrint('📩 Title: ${message.notification?.title ?? "NO TITLE"}');
+      debugPrint('💬 Body: ${message.notification?.body ?? "NO BODY"}');
+      debugPrint('📦 Data: ${message.data}');
+      debugPrint('========================================\n');
+
       // Ensure navigation occurs after frame if navigator not ready
       if (navigatorKey.currentState != null) {
         _handleNotificationTap(message.data);
       } else {
+        debugPrint('⚠️ [FCM] Navigator belum ready, tunggu next frame');
         WidgetsBinding.instance.addPostFrameCallback(
           (_) => _handleNotificationTap(message.data),
         );
@@ -200,17 +224,28 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       RemoteMessage? message,
     ) {
       if (message != null) {
+        debugPrint('\n========================================');
+        debugPrint('🚀 [FCM] APP DIBUKA DARI NOTIFIKASI (Terminated)');
+        debugPrint('========================================');
+        debugPrint('📩 Title: ${message.notification?.title ?? "NO TITLE"}');
+        debugPrint('💬 Body: ${message.notification?.body ?? "NO BODY"}');
+        debugPrint('📦 Data: ${message.data}');
+        debugPrint('========================================\n');
+
         // Delay navigation slightly to allow app to finish init
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (navigatorKey.currentState != null) {
             _handleNotificationTap(message.data);
           } else {
+            debugPrint('⚠️ [FCM] Navigator belum ready, coba next frame');
             // try again next frame
             WidgetsBinding.instance.addPostFrameCallback(
               (__) => _handleNotificationTap(message.data),
             );
           }
         });
+      } else {
+        debugPrint('🔵 [FCM] App dibuka normal (bukan dari notifikasi)');
       }
     });
 
@@ -276,7 +311,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   /// Handle notification tap and navigate to appropriate screen
   Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
     try {
-      debugPrint('📲 Handling notification tap: $data');
+      debugPrint('\n========================================');
+      debugPrint('🛣️ [Routing] Mulai handle notification tap');
+      debugPrint('========================================');
+      debugPrint('📦 Full Data: $data');
 
       // Extract route from data
       final route =
@@ -285,18 +323,59 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           data['click_action_activity'] ??
           'notifications';
 
-      debugPrint('📲 Route extracted: $route');
+      debugPrint('📍 Route extracted: $route');
+      debugPrint('📍 Activity: ${data['click_action_activity'] ?? "N/A"}');
+      debugPrint('📍 Transaction ID: ${data['transaction_id'] ?? "N/A"}');
+      debugPrint('📍 Ref ID: ${data['ref_id'] ?? "N/A"}');
+      debugPrint('========================================\n');
 
-      // Handle transaction history route (from topup success notification)
+      // Handle topup history route (HistoryTopupActivity)
+      if (route == 'topup_history' || route == 'HistoryTopupActivity') {
+        debugPrint('✅ Topup history route confirmed');
+
+        try {
+          if (navigatorKey.currentState != null) {
+            debugPrint(
+              '✅ Navigator state available - navigating to topup history',
+            );
+            navigatorKey.currentState!.pushNamed('/topup_history');
+            return;
+          }
+        } catch (e) {
+          debugPrint('⚠️ Direct navigation failed: $e');
+        }
+
+        // Fallback: Wait for navigator to be ready
+        debugPrint('⚠️ Using fallback navigation method for topup history');
+        int retries = 0;
+        while (retries < 50 && navigatorKey.currentState == null) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          retries++;
+        }
+
+        if (navigatorKey.currentState != null) {
+          try {
+            debugPrint(
+              '✅ Navigator ready after ${retries * 100}ms - navigating to topup history',
+            );
+            navigatorKey.currentState!.pushNamed('/topup_history');
+          } catch (e) {
+            debugPrint('❌ Navigation failed even after waiting: $e');
+          }
+        }
+        return;
+      }
+
+      // Handle transaction history route (for other transaction types)
       if (route.toString().toLowerCase().contains('transaction') ||
           route == 'transaction_history' ||
-          route == 'HistoryTopupActivity') {
+          route == 'RiwayatPrabayarActivity') {
         debugPrint('✅ Transaction history route confirmed');
 
         // Extract tab index if provided
         final tabIndex =
             int.tryParse(data['tab_index']?.toString() ?? '1') ?? 1;
-        debugPrint('📲 Tab index: $tabIndex');
+        debugPrint('📲 Main tab index: $tabIndex');
 
         try {
           if (navigatorKey.currentState != null) {
@@ -339,6 +418,219 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             );
           } catch (e) {
             debugPrint('❌ Navigation failed even after waiting: $e');
+          }
+        }
+        return;
+      }
+
+      // Handle pascabayar detail route
+      if (route == 'pascabayar_detail') {
+        debugPrint('\n========================================');
+        debugPrint('✅ [Routing] PASCABAYAR DETAIL ROUTE');
+        debugPrint('========================================');
+
+        // Extract transaction data from notification
+        final transactionId =
+            int.tryParse(data['transaction_id']?.toString() ?? '0') ?? 0;
+        final refId = data['ref_id']?.toString() ?? '';
+        final brand = data['brand']?.toString() ?? '';
+        final customerNo = data['customer_no']?.toString() ?? '';
+        final status = data['status']?.toString() ?? '';
+
+        debugPrint('📦 [Pascabayar] Transaction Data:');
+        debugPrint('   - Transaction ID: $transactionId');
+        debugPrint('   - Ref ID: $refId');
+        debugPrint('   - Brand: $brand');
+        debugPrint('   - Customer No: $customerNo');
+        debugPrint('   - Status: $status');
+        debugPrint('========================================\n');
+
+        if (transactionId > 0) {
+          // Wait for navigator to be ready
+          int retries = 0;
+          while (retries < 50 && navigatorKey.currentState == null) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            retries++;
+          }
+
+          if (navigatorKey.currentState != null) {
+            try {
+              debugPrint(
+                '✅ [Pascabayar] Navigator ready - fetching transaction data...',
+              );
+
+              // Fetch full transaction data from API
+              final token = await SessionManager.getToken();
+              debugPrint(
+                '🔑 [Pascabayar] Token: ${token != null ? "Available" : "NULL"}',
+              );
+
+              if (token != null) {
+                debugPrint(
+                  '🌐 [Pascabayar] Calling API getTransactionDetailPascabayar...',
+                );
+                final apiService = ApiService(Dio());
+                final response = await apiService
+                    .getTransactionDetailPascabayar(token);
+
+                debugPrint('📥 [Pascabayar] API Response:');
+                debugPrint('   - Status Code: ${response.statusCode}');
+                debugPrint('   - Has Data: ${response.data != null}');
+
+                if (response.statusCode == 200 && response.data != null) {
+                  final transactions = TransactionPascabayarResponse.fromJson(
+                    response.data,
+                  );
+
+                  debugPrint(
+                    '📋 [Pascabayar] Total transaksi: ${transactions.data.length}',
+                  );
+                  debugPrint(
+                    '🔍 [Pascabayar] Mencari transaction dengan ID=$transactionId atau RefID=$refId',
+                  );
+
+                  // Find transaction by ID or ref_id
+                  final transaction = transactions.data.firstWhere(
+                    (t) => t.id == transactionId || t.refId == refId,
+                    orElse: () => throw Exception('Transaction not found'),
+                  );
+
+                  debugPrint('✅ [Pascabayar] Transaction ditemukan!');
+                  debugPrint('   - ID: ${transaction.id}');
+                  debugPrint('   - Ref ID: ${transaction.refId}');
+                  debugPrint('   - Brand: ${transaction.brand}');
+                  debugPrint('   - Status: ${transaction.status}');
+                  debugPrint('🛣️ [Pascabayar] Navigating to detail page...');
+
+                  navigatorKey.currentState!.push(
+                    MaterialPageRoute(
+                      builder: (context) => TransactionPascabayarDetailPage(
+                        transaction: transaction,
+                      ),
+                    ),
+                  );
+                  return;
+                }
+              }
+
+              debugPrint(
+                '\n⚠️ [Pascabayar] Failed to fetch transaction - navigating to history tab',
+              );
+              debugPrint(
+                '🛣️ [Pascabayar] Akan redirect ke tab Pascabayar (index 2)\n',
+              );
+              // Fallback: Navigate to pascabayar history tab
+              navigatorKey.currentState!.pushNamedAndRemoveUntil(
+                '/home',
+                (route) => false,
+                arguments: {'initialTab': 2}, // Pascabayar tab
+              );
+            } catch (e) {
+              debugPrint('❌ [Pascabayar] Error loading transaction detail:');
+              debugPrint('   Error: $e');
+              debugPrint('   Fallback: Navigating to history tab (index 2)');
+              // Fallback to history tab on error
+              navigatorKey.currentState!.pushNamedAndRemoveUntil(
+                '/home',
+                (route) => false,
+                arguments: {'initialTab': 2},
+              );
+            }
+          }
+        } else {
+          debugPrint('⚠️ No transaction ID - navigating to history tab');
+          // Navigate to pascabayar history tab as fallback
+          int retries = 0;
+          while (retries < 50 && navigatorKey.currentState == null) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            retries++;
+          }
+
+          if (navigatorKey.currentState != null) {
+            navigatorKey.currentState!.pushNamedAndRemoveUntil(
+              '/home',
+              (route) => false,
+              arguments: {'initialTab': 2},
+            );
+          }
+        }
+        return;
+      }
+
+      // Handle prabayar detail route
+      if (route == 'prabayar_detail') {
+        debugPrint('\n========================================');
+        debugPrint('✅ [Routing] PRABAYAR DETAIL ROUTE');
+        debugPrint('========================================');
+
+        // Extract transaction data from notification
+        final transactionId = data['transaction_id']?.toString() ?? '';
+        final refId = data['ref_id']?.toString() ?? '';
+        final trxId = data['trx_id']?.toString() ?? '';
+        final status = data['status']?.toString() ?? '';
+
+        debugPrint('📦 [Prabayar] Transaction Data:');
+        debugPrint('   - Transaction ID: $transactionId');
+        debugPrint('   - Ref ID: $refId');
+        debugPrint('   - Trx ID: $trxId');
+        debugPrint('   - Status: $status');
+        debugPrint('========================================\n');
+
+        if (refId.isNotEmpty && transactionId.isNotEmpty) {
+          // Wait for navigator to be ready
+          int retries = 0;
+          while (retries < 50 && navigatorKey.currentState == null) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            retries++;
+          }
+
+          if (navigatorKey.currentState != null) {
+            try {
+              debugPrint(
+                '✅ [Prabayar] Navigator ready - navigating to detail page...',
+              );
+              debugPrint(
+                '🛣️ [Prabayar] Opening TransactionDetailPage with refId=$refId, transactionId=$transactionId',
+              );
+
+              navigatorKey.currentState!.push(
+                MaterialPageRoute(
+                  builder: (context) => TransactionDetailPage(
+                    refId: refId,
+                    transactionId: transactionId,
+                  ),
+                ),
+              );
+              return;
+            } catch (e) {
+              debugPrint('❌ [Prabayar] Error navigating to detail page:');
+              debugPrint('   Error: $e');
+              debugPrint('   Fallback: Navigating to history tab (index 1)');
+              // Fallback to history tab on error
+              navigatorKey.currentState!.pushNamedAndRemoveUntil(
+                '/home',
+                (route) => false,
+                arguments: {'initialTab': 1},
+              );
+            }
+          }
+        } else {
+          debugPrint(
+            '⚠️ [Prabayar] No ref_id or transaction_id - navigating to history tab',
+          );
+          // Navigate to prabayar history tab as fallback
+          int retries = 0;
+          while (retries < 50 && navigatorKey.currentState == null) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            retries++;
+          }
+
+          if (navigatorKey.currentState != null) {
+            navigatorKey.currentState!.pushNamedAndRemoveUntil(
+              '/home',
+              (route) => false,
+              arguments: {'initialTab': 1},
+            );
           }
         }
         return;
@@ -530,6 +822,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               case '/notifications':
                 return MaterialPageRoute(
                   builder: (_) => const NotificationsPage(),
+                );
+              case '/topup_history':
+                return MaterialPageRoute(
+                  builder: (_) => const TopupHistoryScreen(),
                 );
               case '/home':
                 final args = settings.arguments as Map<String, dynamic>?;

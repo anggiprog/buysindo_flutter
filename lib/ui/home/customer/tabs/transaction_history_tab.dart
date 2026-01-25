@@ -14,7 +14,9 @@ import 'templates/transaction_pascabayar_detail_page.dart';
 import 'templates/transaction_mutasi_detail_page.dart';
 
 class TransactionHistoryTab extends StatefulWidget {
-  const TransactionHistoryTab({super.key});
+  final int? initialSubTab;
+
+  const TransactionHistoryTab({super.key, this.initialSubTab});
 
   @override
   State<TransactionHistoryTab> createState() => _TransactionHistoryTabState();
@@ -57,7 +59,16 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   void initState() {
     super.initState();
     _apiService = ApiService(Dio());
-    _tabController = TabController(length: 3, vsync: this);
+    // Initialize TabController with initial sub-tab index if provided
+    final initialIndex = widget.initialSubTab ?? 0;
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: initialIndex,
+    );
+    debugPrint(
+      '🎯 TransactionHistoryTab initialized with sub-tab index: $initialIndex',
+    );
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -74,7 +85,14 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         }
       }
     });
-    _loadTransactionHistory();
+    // Load initial data based on tab
+    if (initialIndex == 0) {
+      _loadTransactionHistory();
+    } else if (initialIndex == 1) {
+      _loadPascabayarHistory();
+    } else if (initialIndex == 2) {
+      _loadMutasiHistory();
+    }
   }
 
   @override

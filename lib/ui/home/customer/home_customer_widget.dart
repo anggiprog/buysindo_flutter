@@ -7,8 +7,9 @@ import 'notifications_page.dart';
 
 class HomeCustomerScreen extends StatefulWidget {
   final int? initialTab;
+  final int? subTabIndex;
 
-  const HomeCustomerScreen({super.key, this.initialTab});
+  const HomeCustomerScreen({super.key, this.initialTab, this.subTabIndex});
 
   @override
   State<HomeCustomerScreen> createState() => _HomeCustomerScreenState();
@@ -28,12 +29,21 @@ class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
   }
 
   // Semua tab dalam satu list: Beranda, Riwayat, Notifikasi, Akun
-  final List<Widget> _pages = [
-    const CustomerDashboard(),
-    const TransactionHistoryTab(),
-    const NotificationsPage(),
-    const AccountTab(),
-  ];
+  final List<Widget> _pages = [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize pages here to access widget.subTabIndex
+    if (_pages.isEmpty) {
+      _pages.addAll([
+        const CustomerDashboard(),
+        TransactionHistoryTab(initialSubTab: widget.subTabIndex),
+        const NotificationsPage(),
+        const AccountTab(),
+      ]);
+    }
+  }
 
   void _onTabTapped(int index) {
     setState(() {

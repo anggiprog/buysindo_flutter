@@ -977,14 +977,6 @@ class ApiService {
       final nomorTransaksi =
           'TRX${adminUserId}${random.toString().padLeft(6, '0')}';
 
-      print('🔍 [API] ===== TOP UP SALDO START =====');
-      print('🔍 [API] Endpoint: api/topup');
-      print('🔍 [API] Amount: $amount');
-      print('🔍 [API] Bank Name: $bankName');
-      print('🔍 [API] No. Rekening: $nomorRekening');
-      print('🔍 [API] Atas Nama: $namaRekening');
-      print('🔍 [API] No. Transaksi: $nomorTransaksi (auto-generated)');
-
       // Ambil admin token
       final adminTokenResponse = await getAdminToken(adminUserId);
       if (adminTokenResponse.statusCode != 200) {
@@ -1086,14 +1078,6 @@ class ApiService {
     required String userToken,
   }) async {
     try {
-      print('🔍 [API] ===== UPLOAD PAYMENT PROOF START =====');
-      print('🔍 [API] Endpoint: api/foto-bukti-transfer');
-      print('🔍 [API] Transaction Number: $nomorTransaksi');
-      print('🔍 [API] User Token: ${userToken.substring(0, 20)}...');
-      print('🔍 [API] Platform: ${kIsWeb ? 'WEB' : 'MOBILE'}');
-      print('🔍 [API] Photo Path: ${photoPath ?? 'null'}');
-      print('🔍 [API] Photo Bytes Size: ${photoBytes?.length ?? 0} bytes');
-
       // Convert image to base64 string (backend expects base64)
       String base64Photo;
 
@@ -1111,8 +1095,6 @@ class ApiService {
         throw Exception('Foto tidak tersedia (tidak ada path atau bytes)');
       }
 
-      print('🔍 [API] Base64 photo length: ${base64Photo.length} characters');
-
       // Send as JSON with base64 string
       final response = await _dio.post(
         'api/foto-bukti-transfer',
@@ -1126,9 +1108,6 @@ class ApiService {
         ),
       );
 
-      print('✅ [API] Status Code: ${response.statusCode}');
-      print('✅ [API] Response Data: ${response.data}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         print('✅ [API] Upload successful!');
       } else {
@@ -1139,17 +1118,82 @@ class ApiService {
 
       return response;
     } on DioException catch (e) {
-      print('❌ [API] DioException during upload proof: ${e.message}');
-      print('❌ [API] Exception type: ${e.type}');
-      print('❌ [API] Response status: ${e.response?.statusCode}');
-      print('❌ [API] Response data: ${e.response?.data}');
-      print('❌ [API] Response headers: ${e.response?.headers}');
       rethrow;
     } catch (e) {
       print('❌ [API] Error uploading payment proof: $e');
       print('❌ [API] Error type: ${e.runtimeType}');
       rethrow;
     }
+  }
+
+  // ===========================================================================
+  // ENDPOINTS PASCABAYAR
+  // ===========================================================================
+
+  /// Get pascabayar products
+  Future<Response> getPascabayarProducts(String token) {
+    return _dio.get(
+      'api/pascabayar',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check pascabayar bill
+  Future<Response> checkPascabayarBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/pln-pascabayar/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Process pascabayar transaction
+  Future<Response> processPascabayarTransaction({
+    required int adminUserId,
+    required String pin,
+    required String refId,
+    required String brand,
+    required String customerNo,
+    required String customerName,
+    required num tagihan,
+    required num admin,
+    required num denda,
+    required num totalTagihan,
+    required String productName,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/proses-trx-pascabayar',
+      data: {
+        'admin_user_id': adminUserId,
+        'pin': pin,
+        'ref_id': refId,
+        'brand': brand,
+        'customer_no': customerNo,
+        'customer_name': customerName,
+        'tagihan': tagihan,
+        'admin': admin,
+        'denda': denda,
+        'total_tagihan': totalTagihan,
+        'product_name': productName,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
   }
 
   /// Handle Dio errors uniformly

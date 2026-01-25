@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 
 class SessionManager {
   static const String _tokenKey = 'access_token';
+  static const String _adminUserIdKey = 'admin_user_id';
 
   // Menyimpan token setelah login berhasil
   static Future<void> saveToken(String token) async {
@@ -18,6 +19,39 @@ class SessionManager {
     print('Panjang Token: ${token.length}');
     print('Waktu: ${DateTime.now()}');
     print('═══════════════════════════════════════════════════');
+  }
+
+  // Menyimpan admin_user_id setelah login berhasil
+  static Future<void> saveAdminUserId(int adminUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_adminUserIdKey, adminUserId);
+
+    print('═══════════════════════════════════════════════════');
+    print('✅ ADMIN USER ID DISIMPAN');
+    print('Admin User ID: $adminUserId');
+    print('Waktu: ${DateTime.now()}');
+    print('═══════════════════════════════════════════════════');
+  }
+
+  // Mengambil admin_user_id
+  static Future<int?> getAdminUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    final adminUserId = prefs.getInt(_adminUserIdKey);
+
+    if (adminUserId != null) {
+      print('═══════════════════════════════════════════════════');
+      print('🔑 ADMIN USER ID DIAMBIL');
+      print('Admin User ID: $adminUserId');
+      print('Status: ✅ Ada');
+      print('═══════════════════════════════════════════════════');
+    } else {
+      print('═══════════════════════════════════════════════════');
+      print('❌ ADMIN USER ID TIDAK DITEMUKAN');
+      print('Status: Tidak tersimpan');
+      print('═══════════════════════════════════════════════════');
+    }
+
+    return adminUserId;
   }
 
   // Mengambil token saat aplikasi dibuka
@@ -49,6 +83,7 @@ class SessionManager {
     final tokenBefore = prefs.getString(_tokenKey);
 
     await prefs.remove(_tokenKey);
+    await prefs.remove(_adminUserIdKey);
 
     // 🔴 LOG: Konfirmasi token dihapus
     print('═══════════════════════════════════════════════════');
