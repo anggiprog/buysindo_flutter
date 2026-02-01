@@ -12,6 +12,7 @@ class AppConfig with ChangeNotifier {
   static const String _keyTemplate = 'cfg_template';
   static const String _keyTampilan = 'cfg_tampilan';
   static const String _keyLogoUrl = 'cfg_logo_url';
+  static const String _keySubdomain = 'cfg_subdomain';
 
   static const String _adminId = String.fromEnvironment(
     'ADMIN_ID',
@@ -22,10 +23,12 @@ class AppConfig with ChangeNotifier {
     defaultValue: 'app',
   );
 
-  /// Admin token untuk registrasi - HARUS dikonfigurasi dari backend
+  /// Admin token untuk registrasi - HARUS dikonfigurasi dari backend atau --dart-define
+  /// JANGAN menulis token asli di sini jika ingin commit ke GitHub publik
   static const String adminToken = String.fromEnvironment(
     'ADMIN_TOKEN',
-    defaultValue: 'your-admin-token-here',
+    defaultValue:
+        'your-admin-token-here', // Ganti dengan token asli saat build/release
   );
 
   // --- STATE VARIABLES ---
@@ -34,6 +37,7 @@ class AppConfig with ChangeNotifier {
   String _tampilan = "";
   String _status = "active";
   String? _logoUrl;
+  String _subdomain = "";
 
   Color _primaryColor = const Color(0xFF0D6EFD);
   Color _textColor = Colors.white;
@@ -47,6 +51,7 @@ class AppConfig with ChangeNotifier {
   Color get primaryColor => _primaryColor;
   Color get textColor => _textColor;
   String? get logoUrl => _logoUrl;
+  String get subdomain => _subdomain;
 
   // --- LOAD DARI SHARED PREFERENCES ---
   Future<void> loadLocalConfig() async {
@@ -55,6 +60,7 @@ class AppConfig with ChangeNotifier {
     _appName = prefs.getString(_keyAppName) ?? _appName;
     _tampilan = prefs.getString(_keyTampilan) ?? _tampilan;
     _logoUrl = prefs.getString(_keyLogoUrl);
+    _subdomain = prefs.getString(_keySubdomain) ?? "";
 
     final hexPrimary = prefs.getString(_keyPrimaryColor);
     if (hexPrimary != null) _primaryColor = _parseColor(hexPrimary);
@@ -73,6 +79,7 @@ class AppConfig with ChangeNotifier {
     await prefs.setString(_keyTextColor, model.textColor);
     await prefs.setString(_keyTemplate, model.template);
     await prefs.setString(_keyTampilan, model.tampilan);
+    await prefs.setString(_keySubdomain, model.subdomain);
     if (model.logoUrl != null) {
       await prefs.setString(_keyLogoUrl, model.logoUrl!);
     }
@@ -97,7 +104,7 @@ class AppConfig with ChangeNotifier {
           );
 
       debugPrint('📨 API Response Status: ${response.statusCode}');
-      debugPrint('📨 API Response Body: ${response.data}');
+      // debugPrint('📨 API Response Body: ${response.data}'); // Sembunyikan untuk keamanan log
 
       if (response.statusCode == 200 && response.data['data'] != null) {
         debugPrint('✅ API response valid, parsing data...');
@@ -130,6 +137,7 @@ class AppConfig with ChangeNotifier {
       _primaryColor = _parseColor(model.primaryColor);
       _textColor = _parseColor(model.textColor);
       _logoUrl = model.logoUrl;
+      _subdomain = model.subdomain;
       _appType = model.appType.toLowerCase();
       _tampilan = model.tampilan.trim();
       _status = model.status;

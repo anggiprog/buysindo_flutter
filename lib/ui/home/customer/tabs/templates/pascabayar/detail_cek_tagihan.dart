@@ -21,6 +21,7 @@ class CekTagihanPascabayar {
     required String buyerSkuCode,
     required int adminUserId,
     String? cachedCustomerNo,
+    int? amount,
   }) async {
     return await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -32,6 +33,7 @@ class CekTagihanPascabayar {
         buyerSkuCode: buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: cachedCustomerNo,
+        amount: amount,
       ),
     );
   }
@@ -43,6 +45,7 @@ class _CekTagihanBottomSheet extends StatefulWidget {
   final String buyerSkuCode;
   final int adminUserId;
   final String? cachedCustomerNo;
+  final int? amount;
 
   const _CekTagihanBottomSheet({
     required this.productName,
@@ -50,6 +53,7 @@ class _CekTagihanBottomSheet extends StatefulWidget {
     required this.buyerSkuCode,
     required this.adminUserId,
     this.cachedCustomerNo,
+    this.amount,
   });
 
   @override
@@ -140,7 +144,9 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
 
     try {
       final token = await SessionManager.getToken();
-      print('🔑 [CekTagihan] Token retrieved: ${token?.substring(0, 20)}...');
+      print(
+        '🔑 [CekTagihan] Token retrieved: [90m${token?.substring(0, 20)}...[0m',
+      );
 
       if (token == null) {
         throw Exception('Token tidak ditemukan');
@@ -152,16 +158,113 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
       print('   - productName: ${widget.productName}');
       print('   - brand: ${widget.brand}');
       print('   - buyerSkuCode: ${widget.buyerSkuCode}');
+      print('   - amount: ${widget.amount}');
 
-      // Semua pascabayar (PLN, PDAM, dll) menggunakan endpoint yang sama
-      final response = await _apiService.checkPascabayarBill(
-        adminUserId: widget.adminUserId,
-        customerNo: _customerNoController.text.trim(),
-        productName: widget.productName,
-        brand: widget.brand,
-        buyerSkuCode: widget.buyerSkuCode,
-        token: token,
-      );
+      Response response;
+      final brandUpper = widget.brand.toUpperCase();
+      if (brandUpper.contains('E-MONEY')) {
+        // E-Money: gunakan endpoint khusus dan kirim amount
+        response = await _apiService.checkEmoneyBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          amount: widget.amount ?? 0,
+          token: token,
+        );
+      } else if (brandUpper.contains('BYU') || brandUpper.contains('BY.U')) {
+        response = await _apiService.checkByuBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('INDOSAT ONLY4U')) {
+        response = await _apiService.checkIndosatOnly4uBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('XL AXIS CUANKU')) {
+        response = await _apiService.checkXlAxisCuankuBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('BPJS')) {
+        response = await _apiService.checkBpjsBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('HP')) {
+        response = await _apiService.checkHpPascabayarBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('MULTIFINANCE')) {
+        response = await _apiService.checkMultifinanceBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('PBB')) {
+        response = await _apiService.checkPbbBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('TV') &&
+          brandUpper.contains('PASCABAYAR')) {
+        response = await _apiService.checkTvPascabayarBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else if (brandUpper.contains('GAS')) {
+        response = await _apiService.checkGasPascabayarBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      } else {
+        response = await _apiService.checkPascabayarBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+      }
 
       print('📥 [CekTagihan] Response received');
       print('   - Status Code: ${response.statusCode}');
@@ -170,10 +273,9 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
       if (response.statusCode == 200) {
         final responseData = response.data;
 
-        // Backend response structure sesuai controller
-        if (responseData['status'] == 'success') {
-          print('✅ [CekTagihan] Status is success, building bill data...');
-
+        // PATCH: Logic sukses untuk E-Money
+        if (brandUpper.contains('E-MONEY')) {
+          // Parsing sesuai hasil Postman
           final billData = {
             'customer_name': responseData['customer_name'],
             'customer_no': responseData['customer_no'],
@@ -187,25 +289,81 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             'product_name': responseData['product_name'],
             'buyer_sku_code': responseData['buyer_sku_code'],
             'brand': responseData['brand'],
+            'biaya_lain': responseData['biaya_lain'],
+            'alamat': responseData['alamat'],
+            'jumlah_peserta': responseData['jumlah_peserta'],
           };
-
           print('📋 [CekTagihan] Bill Data created: $billData');
-
-          // Cache customer number
           await _cacheCustomerNo(_customerNoController.text.trim());
-
           if (mounted) {
             setState(() {
               _billData = billData;
               _isLoading = false;
             });
-
             print('✅ [CekTagihan] Bill data set in state');
             _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
           }
         } else {
-          print('❌ [CekTagihan] Status is not success');
-          throw Exception(responseData['message'] ?? 'Gagal mengambil tagihan');
+          // PATCH: Logic sukses untuk HP Pascabayar dan Multifinance
+          final hasStatus = responseData.containsKey('status');
+          final isStatusSuccess =
+              hasStatus && responseData['status'] == 'success';
+          final isHpPascabayar = brandUpper.contains('HP');
+          final isMultifinance = brandUpper.contains('MULTIFINANCE');
+          final isHpSuccess =
+              isHpPascabayar &&
+              !hasStatus &&
+              responseData['tagihan'] != null &&
+              responseData['total_tagihan'] != null;
+          final isMultifinanceSuccess =
+              isMultifinance &&
+              !hasStatus &&
+              responseData['tagihan'] != null &&
+              responseData['total_tagihan'] != null;
+
+          if (isStatusSuccess || isHpSuccess || isMultifinanceSuccess) {
+            print(
+              '✅ [CekTagihan] Status is success (status field/HP/Multifinance logic), building bill data...',
+            );
+
+            final billData = {
+              'customer_name': responseData['customer_name'],
+              'customer_no': responseData['customer_no'],
+              'periode': responseData['periode'],
+              'tagihan': responseData['tagihan'],
+              'admin': responseData['admin'],
+              'denda': responseData['denda'] ?? 0,
+              'total_tagihan': responseData['total_tagihan'],
+              'lembar_tagihan': responseData['lembar_tagihan'] ?? 1,
+              'ref_id': responseData['ref_id'],
+              'product_name': responseData['product_name'],
+              'buyer_sku_code': responseData['buyer_sku_code'],
+              'brand': responseData['brand'],
+              'biaya_lain': responseData['biaya_lain'],
+              'alamat': responseData['alamat'],
+              'jumlah_peserta': responseData['jumlah_peserta'],
+            };
+
+            print('📋 [CekTagihan] Bill Data created: $billData');
+
+            // Cache customer number
+            await _cacheCustomerNo(_customerNoController.text.trim());
+
+            if (mounted) {
+              setState(() {
+                _billData = billData;
+                _isLoading = false;
+              });
+
+              print('✅ [CekTagihan] Bill data set in state');
+              _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+            }
+          } else {
+            print('❌ [CekTagihan] Status is not success');
+            throw Exception(
+              responseData['message'] ?? 'Gagal mengambil tagihan',
+            );
+          }
         }
       } else {
         print('❌ [CekTagihan] Status code is not 200: ${response.statusCode}');
@@ -214,12 +372,26 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
     } catch (e) {
       print('❌ [CekTagihan] Error occurred: $e');
       print('❌ [CekTagihan] Error type: ${e.runtimeType}');
+      String userMessage = 'Gagal mengambil tagihan. Silakan coba lagi.';
+      if (e is DioException) {
+        // Jika status code 500, tampilkan pesan user-friendly
+        final statusCode = e.response?.statusCode;
+        if (statusCode == 500) {
+          userMessage =
+              'Server sedang bermasalah (500). Silakan coba beberapa saat lagi.';
+        } else if (e.response?.data is Map &&
+            e.response?.data['message'] != null) {
+          userMessage = e.response?.data['message'];
+        }
+      } else if (e is Exception) {
+        userMessage = e.toString().replaceAll('Exception: ', '');
+      }
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = e.toString().replaceAll('Exception: ', '');
+          _errorMessage = userMessage;
         });
-        _showSnackbar('Error: ${e.toString()}', Colors.red);
+        _showSnackbar(userMessage, Colors.red);
       }
     }
   }
@@ -716,7 +888,9 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Cek Tagihan ${widget.productName}',
+                          widget.brand.toUpperCase().contains('E-MONEY')
+                              ? 'Detail Transaksi E-Money'
+                              : 'Cek Tagihan ${widget.productName}',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -989,28 +1163,28 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 _buildCompactInfoRow(
                   icon: Icons.person,
                   label: 'Nama',
-                  value: _billData!['customer_name'] ?? '-',
+                  value: (_billData!['customer_name'] ?? '-').toString(),
                   primaryColor: primaryColor,
                 ),
                 const Divider(height: 16, thickness: 0.5),
                 _buildCompactInfoRow(
                   icon: Icons.badge,
                   label: 'ID Pelanggan',
-                  value: _billData!['customer_no'] ?? '-',
+                  value: (_billData!['customer_no'] ?? '-').toString(),
                   primaryColor: primaryColor,
                 ),
                 const Divider(height: 16, thickness: 0.5),
                 _buildCompactInfoRow(
                   icon: Icons.calendar_today,
                   label: 'Periode',
-                  value: _billData!['periode'] ?? '-',
+                  value: (_billData!['periode'] ?? '-').toString(),
                   primaryColor: primaryColor,
                 ),
                 const Divider(height: 16, thickness: 0.5),
                 _buildCompactInfoRow(
                   icon: Icons.receipt,
                   label: 'Lembar',
-                  value: '${_billData!['lembar_tagihan'] ?? 1}',
+                  value: (_billData!['lembar_tagihan'] ?? 1).toString(),
                   primaryColor: primaryColor,
                 ),
 
@@ -1020,7 +1194,9 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
 
                 // Financial Details (Compact)
                 _buildCompactAmountRow(
-                  label: 'Tagihan',
+                  label: (widget.brand.toUpperCase().contains('E-MONEY'))
+                      ? 'Nominal'
+                      : 'Tagihan',
                   amount: _billData!['tagihan'] ?? 0,
                 ),
                 const SizedBox(height: 8),
@@ -1034,6 +1210,12 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   amount: _billData!['denda'] ?? 0,
                   isDenda: true,
                 ),
+                const SizedBox(height: 8),
+                if (_billData!['biaya_lain'] != null)
+                  _buildCompactAmountRow(
+                    label: 'Biaya Lain',
+                    amount: _billData!['biaya_lain'] ?? 0,
+                  ),
 
                 const SizedBox(height: 12),
                 Container(height: 1, color: primaryColor.withOpacity(0.3)),

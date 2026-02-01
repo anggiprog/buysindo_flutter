@@ -12,13 +12,15 @@ class SessionManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
 
-    // 🔴 LOG: Tampilkan token yang disimpan
+    // 🔴 DEBUG ONLY: Jangan aktifkan di produksi agar token tidak bocor di log
+    /*
     print('═══════════════════════════════════════════════════');
     print('✅ TOKEN DISIMPAN');
     print('Token: $token');
     print('Panjang Token: ${token.length}');
     print('Waktu: ${DateTime.now()}');
     print('═══════════════════════════════════════════════════');
+    */
   }
 
   // Menyimpan admin_user_id setelah login berhasil
@@ -59,7 +61,8 @@ class SessionManager {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_tokenKey);
 
-    // 🔴 LOG: Tampilkan token saat diambil
+    // 🔴 DEBUG ONLY: Sembunyikan token di log untuk alasan keamanan
+    /*
     if (token != null && token.isNotEmpty) {
       print('═══════════════════════════════════════════════════');
       print('🔑 TOKEN DIAMBIL');
@@ -73,6 +76,7 @@ class SessionManager {
       print('Status: Token kosong atau tidak tersimpan');
       print('═══════════════════════════════════════════════════');
     }
+    */
 
     return token;
   }
@@ -80,12 +84,12 @@ class SessionManager {
   // Menghapus token (Logout)
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
-    final tokenBefore = prefs.getString(_tokenKey);
 
     await prefs.remove(_tokenKey);
     await prefs.remove(_adminUserIdKey);
 
-    // 🔴 LOG: Konfirmasi token dihapus
+    // 🔴 DEBUG ONLY: Sembunyikan konfirmasi token dihapus jika mengandung data sensitif
+    /*
     print('═══════════════════════════════════════════════════');
     print('🔴 TOKEN DIHAPUS (LOGOUT)');
     if (tokenBefore != null) {
@@ -94,13 +98,14 @@ class SessionManager {
     print('Status: ✅ Cleared');
     print('Waktu: ${DateTime.now()}');
     print('═══════════════════════════════════════════════════');
+    */
   }
 
   // 🆕 Bonus: Cek status token tanpa mengambilnya
   static Future<bool> isTokenExist() async {
     final prefs = await SharedPreferences.getInstance();
     final exists = prefs.containsKey(_tokenKey);
-    print('🔍 CEK TOKEN: ${exists ? "✅ Ada" : "❌ Tidak ada"}');
+    // print('🔍 CEK TOKEN: ${exists ? "✅ Ada" : "❌ Tidak ada"}');
     return exists;
   }
 

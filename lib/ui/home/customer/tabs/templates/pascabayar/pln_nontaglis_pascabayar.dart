@@ -445,7 +445,7 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
+    // ...existing code...
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,

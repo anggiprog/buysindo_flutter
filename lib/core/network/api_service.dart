@@ -17,16 +17,376 @@ void _noopLog(Object? _) {}
 // Temporary helper to surface tokens in console for debugging/Postman
 void _debugTokenLog(String? token, {String source = ''}) {
   if (token == null || token.isEmpty) return;
-  final prefix = source.isNotEmpty ? ' ($source)' : '';
+  // ...existing code...
   // Using print (not debugPrint) to avoid log throttling
-  print('\nBUYSINDO-LOG: ═══════════════════════════════════');
-  print('BUYSINDO-LOG: TOKEN${prefix.isEmpty ? '' : prefix}');
-  print('BUYSINDO-LOG: $token');
-  print('BUYSINDO-LOG: LENGTH ${token.length}');
-  print('BUYSINDO-LOG: ═══════════════════════════════════\n');
 }
 
 class ApiService {
+  /// Hapus semua chat antara user dan admin
+  Future<bool> deleteAllChat(String token) async {
+    try {
+      print('[ApiService] deleteAllChat: Mengirim request hapus semua chat');
+      final response = await _dio.delete(
+        'api/user/chat',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      print(
+        '[ApiService] deleteAllChat: Status code: [32m${response.statusCode}[0m',
+      );
+      // print('[ApiService] deleteAllChat: Response: ${response.data}'); // Sembunyikan untuk keamanan
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ApiService] deleteAllChat: ERROR: $e');
+    }
+    return false;
+  }
+
+  /// Ambil pesan chat user-admin
+  Future<List<dynamic>?> getChatMessages(String token) async {
+    try {
+      print('[ApiService] getChatMessages: Mengirim request ambil chat');
+      final response = await _dio.get(
+        'api/user/chat',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      print(
+        '[ApiService] getChatMessages: Status code: [32m${response.statusCode}[0m',
+      );
+      // print('[ApiService] getChatMessages: Response: ${response.data}'); // Sembunyikan untuk keamanan
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is Map<String, dynamic> &&
+            response.data.containsKey('messages')) {
+          print('[ApiService] getChatMessages: Format Map, return messages');
+          return response.data['messages'] as List<dynamic>;
+        } else if (response.data is List) {
+          print('[ApiService] getChatMessages: Format List, return data');
+          return response.data as List<dynamic>;
+        }
+      }
+    } catch (e) {
+      print('[ApiService] getChatMessages: ERROR: $e');
+    }
+    return null;
+  }
+
+  /// Kirim pesan chat user-admin
+  Future<bool> sendChatMessage(String token, String message) async {
+    try {
+      print('[ApiService] sendChatMessage: Mengirim pesan: $message');
+      final response = await _dio.post(
+        'api/user/chat-send',
+        data: {'message': message},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      print(
+        '[ApiService] sendChatMessage: Status code: [32m${response.statusCode}[0m',
+      );
+      // print('[ApiService] sendChatMessage: Response: ${response.data}'); // Sembunyikan untuk keamanan
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[ApiService] sendChatMessage: ERROR: $e');
+    }
+    return false;
+  }
+
+  /// Ambil kontak admin
+  Future<Map<String, dynamic>?> getKontakAdmin(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/user/kontak-admin',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return Map<String, dynamic>.from(response.data);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Ambil status paket
+  Future<Map<String, dynamic>?> getPaket(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/user/getPaket',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return Map<String, dynamic>.from(response.data);
+      }
+    } catch (e) {
+      print('[ApiService] getPaket: ERROR: $e');
+    }
+    return null;
+  }
+
+  /// Ambil info update aplikasi
+  Future<Map<String, dynamic>?> getAppUpdate(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/admin/app-update',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return Map<String, dynamic>.from(response.data);
+      }
+    } catch (e) {
+      print('[ApiService] getAppUpdate: ERROR: $e');
+    }
+    return null;
+  }
+
+  static final ApiService instance = ApiService(Dio());
+
+  /// Check Telkomsel Omni Pascabayar bill
+  Future<Response> checkTelkomselOmniBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/telkomsel/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check Indosat Only4u Pascabayar bill
+  Future<Response> checkIndosatOnly4uBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/indosat/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check XL Axis Cuanku Pascabayar bill
+  Future<Response> checkXlAxisCuankuBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/xl/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check Tri CuanMax Pascabayar bill
+  Future<Response> checkTriCuanMaxBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/tri/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check by.U Pascabayar bill
+  Future<Response> checkByuBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/byu/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check Gas Pascabayar bill
+  Future<Response> checkGasPascabayarBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/gas/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check TV Pascabayar bill
+  Future<Response> checkTvPascabayarBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/tv/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check Multifinance bill (body sama seperti PLN, response mirip)
+  Future<Response> checkMultifinanceBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/multifinance/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check HP Pascabayar bill (body sama seperti PLN, response mirip)
+  Future<Response> checkHpPascabayarBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/hp/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check BPJS Kesehatan bill (body sama seperti PLN, response berbeda)
+  Future<Response> checkBpjsBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/bpjs-kesehatan/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ganti password user sesuai endpoint user/change-password
+  Future<bool> changeUserPassword({
+    required String token,
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'api/user/change-password',
+        data: {
+          'old_password': oldPassword,
+          'new_password': newPassword,
+          'new_password_confirmation': confirmPassword,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 &&
+          (response.data['status'] == true ||
+              response.data['status'] == 'success' ||
+              response.data['success'] == true)) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+  }
+
   final Dio _dio;
   final String baseUrl;
   static const String _prefKey = "cached_products";
@@ -171,6 +531,39 @@ class ApiService {
     );
   }
 
+  /// Ambil data "Tentang Kami" dari admin
+  Future<Response> getTentangKami(String token) {
+    return _dio.get(
+      'api/admin/tentang-kami',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil Kode Referral User
+  Future<Response> getReferralCode(String token) {
+    return _dio.get(
+      'api/get-referral-code',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Simpan/Buat Kode Referral User
+  Future<Response> saveReferralCode(String token, String code) {
+    return _dio.post(
+      'api/save-referral-code',
+      data: {'referral_code': code},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil Daftar User yang diajak (Referral List)
+  Future<Response> getReferralList(String token) {
+    return _dio.get(
+      'api/referral-status', // Berdasarkan route api.php line 613
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   /// Update profil user lengkap
   Future<Response> updateProfile({
     required String token,
@@ -197,15 +590,6 @@ class ApiService {
   /// Mengambil saldo user
 
   Future<Response> getSaldo(String token) {
-    print('\n\n');
-    print('BUYSINDO-LOG: ═══════════════════════════════════════════════════');
-    print('BUYSINDO-LOG: 💰 GET SALDO DIPANGGIL');
-    print('BUYSINDO-LOG: Token = $token');
-    print('BUYSINDO-LOG: Token Length = ${token.length} karakter');
-    print('BUYSINDO-LOG: Endpoint = api/saldo');
-    print('BUYSINDO-LOG: ═══════════════════════════════════════════════════');
-    print('\n\n');
-
     return _dio.get(
       'api/saldo',
       options: Options(
@@ -420,12 +804,46 @@ class ApiService {
     );
   }
 
-  /// Ambil informasi toko user
-  Future<Response> getUserStore(String token) {
-    return _dio.get(
+  static const String _prefNamaToko = 'user_nama_toko';
+
+  /// Ambil informasi toko user dan simpan ke SharedPreferences
+  Future<Response> getUserStore(String token) async {
+    final response = await _dio.get(
       'api/user/buat-toko',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
+    try {
+      if (response.data != null && response.data['data'] != null) {
+        final namaToko = response.data['data']['nama_toko'] ?? '';
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_prefNamaToko, namaToko);
+      }
+    } catch (_) {}
+    return response;
+  }
+
+  /// Simpan atau update toko user (POST) dan update SharedPreferences
+  Future<Response> simpanToko(String token, String namaToko) async {
+    final response = await _dio.post(
+      'api/user/buat-toko',
+      data: {'nama_toko': namaToko},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+    try {
+      if (response.data != null &&
+          (response.data['status'] == 'success' ||
+              response.data['status'] == true)) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_prefNamaToko, namaToko);
+      }
+    } catch (_) {}
+    return response;
+  }
+
+  /// Ambil nama_toko dari SharedPreferences
+  Future<String?> getNamaTokoFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_prefNamaToko);
   }
 
   // ===========================================================================
@@ -833,7 +1251,7 @@ class ApiService {
     try {
       print('🔍 [API] ===== FETCHING BANK ACCOUNTS START =====');
       print('🔍 [API] Endpoint: api/rekening-bank');
-      print('🔍 [API] Token: ${token.substring(0, 20)}...');
+      // print('🔍 [API] Token: ${token.substring(0, 20)}...'); // Sembunyikan untuk keamanan
 
       final response = await _dio.get(
         'api/rekening-bank',
@@ -841,7 +1259,7 @@ class ApiService {
       );
 
       print('🔍 [API] Status Code: ${response.statusCode}');
-      print('🔍 [API] Response Data: ${response.data}');
+      // print('🔍 [API] Response Data: ${response.data}'); // Sembunyikan untuk keamanan
 
       final bankResponse = BankAccountResponse.fromJson(response.data);
       print(
@@ -987,7 +1405,7 @@ class ApiService {
       String? adminToken;
       try {
         final responseData = adminTokenResponse.data;
-        print('🔍 [API] Admin Token Response: $responseData');
+        // print('🔍 [API] Admin Token Response: $responseData'); // Sembunyikan untuk keamanan
 
         if (responseData is Map) {
           // Cek struktur: data['data'] adalah array
@@ -1011,7 +1429,7 @@ class ApiService {
         throw Exception('Admin token kosong - gagal parse dari response');
       }
 
-      print('🔍 [API] Admin Token: ${adminToken.substring(0, 20)}...');
+      // print('🔍 [API] Admin Token: ${adminToken.substring(0, 20)}...'); // Sembunyikan untuk keamanan
 
       // Hitung batas waktu (3 hari dari sekarang) - format: Y-m-d H:i:s
       final batasWaktuDateTime = DateTime.now().add(const Duration(days: 3));
@@ -1043,7 +1461,7 @@ class ApiService {
       );
 
       print('🔍 [API] Status Code: ${response.statusCode}');
-      print('🔍 [API] Response Data: ${response.data}');
+      // print('🔍 [API] Response Data: ${response.data}'); // Sembunyikan untuk keamanan
 
       final topupResponse = TopupResponse.fromJson(response.data);
       print('🔍 [API] Transaction Number: $nomorTransaksi (for proof upload)');
@@ -1117,11 +1535,9 @@ class ApiService {
       print('✅ [API] ===== UPLOAD PAYMENT PROOF END =====');
 
       return response;
-    } on DioException catch (e) {
+    } on DioException {
       rethrow;
-    } catch (e) {
-      print('❌ [API] Error uploading payment proof: $e');
-      print('❌ [API] Error type: ${e.runtimeType}');
+    } catch (_) {
       rethrow;
     }
   }
@@ -1129,6 +1545,30 @@ class ApiService {
   // ===========================================================================
   // ENDPOINTS PASCABAYAR
   // ===========================================================================
+
+  /// Check E-MONEY Pascabayar bill
+  Future<Response> checkEmoneyBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required int amount,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/emoney/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+        'amount': amount,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
 
   /// Get pascabayar products
   Future<Response> getPascabayarProducts(String token) {
@@ -1138,7 +1578,7 @@ class ApiService {
     );
   }
 
-  /// Check pascabayar bill
+  /// Check PLN Pascabayar bill
   Future<Response> checkPascabayarBill({
     required int adminUserId,
     required String customerNo,
@@ -1155,6 +1595,72 @@ class ApiService {
         'product_name': productName,
         'brand': brand,
         'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check PBB bill (matches Postman)
+  Future<Response> checkPbbBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/pbb/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Check PDAM bill (struktur berbeda dengan PLN)
+  Future<Response> checkPdamBill({
+    required String productName,
+    required String buyerSkuCode,
+    required String refId,
+    required String brand,
+    required String customerName,
+    required String customerNo,
+    required String tarif,
+    required String alamat,
+    required String jatuhTempo,
+    required int lembarTagihan,
+    required List<RincianTagihan> rincianTagihan,
+    required int tagihan,
+    required int admin,
+    required int denda,
+    required int biayaLain,
+    required int totalTagihan,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/pdam/cek-tagihan',
+      data: {
+        'product_name': productName,
+        'buyer_sku_code': buyerSkuCode,
+        'ref_id': refId,
+        'brand': brand,
+        'customer_name': customerName,
+        'customer_no': customerNo,
+        'tarif': tarif,
+        'alamat': alamat,
+        'jatuh_tempo': jatuhTempo,
+        'lembar_tagihan': lembarTagihan,
+        'rincian_tagihan': rincianTagihan.map((e) => e.toJson()).toList(),
+        'tagihan': tagihan,
+        'admin': admin,
+        'denda': denda,
+        'biaya_lain': biayaLain,
+        'total_tagihan': totalTagihan,
       },
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
@@ -1196,6 +1702,54 @@ class ApiService {
     );
   }
 
+  /// Process PDAM transaction (optional, jika dibutuhkan)
+  Future<Response> processPdamTransaction({
+    required int adminUserId,
+    required String pin,
+    required String refId,
+    required String brand,
+    required String customerNo,
+    required String customerName,
+    required num tagihan,
+    required num admin,
+    required num denda,
+    required num biayaLain,
+    required num totalTagihan,
+    required String productName,
+    required String buyerSkuCode,
+    required String tarif,
+    required String alamat,
+    required String jatuhTempo,
+    required int lembarTagihan,
+    required List<RincianTagihan> rincianTagihan,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/proses-trx-pdam',
+      data: {
+        'admin_user_id': adminUserId,
+        'pin': pin,
+        'ref_id': refId,
+        'brand': brand,
+        'customer_no': customerNo,
+        'customer_name': customerName,
+        'tagihan': tagihan,
+        'admin': admin,
+        'denda': denda,
+        'biaya_lain': biayaLain,
+        'total_tagihan': totalTagihan,
+        'product_name': productName,
+        'buyer_sku_code': buyerSkuCode,
+        'tarif': tarif,
+        'alamat': alamat,
+        'jatuh_tempo': jatuhTempo,
+        'lembar_tagihan': lembarTagihan,
+        'rincian_tagihan': rincianTagihan.map((e) => e.toJson()).toList(),
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   /// Handle Dio errors uniformly
   String _handleDioError(DioException e) {
     if (e.response != null) {
@@ -1209,6 +1763,127 @@ class ApiService {
   // =============================================
   // High-level models: LoginResponse & OtpResponse
   // =============================================
+}
+
+/// Model untuk rincian tagihan PDAM
+class RincianTagihan {
+  final String periode;
+  final String nilaiTagihan;
+  final String denda;
+  final String meterAwal;
+  final String meterAkhir;
+  final String biayaLain;
+
+  RincianTagihan({
+    required this.periode,
+    required this.nilaiTagihan,
+    required this.denda,
+    required this.meterAwal,
+    required this.meterAkhir,
+    required this.biayaLain,
+  });
+
+  factory RincianTagihan.fromJson(Map<String, dynamic> json) {
+    return RincianTagihan(
+      periode: json['periode'] ?? '',
+      nilaiTagihan: json['nilai_tagihan'] ?? '',
+      denda: json['denda'] ?? '',
+      meterAwal: json['meter_awal'] ?? '',
+      meterAkhir: json['meter_akhir'] ?? '',
+      biayaLain: json['biaya_lain'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'periode': periode,
+    'nilai_tagihan': nilaiTagihan,
+    'denda': denda,
+    'meter_awal': meterAwal,
+    'meter_akhir': meterAkhir,
+    'biaya_lain': biayaLain,
+  };
+}
+
+/// Model gabungan response tagihan Pascabayar (PLN/PDAM)
+class PascabayarTagihanResponse {
+  final String? productName;
+  final String? buyerSkuCode;
+  final String? refId;
+  final String? brand;
+  final String? customerName;
+  final String? customerNo;
+  final String? tarif;
+  final String? alamat;
+  final String? jatuhTempo;
+  final int? lembarTagihan;
+  final List<RincianTagihan>? rincianTagihan;
+  final num? tagihan;
+  final num? admin;
+  final num? denda;
+  final num? biayaLain;
+  final num? totalTagihan;
+  final Map<String, dynamic>? otherFields;
+
+  PascabayarTagihanResponse({
+    this.productName,
+    this.buyerSkuCode,
+    this.refId,
+    this.brand,
+    this.customerName,
+    this.customerNo,
+    this.tarif,
+    this.alamat,
+    this.jatuhTempo,
+    this.lembarTagihan,
+    this.rincianTagihan,
+    this.tagihan,
+    this.admin,
+    this.denda,
+    this.biayaLain,
+    this.totalTagihan,
+    this.otherFields,
+  });
+
+  factory PascabayarTagihanResponse.fromJson(Map<String, dynamic> json) {
+    List<RincianTagihan>? rincian;
+    if (json['rincian_tagihan'] is List) {
+      rincian = (json['rincian_tagihan'] as List)
+          .map((e) => RincianTagihan.fromJson(e))
+          .toList();
+    }
+    // Support for HP Pascabayar: allow periode as int or string, and allow missing fields
+    return PascabayarTagihanResponse(
+      productName: json['product_name'],
+      buyerSkuCode: json['buyer_sku_code'],
+      refId: json['ref_id'],
+      brand: json['brand'],
+      customerName: json['customer_name'],
+      customerNo: json['customer_no'],
+      tarif: json['tarif'],
+      alamat: json['alamat'],
+      jatuhTempo: json['jatuh_tempo'],
+      lembarTagihan: json['lembar_tagihan'] is int
+          ? json['lembar_tagihan']
+          : int.tryParse(json['lembar_tagihan']?.toString() ?? ''),
+      rincianTagihan: rincian,
+      tagihan: json['tagihan'] is num
+          ? json['tagihan']
+          : num.tryParse(json['tagihan']?.toString() ?? '0'),
+      admin: json['admin'] is num
+          ? json['admin']
+          : num.tryParse(json['admin']?.toString() ?? '0'),
+      denda: json['denda'] is num
+          ? json['denda']
+          : num.tryParse(json['denda']?.toString() ?? '0'),
+      biayaLain: json['biaya_lain'] is num
+          ? json['biaya_lain']
+          : num.tryParse(json['biaya_lain']?.toString() ?? '0'),
+      totalTagihan: json['total_tagihan'] is num
+          ? json['total_tagihan']
+          : num.tryParse(json['total_tagihan']?.toString() ?? '0'),
+      otherFields: json,
+    );
+  }
 }
 
 /// Model for Login Response

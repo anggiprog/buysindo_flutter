@@ -109,12 +109,12 @@ class _TopupModalState extends State<TopupModal> {
 
   void _onContinueManual() async {
     final value = _parseNominal();
-    print('\n\n🔍 DEBUG: _onContinueManual START');
-    print('🔍 DEBUG: value = $value');
+    // debug log removed
+    // debug log removed
 
     // Validasi
     if (value == 0) {
-      print('🔍 DEBUG: value is 0, showing error snackbar');
+      // debug log removed
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Silakan masukkan nominal top up')),
       );
@@ -122,32 +122,29 @@ class _TopupModalState extends State<TopupModal> {
     }
 
     // Show loading
-    print('🔍 DEBUG: Setting _isLoading = true');
+    // debug log removed
     setState(() => _isLoading = true);
 
     try {
       final token = await SessionManager.getToken();
-      print('🔍 DEBUG: token retrieved: ${token?.substring(0, 20)}...');
+      // debug log removed
       if (token == null) throw Exception('Token not found');
 
       // Validate amount dengan backend
-      print('🔍 DEBUG: Calling getMinimalTopup with value=$value');
+      // debug log removed
       final validationResponse = await widget.apiService.getMinimalTopup(
         value,
         token,
       );
 
-      print('🔍 DEBUG: API Response:');
-      print('  - minimalTopup: ${validationResponse.minimalTopup}');
-      print('  - amountMeetsMinimal: ${validationResponse.amountMeetsMinimal}');
-      print('  - status: ${validationResponse.status}');
+      // debug log removed
 
       // Check if amount doesn't meet minimal requirement
       if (validationResponse.amountMeetsMinimal == false ||
           validationResponse.amountMeetsMinimal == null) {
-        print('🔍 DEBUG: VALIDATION FAILED - amount does not meet minimal');
+        // debug log removed
         if (mounted) {
-          print('🔍 DEBUG: Widget still mounted, showing error snackbar');
+          // debug log removed
 
           // Dismiss loading first
           setState(() => _isLoading = false);
@@ -171,18 +168,16 @@ class _TopupModalState extends State<TopupModal> {
             },
           );
         }
-        print('🔍 DEBUG: Returning early, NOT navigating to TopupManual');
+        // debug log removed
         return;
       }
 
-      print(
-        '🔍 DEBUG: VALIDATION PASSED - amount meets minimal, preparing to navigate',
-      );
+      // debug log removed
       if (mounted) setState(() => _isLoading = false);
 
       // Navigate ke TopupManual dengan amount
       if (mounted) {
-        print('🔍 DEBUG: Navigating to TopupManual');
+        // debug log removed
         Navigator.pop(context);
         Navigator.push(
           context,
@@ -196,7 +191,7 @@ class _TopupModalState extends State<TopupModal> {
         );
       }
     } catch (e) {
-      print('❌ ERROR in _onContinueManual: $e');
+      // debug log removed
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -204,7 +199,7 @@ class _TopupModalState extends State<TopupModal> {
         setState(() => _isLoading = false);
       }
     }
-    print('🔍 DEBUG: _onContinueManual END\n\n');
+    // debug log removed
   }
 
   void _onContinueAuto() async {

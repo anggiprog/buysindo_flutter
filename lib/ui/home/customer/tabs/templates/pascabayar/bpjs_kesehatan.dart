@@ -626,68 +626,87 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
           const SizedBox(width: 8),
         ],
       ),
-      body: Stack(
-        children: [
-          // Camera preview
-          MobileScanner(controller: cameraController, onDetect: _handleBarcode),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double scanAreaSize =
+              constraints.maxWidth < constraints.maxHeight
+              ? constraints.maxWidth * 0.7
+              : constraints.maxHeight * 0.4;
+          final double scanAreaLeft = (constraints.maxWidth - scanAreaSize) / 2;
+          final double scanAreaTop = (constraints.maxHeight - scanAreaSize) / 2;
 
-          // Dark overlay with transparent center
-          CustomPaint(painter: _ScannerOverlayPainter(), child: Container()),
+          return Stack(
+            children: [
+              // Camera preview
+              Positioned.fill(
+                child: MobileScanner(
+                  controller: cameraController,
+                  onDetect: _handleBarcode,
+                ),
+              ),
 
-          // Scanner frame and UI
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(flex: 2),
-
-                // Scanner frame with corner brackets
-                SizedBox(
-                  width: 280,
-                  height: 280,
-                  child: Stack(
-                    children: [
-                      // Corner brackets
-                      ..._buildCornerBrackets(primaryColor),
-
-                      // Animated scanning line
-                      AnimatedBuilder(
-                        animation: _animationController,
-                        builder: (context, child) {
-                          return Positioned(
-                            top: _animationController.value * 260,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              height: 3,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.transparent,
-                                    primaryColor.withOpacity(0.8),
-                                    Colors.transparent,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: primaryColor.withOpacity(0.5),
-                                    blurRadius: 8,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+              // Dark overlay with transparent center
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _ScannerOverlayPainter(
+                    scanRect: Rect.fromLTWH(
+                      scanAreaLeft,
+                      scanAreaTop,
+                      scanAreaSize,
+                      scanAreaSize,
+                    ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 40),
+              // Scanner frame and UI
+              Positioned(
+                left: scanAreaLeft,
+                top: scanAreaTop,
+                width: scanAreaSize,
+                height: scanAreaSize,
+                child: Stack(
+                  children: [
+                    ..._buildCornerBrackets(primaryColor, scanAreaSize),
+                    AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        return Positioned(
+                          top: _animationController.value * (scanAreaSize - 20),
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 3,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  primaryColor.withOpacity(0.8),
+                                  Colors.transparent,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.5),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
 
-                // Instructions
-                Container(
+              // Instructions
+              Positioned(
+                left: 0,
+                right: 0,
+                top: scanAreaTop + scanAreaSize + 24,
+                child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 40,
                     vertical: 16,
@@ -720,19 +739,17 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
                     ],
                   ),
                 ),
-
-                const Spacer(flex: 3),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  List<Widget> _buildCornerBrackets(Color color) {
-    const double size = 40;
-    const double thickness = 4.0;
+  List<Widget> _buildCornerBrackets(Color color, double scanAreaSize) {
+    final double size = scanAreaSize * 0.15;
+    final double thickness = 4.0;
 
     return [
       // Top-left
@@ -852,14 +869,12 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
 
 // Custom painter for scanner overlay
 class _ScannerOverlayPainter extends CustomPainter {
+  final Rect scanRect;
+  _ScannerOverlayPainter({required this.scanRect});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.black.withOpacity(0.6);
-
-    const scanAreaSize = 280.0;
-    final left = (size.width - scanAreaSize) / 2;
-    final top = (size.height - scanAreaSize) / 2;
-    final scanRect = Rect.fromLTWH(left, top, scanAreaSize, scanAreaSize);
 
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))

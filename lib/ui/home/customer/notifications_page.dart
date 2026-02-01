@@ -523,7 +523,10 @@ class _NotificationsPageState extends State<NotificationsPage>
   Widget build(BuildContext context) {
     try {
       if (_isLoading) {
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        return const Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(child: CircularProgressIndicator()),
+        );
       }
 
       final Color appBarColor = _getValidAppBarColor();

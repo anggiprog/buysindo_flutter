@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/session_manager.dart';
@@ -38,6 +40,8 @@ class _CustomerDashboardState extends State<CustomerDashboard>
 
     // Initial fetch for admin notification count
     _fetchAdminNotifCount();
+    // Cek update aplikasi
+    _checkAppUpdate();
   }
 
   @override
@@ -52,7 +56,125 @@ class _CustomerDashboardState extends State<CustomerDashboard>
     // Refresh notification count when returning to foreground
     if (state == AppLifecycleState.resumed) {
       _fetchAdminNotifCount();
+      _checkAppUpdate();
     }
+  }
+
+  Future<void> _checkAppUpdate() async {
+    try {
+      String? token = await SessionManager.getToken();
+      if (token == null || token.isEmpty) return;
+
+      final updateData = await ApiService.instance.getAppUpdate(token);
+      if (updateData != null && updateData['status'] == 'success') {
+        final data = updateData['data'];
+        final serverVersion = data['version_code'].toString().trim();
+        final downloadUrl = data['download_url'];
+        final isMandatory = data['is_mandatory'] == 1;
+        final keterangan =
+            data['keterangan'] ?? "Pembaruan versi baru telah tersedia.";
+
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion = packageInfo.version.trim();
+
+        debugPrint(
+          '🔍 [UpdateCheck] Server: $serverVersion, Device: $currentVersion',
+        );
+
+        if (serverVersion != currentVersion) {
+          if (!mounted) return;
+          _showUpdateDialog(
+            version: serverVersion,
+            url: downloadUrl,
+            mandatory: isMandatory,
+            notes: keterangan,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [UpdateCheck] Gagal: $e');
+    }
+  }
+
+  void _showUpdateDialog({
+    required String version,
+    required String url,
+    required bool mandatory,
+    required String notes,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: !mandatory,
+      builder: (context) {
+        return WillPopScope(
+          onWillPop: () async => !mandatory,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Row(
+              children: [
+                const Icon(Icons.system_update, color: Colors.blueAccent),
+                const SizedBox(width: 10),
+                Text("Update Versi $version"),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Versi terbaru telah tersedia!",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(notes),
+                if (mandatory)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 15),
+                    child: Text(
+                      "* Update ini wajib dilakukan untuk tetap menggunakan aplikasi.",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              if (!mandatory)
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Batal",
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ElevatedButton(
+                onPressed: () async {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appConfig.primaryColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  "Update Sekarang",
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _fetchAdminNotifCount() async {

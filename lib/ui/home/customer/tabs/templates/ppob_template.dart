@@ -36,6 +36,12 @@ import '../../tabs/templates/pascabayar/pln_nontaglis_pascabayar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../../../../features/topup/screens/topup_history_screen.dart';
+import '../../tabs/templates/pascabayar/emoney_pascabayar.dart';
+import '../../tabs/templates/pascabayar/byu_pascabayar.dart';
+import '../../tabs/templates/pascabayar/indosat_only4u_pascabayar.dart';
+import '../../tabs/templates/pascabayar/xl_axis_cuanku_pascabayar.dart';
+import '../../tabs/templates/pascabayar/telkomsel_omni_pascabayar.dart';
+import '../../tabs/templates/pascabayar/tri_cuanmax_pascabayar.dart';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -953,6 +959,54 @@ class _PpobTemplateState extends State<PpobTemplate> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const GasPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('e-money') ||
+                          brand.contains('emoney')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EmoneyPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('by.u') ||
+                          brand.contains('by.u')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ByuPascabayarPage(),
+                          ),
+                        );
+                      } else if (brand.contains('indosat only4u') ||
+                          brand.contains('indosat only4u')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const IndosatOnly4uPascabayarPage(),
+                          ),
+                        );
+                      } else if (brand.contains('telkomsel omni') ||
+                          brand.contains('telkomsel omni')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TelkomselOmniPascabayarPage(),
+                          ),
+                        );
+                      } else if (brand.contains('xl axis cuanku') ||
+                          brand.contains('xl axis cuanku')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const XlAxisCuankuPascabayarPage(),
+                          ),
+                        );
+                      } else if (brand.contains('tri cuanmax') ||
+                          brand.contains('tri cuanmax')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TriCuanMaxPascabayarPage(),
                           ),
                         );
                       } else {

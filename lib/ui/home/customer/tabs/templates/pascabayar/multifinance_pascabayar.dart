@@ -26,7 +26,6 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
 
   // Products Data
   List<ProductPascabayar> _allProducts = [];
-  List<ProductPascabayar> _products = [];
   List<String> _availableBrands = [];
   ProductPascabayar? _selectedProduct;
   String _selectedBrand = '';
@@ -888,6 +887,11 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(20),
             ],
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
             decoration: InputDecoration(
               hintText: 'Masukkan nomor kontrak',
               prefixIcon: Icon(Icons.credit_card, color: primaryColor),
@@ -978,84 +982,330 @@ class _BarcodeScannerScreen extends StatefulWidget {
   State<_BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
 }
 
-class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
-  MobileScannerController controller = MobileScannerController();
-  bool isScanned = false;
+class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> with SingleTickerProviderStateMixin {
+  MobileScannerController cameraController = MobileScannerController();
+  bool _isProcessing = false;
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
-    controller.dispose();
+    _animationController.dispose();
+    cameraController.dispose();
     super.dispose();
+  }
+
+  void _handleBarcode(BarcodeCapture capture) {
+    if (_isProcessing) return;
+
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final String? code = barcodes.first.rawValue;
+    if (code != null && code.isNotEmpty) {
+      _isProcessing = true;
+      Navigator.pop(context, code);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
     return Scaffold(
       backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: const Text(
           'Scan Barcode',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.close, color: Colors.white, size: 20),
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: Icon(
-              controller.torchEnabled ? Icons.flash_on : Icons.flash_off,
-              color: Colors.white,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.flash_on, color: Colors.white, size: 20),
             ),
-            onPressed: () => controller.toggleTorch(),
+            onPressed: () => cameraController.toggleTorch(),
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          MobileScanner(
-            controller: controller,
-            onDetect: (capture) {
-              if (isScanned) return;
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double scanAreaSize =
+              constraints.maxWidth < constraints.maxHeight
+                  ? constraints.maxWidth * 0.7
+                  : constraints.maxHeight * 0.4;
+          final double scanAreaLeft = (constraints.maxWidth - scanAreaSize) / 2;
+          final double scanAreaTop = (constraints.maxHeight - scanAreaSize) / 2;
 
-              final List<Barcode> barcodes = capture.barcodes;
-              if (barcodes.isNotEmpty) {
-                final barcode = barcodes.first;
-                if (barcode.rawValue != null) {
-                  setState(() => isScanned = true);
-                  Navigator.pop(context, barcode.rawValue);
-                }
-              }
-            },
-          ),
-          // Overlay with scan area
-          Center(
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.white, width: 2),
-                borderRadius: BorderRadius.circular(12),
+          return Stack(
+            children: [
+              // Camera preview
+              Positioned.fill(
+                child: MobileScanner(
+                  controller: cameraController,
+                  onDetect: _handleBarcode,
+                ),
               ),
-            ),
-          ),
-          const Positioned(
-            bottom: 50,
-            left: 0,
-            right: 0,
-            child: Text(
-              'Arahkan kamera ke barcode',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+
+              // Dark overlay with transparent center
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _ScannerOverlayPainter(scanAreaLeft, scanAreaTop, scanAreaSize),
+                ),
               ),
-            ),
-          ),
-        ],
+
+              // Scanner frame and UI
+              Positioned(
+                left: scanAreaLeft,
+                top: scanAreaTop,
+                width: scanAreaSize,
+                height: scanAreaSize,
+                child: Stack(
+                  children: [
+                    ..._buildCornerBrackets(primaryColor, scanAreaSize),
+                    AnimatedBuilder(
+                      animation: _animationController,
+                      builder: (context, child) {
+                        return Positioned(
+                          top: _animationController.value * (scanAreaSize - 20),
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 3,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.transparent,
+                                  primaryColor.withOpacity(0.8),
+                                  Colors.transparent,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: primaryColor.withOpacity(0.5),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // Instructions
+              Positioned(
+                left: 0,
+                right: 0,
+                top: scanAreaTop + scanAreaSize + 24,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Arahkan Kamera ke Barcode',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pastikan barcode berada di dalam frame',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+
+  List<Widget> _buildCornerBrackets(Color color, double scanAreaSize) {
+    final double size = scanAreaSize * 0.15;
+    final double thickness = 4.0;
+    return [
+      // Top-left
+      Positioned(
+        top: 0,
+        left: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(2)),
+          ),
+        ),
+      ),
+      Positioned(
+        top: 0,
+        left: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topLeft: Radius.circular(2)),
+          ),
+        ),
+      ),
+      // Top-right
+      Positioned(
+        top: 0,
+        right: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topRight: Radius.circular(2)),
+          ),
+        ),
+      ),
+      Positioned(
+        top: 0,
+        right: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(topRight: Radius.circular(2)),
+          ),
+        ),
+      ),
+      // Bottom-left
+      Positioned(
+        bottom: 0,
+        left: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: 0,
+        left: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+      // Bottom-right
+      Positioned(
+        bottom: 0,
+        right: 0,
+        child: Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+      Positioned(
+        bottom: 0,
+        right: 0,
+        child: Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.only(
+              bottomRight: Radius.circular(2),
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
 }
+
+class _ScannerOverlayPainter extends CustomPainter {
+  final double left;
+  final double top;
+  final double size;
+  _ScannerOverlayPainter(this.left, this.top, this.size);
+
+  @override
+  void paint(Canvas canvas, Size screenSize) {
+    final paint = Paint()..color = Colors.black.withOpacity(0.6);
+    final scanRect = Rect.fromLTWH(left, top, size, size);
+    final path = Path()
+      ..addRect(Rect.fromLTWH(0, 0, screenSize.width, screenSize.height))
+      ..addRRect(RRect.fromRectAndRadius(scanRect, const Radius.circular(12)))
+      ..fillType = PathFillType.evenOdd;
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

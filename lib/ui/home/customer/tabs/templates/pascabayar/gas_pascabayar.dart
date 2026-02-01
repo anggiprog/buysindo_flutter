@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'barcode_scanner_screen.dart';
 import '../../../../../../core/app_config.dart';
 import '../../../../../../core/network/api_service.dart';
 import '../../../../../../core/network/session_manager.dart';
@@ -105,12 +105,12 @@ class _GasPascabayarState extends State<GasPascabayar> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [primaryColor, primaryColor.withOpacity(0.8)],
+          colors: [primaryColor, primaryColor.withAlpha((0.8 * 255).toInt())],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withOpacity(0.3),
+            color: primaryColor.withAlpha((0.3 * 255).toInt()),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -121,7 +121,7 @@ class _GasPascabayarState extends State<GasPascabayar> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withAlpha((0.2 * 255).toInt()),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -147,7 +147,7 @@ class _GasPascabayarState extends State<GasPascabayar> {
                 Text(
                   'Bayar tagihan Gas Negara',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withAlpha((0.9 * 255).toInt()),
                     fontSize: 13,
                   ),
                 ),
@@ -376,9 +376,161 @@ class _GasPascabayarState extends State<GasPascabayar> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _pickContact,
+                  icon: const Icon(Icons.contacts, size: 18),
+                  label: const Text('Kontak'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _scanBarcode,
+                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  label: const Text('Scan Barcode'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  // PICK CONTACT
+  Future<void> _pickContact() async {
+    try {
+      final permissionStatus = await Permission.contacts.request();
+      if (permissionStatus.isDenied || permissionStatus.isPermanentlyDenied) {
+        if (mounted) {
+          _showSnackbar(
+            'Izin kontak diperlukan untuk memilih nomor',
+            Colors.orange,
+          );
+          if (permissionStatus.isPermanentlyDenied) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Izin Diperlukan'),
+                content: const Text(
+                  'Aplikasi memerlukan izin akses kontak. Silakan aktifkan di pengaturan.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Batal'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      openAppSettings();
+                    },
+                    child: const Text('Buka Pengaturan'),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      final contact = await FlutterContacts.openExternalPick();
+      if (contact != null && contact.phones.isNotEmpty) {
+        String phoneNumber = contact.phones.first.number;
+        phoneNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
+        if (phoneNumber.startsWith('62')) {
+          phoneNumber = '0${phoneNumber.substring(2)}';
+        }
+        if (!phoneNumber.startsWith('0')) {
+          phoneNumber = '0$phoneNumber';
+        }
+        if (mounted) {
+          setState(() {
+            _customerIdController.text = phoneNumber;
+          });
+          _showSnackbar('Nomor kontak dipilih', Colors.green);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackbar('Gagal memilih kontak', Colors.red);
+      }
+    }
+  }
+
+  // SCAN BARCODE
+  Future<void> _scanBarcode() async {
+    try {
+      final permissionStatus = await Permission.camera.request();
+      if (permissionStatus.isDenied || permissionStatus.isPermanentlyDenied) {
+        if (mounted) {
+          _showSnackbar(
+            'Izin kamera diperlukan untuk scan barcode',
+            Colors.orange,
+          );
+          if (permissionStatus.isPermanentlyDenied) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Izin Diperlukan'),
+                content: const Text(
+                  'Aplikasi memerlukan izin kamera. Silakan aktifkan di pengaturan.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Batal'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      openAppSettings();
+                    },
+                    child: const Text('Buka Pengaturan'),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+        return;
+      }
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => BarcodeScannerScreen()),
+      );
+      if (result != null && result is String && mounted) {
+        setState(() {
+          _customerIdController.text = result;
+        });
+        _showSnackbar('Barcode berhasil dipindai', Colors.green);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackbar('Gagal scan barcode', Colors.red);
+      }
+    }
   }
 
   Widget _buildCekTagihanButton(Color primaryColor) {
@@ -412,7 +564,6 @@ class _GasPascabayarState extends State<GasPascabayar> {
 
   // Products Data
   List<ProductPascabayar> _allProducts = [];
-  List<ProductPascabayar> _products = [];
   List<String> _availableBrands = [];
   ProductPascabayar? _selectedProduct;
   String _selectedBrand = '';
@@ -498,18 +649,7 @@ class _GasPascabayarState extends State<GasPascabayar> {
     }
   }
 
-  void _selectBrand(String productName) {
-    final brandProducts = _allProducts
-        .where((p) => p.productName == productName)
-        .toList();
-    if (brandProducts.isNotEmpty) {
-      setState(() {
-        _selectedBrand = productName;
-        _products = brandProducts;
-        _selectedProduct = brandProducts.first;
-      });
-    }
-  }
+  // ...existing code...
 
   Future<void> _checkBill() async {
     if (_selectedProduct == null) {
@@ -806,5 +946,5 @@ class _GasPascabayarState extends State<GasPascabayar> {
     );
   }
 
-  // ...rest of the UI and logic, copy from HP Pascabayar, adjust for GAS NEGARA...
+ 
 }

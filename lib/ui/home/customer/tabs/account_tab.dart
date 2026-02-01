@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/session_manager.dart';
 import '../../../../features/customer/data/models/user_model.dart' as models;
 import 'edit_profile_screen.dart';
+import 'transaction_history_tab.dart';
+import '../notifications_page.dart';
+import '../../../../features/topup/screens/topup_history_screen.dart';
+import 'animated_list_tile.dart';
+import 'akun/buat_toko.dart';
+import '../../kontak_admin.dart';
+import '../../akun/ganti_password.dart';
+import '../../pin.dart';
+import '../../tentang_kami.dart';
+import '../../referral/referral.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -17,11 +28,50 @@ class AccountTab extends StatefulWidget {
 class _AccountTabState extends State<AccountTab> {
   bool _isLoading = true;
   models.ProfileResponse? _profileData;
+  String _saldo = "0";
+  bool _isLoadingSaldo = true;
 
   @override
   void initState() {
     super.initState();
     _fetchProfile();
+    _fetchSaldo();
+  }
+
+  Future<void> _fetchSaldo() async {
+    setState(() => _isLoadingSaldo = true);
+    try {
+      String? token = await SessionManager.getToken();
+      if (token == null || token.isEmpty) {
+        setState(() {
+          _isLoadingSaldo = false;
+          _saldo = "0";
+        });
+        return;
+      }
+      final dio = Dio();
+      final apiService = ApiService(dio);
+      final response = await apiService.getSaldo(token);
+      if (response.statusCode == 200 &&
+          response.data != null &&
+          response.data['saldo'] != null) {
+        final saldo = response.data['saldo'].toString();
+        setState(() {
+          _saldo = saldo;
+          _isLoadingSaldo = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingSaldo = false;
+          _saldo = "0";
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingSaldo = false;
+        _saldo = "0";
+      });
+    }
   }
 
   Future<void> _fetchProfile() async {
@@ -95,7 +145,7 @@ class _AccountTabState extends State<AccountTab> {
     }
   }
 
-  // Fungsi Hapus Cache
+  //// Fungsi Hapus Cache
   void _clearCache() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -312,50 +362,316 @@ class _AccountTabState extends State<AccountTab> {
   }
 
   Widget _buildMenuTab(Color themeColor) {
+    final user =
+        _profileData?.user ??
+        models.UserModel(
+          id: 0,
+          email: "email@example.com",
+          username: "-",
+          referralCode: null,
+        );
+    String saldoDisplay = _isLoadingSaldo
+        ? "Memuat..."
+        : (_saldo.isEmpty || _saldo == "0")
+        ? "-"
+        : "Rp ${_formatRupiah(_saldo)}";
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        _buildListTile(
-          Icons.account_balance_wallet,
-          "Saldo",
-          themeColor,
-          trailing: "Rp 663.656",
+        AnimatedListTile(
+          icon: Icons.account_balance_wallet,
+          title: "Saldo",
+          color: themeColor,
+          trailing: saldoDisplay,
         ),
         const Divider(height: 1),
-        _buildListTile(Icons.history, "Transaksi", themeColor),
-        _buildListTile(Icons.history_edu, "Histori Topup", themeColor),
-        _buildListTile(Icons.notifications_none, "Pemberitahuan", themeColor),
-        _buildListTile(Icons.storefront, "Buat Nama Toko", themeColor),
-        _buildListTile(Icons.headset_mic_outlined, "Hubungi CS", themeColor),
-        _buildListTile(Icons.lock_open, "Ganti Password", themeColor),
-        _buildListTile(Icons.pin, "PIN", themeColor),
-        _buildListTile(Icons.info_outline, "Tentang Kami", themeColor),
-        _buildListTile(Icons.star_border, "Rating Aplikasi", themeColor),
-        _buildListTile(Icons.share_outlined, "Referral", themeColor),
-        _buildListTile(
-          Icons.policy_outlined,
-          "Kebijakan - FAQ - Terms",
-          themeColor,
+        AnimatedListTile(
+          icon: Icons.history,
+          title: "Riwayat",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TransactionHistoryTab(),
+              ),
+            );
+          },
         ),
-        _buildListTile(
-          Icons.delete_sweep_outlined,
-          "Hapus Data Cache",
-          themeColor,
+        AnimatedListTile(
+          icon: Icons.history_edu,
+          title: "Histori Topup",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TopupHistoryScreen(),
+              ),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.notifications_none,
+          title: "Pemberitahuan",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NotificationsPage(),
+              ),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.storefront,
+          title: "Buat Nama Toko",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const BuatTokoPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.headset_mic_outlined,
+          title: "Hubungi CS",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => KontakAdminPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.lock_open,
+          title: "Ganti Password",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => GantiPasswordPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.pin,
+          title: "PIN",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PinPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.info_outline,
+          title: "Tentang Kami",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TentangKamiPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.star_border,
+          title: "Rating Aplikasi",
+          color: themeColor,
+          onTap: () async {
+            final subdomain = appConfig.subdomain.toLowerCase();
+            if (subdomain.isNotEmpty) {
+              final url = Uri.parse(
+                'https://play.google.com/store/apps/details?id=com.$subdomain.app',
+              );
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Gagal membuka PlayStore")),
+                  );
+                }
+              }
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Link PlayStore belum tersedia"),
+                  ),
+                );
+              }
+            }
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.share_outlined,
+          title: "Referral",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ReferralPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.policy_outlined,
+          title: "Kebijakan - FAQ - Terms",
+          color: themeColor,
+          onTap: () async {
+            final subdomain = appConfig.subdomain.toLowerCase();
+            if (subdomain.isNotEmpty) {
+              final url = Uri.parse(
+                'https://$subdomain.buysindo.com/privacy-policy/$subdomain',
+              );
+              if (await canLaunchUrl(url)) {
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              } else {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Gagal membuka halaman kebijakan"),
+                    ),
+                  );
+                }
+              }
+            } else {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Halaman kebijakan belum tersedia"),
+                  ),
+                );
+              }
+            }
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.delete_sweep_outlined,
+          title: "Hapus Data Cache",
+          color: themeColor,
           onTap: _clearCache,
         ),
-        _buildListTile(
-          Icons.person_remove_outlined,
-          "Minta Hapus Akun",
-          themeColor,
+        AnimatedListTile(
+          icon: Icons.person_remove_outlined,
+          title: "Minta Hapus Akun",
+          color: themeColor,
+          onTap: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text("Hapus Akun"),
+                content: const Text(
+                  "Apakah Anda yakin ingin menghapus akun? Anda akan diarahkan ke WhatsApp Admin untuk proses verifikasi penghapusan akun.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Batal"),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text(
+                      "Ya, Hubungi Admin",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirm == true) {
+              try {
+                // Tampilkan snackbar proses
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Menghubungkan ke Admin..."),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+
+                String? token = await SessionManager.getToken();
+                if (token == null) return;
+
+                final kontak = await ApiService.instance.getKontakAdmin(token);
+                if (kontak != null && kontak['whatsapp'] != null) {
+                  final phone = kontak['whatsapp'].toString().replaceAll(
+                    RegExp(r'[^0-9]'),
+                    '',
+                  );
+
+                  final username = user.username;
+                  final email = user.email;
+                  final message =
+                      "Halo Admin, saya ingin mengajukan penghapusan akun saya di aplikasi ${appConfig.appName}.\n\n"
+                      "Detail Akun:\n"
+                      "Username: $username\n"
+                      "Email: $email\n\n"
+                      "Mohon instruksi selanjutnya. Terima kasih.";
+
+                  final url = Uri.parse(
+                    "https://wa.me/$phone?text=${Uri.encodeComponent(message)}",
+                  );
+
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Gagal membuka WhatsApp")),
+                      );
+                    }
+                  }
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Nomor WhatsApp Admin tidak ditemukan"),
+                      ),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Terjadi kesalahan, silakan coba lagi"),
+                    ),
+                  );
+                }
+              }
+            }
+          },
         ),
-        _buildListTile(
-          Icons.logout,
-          "Keluar",
-          Colors.red,
+        AnimatedListTile(
+          icon: Icons.logout,
+          title: "Keluar",
+          color: Colors.red,
           onTap: _handleLogout,
         ),
       ],
     );
+  }
+
+  String _formatRupiah(String value) {
+    try {
+      final number = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+      String result = number.toString().replaceAllMapped(
+        RegExp(r'\B(?=(\d{3})+(?!\d))'),
+        (match) => '.',
+      );
+      return result;
+    } catch (e) {
+      return value;
+    }
   }
 
   Widget _buildProfilTab(models.ProfileModel? profile, models.UserModel? user) {
@@ -370,42 +686,6 @@ class _AccountTabState extends State<AccountTab> {
         _buildInfoTile("Tanggal Lahir", profile?.birthdate ?? "-"),
         _buildInfoTile("Alamat", profile?.address ?? "-"),
       ],
-    );
-  }
-
-  Widget _buildListTile(
-    IconData icon,
-    String title,
-    Color color, {
-    String? trailing,
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(
-          // Jika warna bukan merah (logout), gunakan warna teks dari backend
-          color: color == Colors.red ? Colors.red : Colors.black87,
-          fontSize: 15,
-        ),
-      ),
-      trailing: trailing != null
-          ? Text(
-              trailing,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: color,
-              ),
-            )
-          : Icon(
-              Icons.chevron_right,
-              size: 20,
-              // --- GANTI DI SINI ---
-              color: appConfig.primaryColor.withValues(alpha: 0.5),
-            ),
-      onTap: onTap,
     );
   }
 

@@ -12,27 +12,29 @@ import '../../../../../../core/network/session_manager.dart';
 import '../../../../../../features/customer/data/models/product_pascabayar_model.dart';
 import 'detail_cek_tagihan.dart';
 
-class TvPascabayar extends StatefulWidget {
-  const TvPascabayar({super.key});
+class EmoneyPascabayar extends StatefulWidget {
+  const EmoneyPascabayar({super.key});
 
   @override
-  State<TvPascabayar> createState() => _TvPascabayarState();
+  State<EmoneyPascabayar> createState() => _EmoneyPascabayarState();
 }
 
-class _TvPascabayarState extends State<TvPascabayar> {
+class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
   final TextEditingController _customerIdController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
 
   late ApiService _apiService;
 
   // Products Data
   List<ProductPascabayar> _allProducts = [];
+  List<ProductPascabayar> _products = [];
   List<String> _availableBrands = [];
   ProductPascabayar? _selectedProduct;
   String _selectedBrand = '';
   bool _hasShownBrandDialog = false;
   bool _isRefreshing = false;
 
-  static const String _cacheKey = 'tv_products_cache';
+  static const String _cacheKey = 'emoney_products_cache';
 
   @override
   void initState() {
@@ -49,19 +51,30 @@ class _TvPascabayarState extends State<TvPascabayar> {
 
   // Load pascabayar products (with cache support)
   Future<void> _loadProducts({bool forceRefresh = false}) async {
-    print('🔄 [TV] _loadProducts called (forceRefresh: $forceRefresh)');
+    print('🔄 [EMONEY] _loadProducts called (forceRefresh: $forceRefresh)');
+
+    // Helper: check if brand is E-MONEY (case-insensitive, ignore space/dash)
+    bool _isEmoneyBrand(String? brand) {
+      if (brand == null) return false;
+      final normalized = brand.replaceAll(RegExp(r'[\s\-]'), '').toLowerCase();
+      return normalized == 'emoney';
+    }
 
     try {
       // Cek cache terlebih dahulu jika bukan force refresh
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [TV] Using cached products: ${cachedProducts.length}');
+          print('📦 [EMONEY] Using cached products: ${cachedProducts.length}');
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
               _availableBrands =
-                  _allProducts.map((p) => p.productName).toSet().toList()
+                  _allProducts
+                      .where((p) => _isEmoneyBrand(p.brand))
+                      .map((p) => p.productName)
+                      .toSet()
+                      .toList()
                     ..sort();
             });
 
@@ -79,39 +92,34 @@ class _TvPascabayarState extends State<TvPascabayar> {
 
       // Fetch dari API
       final token = await SessionManager.getToken();
-      print('🔑 [TV] Token: ${token?.substring(0, 20)}...');
+      print('🔑 [EMONEY] Token: ${token?.substring(0, 20)}...');
 
       if (token == null) {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [TV] Fetching from API...');
+      print('🌐 [EMONEY] Fetching from API...');
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [TV] Response status: ${response.statusCode}');
-
+      print('📥 [EMONEY] Response status: ${response.statusCode}');
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
         );
 
-        // Filter hanya produk TV PASCABAYAR
-        final tvProducts = productResponse.products
-            .where(
-              (p) =>
-                  p.brand.toUpperCase().contains('TV') &&
-                  p.brand.toUpperCase().contains('PASCABAYAR'),
-            )
+        // Filter hanya produk dengan brand E-MONEY (case-insensitive, ignore space/dash)
+        final emoneyProducts = productResponse.products
+            .where((p) => _isEmoneyBrand(p.brand))
             .toList();
 
-        print('📦 [TV] TV products fetched: ${tvProducts.length}');
+        print('📦 [EMONEY] E-MONEY products fetched: ${emoneyProducts.length}');
 
         // Simpan ke cache
-        await _saveToCache(tvProducts);
+        await _saveToCache(emoneyProducts);
 
         if (mounted) {
           setState(() {
-            _allProducts = tvProducts;
+            _allProducts = emoneyProducts;
             _availableBrands =
                 _allProducts.map((p) => p.productName).toSet().toList()..sort();
           });
@@ -126,15 +134,17 @@ class _TvPascabayarState extends State<TvPascabayar> {
             });
           }
 
-          print('✅ [TV] Products loaded: ${_availableBrands.length} brands');
+          print(
+            '✅ [EMONEY] Products loaded: ${_availableBrands.length} brands',
+          );
         }
       } else {
-        print('❌ [TV] Response status not 200: ${response.statusCode}');
+        print('❌ [EMONEY] Response status not 200: ${response.statusCode}');
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [TV] Error loading products: $e');
-      print('❌ [TV] Error type: ${e.runtimeType}');
+      print('❌ [EMONEY] Error loading products: $e');
+      print('❌ [EMONEY] Error type: ${e.runtimeType}');
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -154,7 +164,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [TV] Error loading from cache: $e');
+      print('⚠️ [EMONEY] Error loading from cache: $e');
     }
     return [];
   }
@@ -165,9 +175,9 @@ class _TvPascabayarState extends State<TvPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [TV] Saved ${products.length} products to cache');
+      print('💾 [EMONEY] Saved ${products.length} products to cache');
     } catch (e) {
-      print('⚠️ [TV] Error saving to cache: $e');
+      print('⚠️ [EMONEY] Error saving to cache: $e');
     }
   }
 
@@ -182,7 +192,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
     try {
       await _loadProducts(forceRefresh: true);
       if (mounted) {
-        _showSnackbar('Data TV berhasil diperbarui', Colors.green);
+        _showSnackbar('Data EMONEY berhasil diperbarui', Colors.green);
       }
     } finally {
       if (mounted) {
@@ -196,7 +206,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
   // Show brand selection dialog
   void _showBrandSelectionDialog() {
     final primaryColor = appConfig.primaryColor;
-    String searchQuery = '';
+    String searchQuery = ''; // Moved outside builder
 
     showDialog(
       context: context,
@@ -240,7 +250,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
-                            Icons.tv,
+                            Icons.phone_android,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -259,7 +269,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
                                 ),
                               ),
                               Text(
-                                'Pilih provider TV Pascabayar',
+                                'Pilih provider Emoney pascabayar',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.white70,
@@ -369,6 +379,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
                             itemCount: filteredBrands.length,
                             itemBuilder: (context, index) {
                               final productName = filteredBrands[index];
+
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
                                 decoration: BoxDecoration(
@@ -393,18 +404,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
                                   child: InkWell(
                                     onTap: () {
                                       Navigator.pop(context);
-                                      setState(() {
-                                        _selectedBrand = productName;
-                                        _selectedProduct = _allProducts
-                                            .firstWhere(
-                                              (p) =>
-                                                  p.productName == productName,
-                                            );
-                                      });
-                                      _showSnackbar(
-                                        'Provider dipilih: $productName',
-                                        Colors.green,
-                                      );
+                                      _selectBrand(productName);
                                     },
                                     borderRadius: BorderRadius.circular(15),
                                     child: Padding(
@@ -421,7 +421,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
                                                   BorderRadius.circular(10),
                                             ),
                                             child: Icon(
-                                              Icons.tv,
+                                              Icons.phone_android,
                                               color: primaryColor,
                                               size: 24,
                                             ),
@@ -461,169 +461,60 @@ class _TvPascabayarState extends State<TvPascabayar> {
     );
   }
 
-  // Pick contact from phonebook
-  Future<void> _pickContact() async {
-    try {
-      // Request permission
-      final permissionStatus = await Permission.contacts.request();
+  // Select brand and filter products
+  void _selectBrand(String productName) {
+    print('📌 [EMONEY] Brand selected: $productName');
 
-      if (permissionStatus.isDenied || permissionStatus.isPermanentlyDenied) {
-        if (mounted) {
-          _showSnackbar(
-            'Izin kontak diperlukan untuk memilih nomor',
-            Colors.orange,
-          );
+    // Filter products berdasarkan product_name yang dipilih
+    final brandProducts = _allProducts
+        .where((p) => p.productName == productName)
+        .toList();
 
-          // Show dialog to open settings if permanently denied
-          if (permissionStatus.isPermanentlyDenied) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Izin Diperlukan'),
-                content: const Text(
-                  'Aplikasi memerlukan izin akses kontak. Silakan aktifkan di pengaturan.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Batal'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      openAppSettings();
-                    },
-                    child: const Text('Buka Pengaturan'),
-                  ),
-                ],
-              ),
-            );
-          }
-        }
-        return;
-      }
+    if (brandProducts.isNotEmpty) {
+      setState(() {
+        _selectedBrand = productName;
+        _products = brandProducts;
+        _selectedProduct = brandProducts.first; // Auto select pertama
+      });
 
-      // Open contact picker (native Android/iOS picker)
-      final contact = await FlutterContacts.openExternalPick();
-
-      if (contact != null && contact.phones.isNotEmpty) {
-        // Get first phone number
-        String phoneNumber = contact.phones.first.number;
-
-        // Clean phone number: remove spaces, dashes, parentheses, plus signs
-        phoneNumber = phoneNumber.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
-
-        // Convert 62 to 0 (Indonesian format)
-        if (phoneNumber.startsWith('62')) {
-          phoneNumber = '0${phoneNumber.substring(2)}';
-        }
-
-        // Ensure it starts with 0
-        if (!phoneNumber.startsWith('0')) {
-          phoneNumber = '0$phoneNumber';
-        }
-
-        if (mounted) {
-          setState(() {
-            _customerIdController.text = phoneNumber;
-          });
-          _showSnackbar('Nomor kontak dipilih', Colors.green);
-        }
-      }
-    } catch (e) {
-      print('❌ Error picking contact: $e');
-      if (mounted) {
-        _showSnackbar('Gagal memilih kontak', Colors.red);
-      }
-    }
-  }
-
-  // Scan barcode
-  Future<void> _scanBarcode() async {
-    try {
-      // Request camera permission
-      final permissionStatus = await Permission.camera.request();
-
-      if (permissionStatus.isDenied || permissionStatus.isPermanentlyDenied) {
-        if (mounted) {
-          _showSnackbar(
-            'Izin kamera diperlukan untuk scan barcode',
-            Colors.orange,
-          );
-
-          if (permissionStatus.isPermanentlyDenied) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Izin Diperlukan'),
-                content: const Text(
-                  'Aplikasi memerlukan izin kamera. Silakan aktifkan di pengaturan.',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Batal'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      openAppSettings();
-                    },
-                    child: const Text('Buka Pengaturan'),
-                  ),
-                ],
-              ),
-            );
-          }
-        }
-        return;
-      }
-
-      // Open barcode scanner
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => _BarcodeScannerScreen()),
+      print(
+        '✅ [EMONEY] Selected: $_selectedBrand with ${_products.length} products',
       );
-
-      if (result != null && result is String && mounted) {
-        setState(() {
-          _customerIdController.text = result;
-        });
-        _showSnackbar('Barcode berhasil dipindai', Colors.green);
-      }
-    } catch (e) {
-      print('❌ Error scanning barcode: $e');
-      if (mounted) {
-        _showSnackbar('Gagal scan barcode', Colors.red);
-      }
+      print(
+        '✅ [EMONEY] Auto-selected product: ${_selectedProduct!.buyerSkuCode}',
+      );
     }
   }
 
-  // Cek tagihan
-  Future<void> _cekTagihan() async {
+  // Cek Tagihan
+  Future<void> _checkBill() async {
+    print('🔍 [EMONEY] _checkBill called');
+    print('🔍 [EMONEY] Selected Product: $_selectedProduct');
+    print('🔍 [EMONEY] Customer ID: ${_customerIdController.text}');
+
     if (_selectedProduct == null) {
-      _showSnackbar('Silakan pilih provider terlebih dahulu', Colors.orange);
+      print('⚠️ [EMONEY] No product selected');
+      _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
-    final customerId = _customerIdController.text.trim();
-    if (customerId.isEmpty) {
-      _showSnackbar('ID Pelanggan tidak boleh kosong', Colors.orange);
+    if (_customerIdController.text.isEmpty) {
+      print('⚠️ [EMONEY] Customer ID is empty');
+      _showSnackbar('Masukkan nomor HP terlebih dahulu', Colors.orange);
       return;
     }
 
     try {
-      // Get admin user ID
+      // Get admin ID from AppConfig
       final adminUserId = int.parse(appConfig.adminId);
 
-      print('📝 [TV] Customer ID: $customerId');
-      print('📝 [TV] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [TV] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [TV] Brand: ${_selectedProduct!.brand}');
-      print('📝 [TV] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      print('📝 [EMONEY] Admin User ID (from AppConfig): $adminUserId');
+      print('📝 [EMONEY] Product Name: ${_selectedProduct!.productName}');
+      print('📝 [EMONEY] Brand: ${_selectedProduct!.brand}');
+      print('📝 [EMONEY] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
 
       // Show bottom sheet cek tagihan
-      print('🚀 [TV] Showing CekTagihan bottom sheet...');
+      print('🚀 [EMONEY] Showing CekTagihan bottom sheet...');
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -631,34 +522,238 @@ class _TvPascabayarState extends State<TvPascabayar> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        amount: int.tryParse(_amountController.text) ?? 0,
       );
 
-      print('📥 [TV] Bill Data Response: $billData');
+      print('📥 [EMONEY] Bill Data Response: $billData');
 
       if (billData != null) {
-        print('✅ [TV] Bill data received from bottom sheet');
+        print('✅ [EMONEY] Bill data received from bottom sheet');
       } else {
-        print('❌ [TV] Bill data is null (user might have cancelled)');
+        print('ℹ️ [EMONEY] User cancelled the bill check');
       }
     } catch (e) {
-      print('❌ [TV] Error in _cekTagihan: $e');
+      print('❌ [EMONEY] Error in _checkBill: $e');
+      print('❌ [EMONEY] Error type: ${e.runtimeType}');
       if (mounted) {
-        _showSnackbar('Terjadi kesalahan: ${e.toString()}', Colors.red);
+        _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
     }
   }
 
-  void _showSnackbar(String message, Color backgroundColor) {
+  // Show Snackbar
+  void _showSnackbar(String message, Color color) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: backgroundColor,
+        backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(10),
+        duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  Future<void> _pickContact() async {
+    try {
+      // Request contacts permission
+      final status = await Permission.contacts.request();
+
+      if (status.isDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin akses kontak diperlukan'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Izin Kontak Diperlukan'),
+              content: const Text(
+                'Aplikasi memerlukan akses kontak untuk memilih nomor HP. '
+                'Silakan aktifkan izin kontak di pengaturan aplikasi.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: const Text('Buka Pengaturan'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Pick a contact
+      final contact = await FlutterContacts.openExternalPick();
+
+      if (contact != null && mounted) {
+        // Get the full contact details including phone numbers
+        final fullContact = await FlutterContacts.getContact(
+          contact.id,
+          withProperties: true,
+        );
+
+        if (fullContact != null && fullContact.phones.isNotEmpty) {
+          // Clean the phone number (remove spaces, dashes, parentheses)
+          String phoneNumber = fullContact.phones.first.number.replaceAll(
+            RegExp(r'[\s\-\(\)\+]'),
+            '',
+          );
+
+          // Remove country code if starts with 62
+          if (phoneNumber.startsWith('62')) {
+            phoneNumber = '0${phoneNumber.substring(2)}';
+          }
+          // Remove +62
+          else if (phoneNumber.startsWith('+62')) {
+            phoneNumber = '0${phoneNumber.substring(3)}';
+          }
+          // Ensure starts with 0
+          else if (!phoneNumber.startsWith('0')) {
+            phoneNumber = '0$phoneNumber';
+          }
+
+          setState(() {
+            _customerIdController.text = phoneNumber;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Kontak dipilih: ${fullContact.displayName} - $phoneNumber',
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kontak tidak memiliki nomor telepon'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka kontak: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _scanBarcode() async {
+    try {
+      final status = await Permission.camera.request();
+
+      if (status.isDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin kamera diperlukan untuk scan barcode'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Izin Kamera Diperlukan'),
+              content: const Text(
+                'Aplikasi memerlukan akses kamera untuk scan barcode. '
+                'Silakan aktifkan izin kamera di pengaturan aplikasi.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: const Text('Buka Pengaturan'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      final result = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(builder: (context) => const _BarcodeScannerScreen()),
+      );
+
+      if (result != null && result.isNotEmpty && mounted) {
+        setState(() {
+          _customerIdController.text = result;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Nomor HP: $result'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error scanning: ${e.message ?? e.code}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka scanner: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -668,41 +763,40 @@ class _TvPascabayarState extends State<TvPascabayar> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
+        title: const Text(
+          'Emoney Pascabayar',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
         backgroundColor: primaryColor,
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'TV Pascabayar',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header card
-            _buildHeaderCard(primaryColor),
-            const SizedBox(height: 16),
-
-            // Provider selection card
-            _buildProviderCard(primaryColor),
-            const SizedBox(height: 16),
-
-            // Customer ID input
-            _buildCustomerIdInput(primaryColor),
-            const SizedBox(height: 24),
-
-            // Cek Tagihan button
-            _buildCekTagihanButton(primaryColor),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadProducts(forceRefresh: true);
+        },
+        color: primaryColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _buildHeaderCard(primaryColor),
+              if (_selectedProduct != null) ...[
+                _buildSelectedBrandInfo(primaryColor),
+                _buildCustomerIdInput(primaryColor),
+              ] else
+                _buildNoBrandSelected(primaryColor),
+            ],
+          ),
         ),
       ),
     );
@@ -725,48 +819,50 @@ class _TvPascabayarState extends State<TvPascabayar> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.phone_android,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Emoney Pascabayar',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                child: const Icon(Icons.live_tv, color: Colors.white, size: 32),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'TV Pascabayar',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Bayar tagihan TV berlangganan',
-                      style: TextStyle(color: Colors.white70, fontSize: 13),
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  'Bayar tagihan Emoney pascabayar',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildProviderCard(Color primaryColor) {
+  Widget _buildSelectedBrandInfo(Color primaryColor) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.all(16),
@@ -781,54 +877,101 @@ class _TvPascabayarState extends State<TvPascabayar> {
           ),
         ],
       ),
-      child: InkWell(
-        onTap: () {
-          if (_availableBrands.isNotEmpty) {
-            _showBrandSelectionDialog();
-          } else {
-            _showSnackbar('Memuat data provider...', Colors.orange);
-          }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.live_tv, color: primaryColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Provider TV',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _selectedBrand.isEmpty
-                          ? 'Pilih provider'
-                          : _selectedBrand,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
-            ],
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.phone_android, color: primaryColor, size: 24),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Provider Dipilih',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _selectedBrand,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _showBrandSelectionDialog,
+            style: TextButton.styleFrom(
+              foregroundColor: primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: const Text(
+              'Ganti',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoBrandSelected(Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.phone_android_outlined, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Pilih Provider Terlebih Dahulu',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Klik tombol dibawah untuk memilih provider HP pascabayar',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _showBrandSelectionDialog,
+            icon: const Icon(Icons.location_on),
+            label: const Text('Pilih Provider'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -855,37 +998,113 @@ class _TvPascabayarState extends State<TvPascabayar> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'ID Pelanggan',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryColor, primaryColor.withOpacity(0.7)],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primaryColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.badge, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Nomor Emoney Pascabayar',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  Text(
+                    'Masukkan nomor e-money pascabayar',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          TextField(
+            controller: _customerIdController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 15,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              letterSpacing: 0.5,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Contoh: 081234567890',
+              hintStyle: TextStyle(
+                color: Colors.grey[400],
+                fontWeight: FontWeight.normal,
+              ),
+              counterText: '',
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: primaryColor, width: 2.5),
+              ),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
-            controller: _customerIdController,
-            keyboardType: TextInputType.text,
-            inputFormatters: [LengthLimitingTextInputFormatter(20)],
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            maxLength: 10,
             style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
               color: Colors.black,
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
+              letterSpacing: 0.5,
             ),
             decoration: InputDecoration(
-              hintText: 'Masukkan ID Pelanggan',
-              hintStyle: TextStyle(color: Colors.grey[400]),
-              prefixIcon: Icon(Icons.tv, color: primaryColor),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+              hintText: 'Masukkan nominal (contoh: 100000)',
+              hintStyle: TextStyle(
+                color: Colors.grey,
+                fontWeight: FontWeight.normal,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: primaryColor, width: 2),
-              ),
+              counterText: '',
               filled: true,
               fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: primaryColor, width: 2.5),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -894,15 +1113,15 @@ class _TvPascabayarState extends State<TvPascabayar> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _pickContact,
-                  icon: const Icon(Icons.contacts, size: 18),
+                  icon: Icon(Icons.contacts, size: 20),
                   label: const Text('Kontak'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primaryColor,
-                    side: BorderSide(color: primaryColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    side: BorderSide(color: primaryColor, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -910,50 +1129,41 @@ class _TvPascabayarState extends State<TvPascabayar> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _scanBarcode,
-                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  icon: Icon(Icons.qr_code_scanner, size: 20),
                   label: const Text('Scan Barcode'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: primaryColor,
-                    side: BorderSide(color: primaryColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    side: BorderSide(color: primaryColor, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-        
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _checkBill,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 3,
+              ),
+              child: const Text(
+                'Lanjutkan',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCekTagihanButton(Color primaryColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: _cekTagihan,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primaryColor,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-          ),
-          child: const Text(
-            'Cek Tagihan',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1288,6 +1498,8 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
       ),
     ];
   }
+
+  // (Removed duplicate and broken _buildCornerBrackets and stray widget code)
 }
 
 class _ScannerOverlayPainter extends CustomPainter {

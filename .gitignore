@@ -60,3 +60,8 @@ assets/images/logo.png
 
 # Abaikan file lock
 pubspec.lockandroid/build/
+
+# Environment variables
+.env
+.env.*
+!.env.example
