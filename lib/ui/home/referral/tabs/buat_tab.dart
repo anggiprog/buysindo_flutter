@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/session_manager.dart';
@@ -20,6 +21,9 @@ class _BuatTabState extends State<BuatTab> {
   final ApiService _apiService = ApiService(Dio());
   bool _isLoading = false;
 
+  // SharedPreferences key
+  static const String _referralCodeKey = 'cached_referral_code';
+
   @override
   void dispose() {
     _referralController.dispose();
@@ -28,34 +32,93 @@ class _BuatTabState extends State<BuatTab> {
 
   Future<void> _saveReferral() async {
     final code = _referralController.text.trim();
-    if (code.isEmpty) return;
+    if (code.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Referral code tidak boleh kosong.")),
+        );
+      }
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
       final token = await SessionManager.getToken();
-      if (token == null) return;
-      final response = await _apiService.saveReferralCode(token, code);
-      if (response.statusCode == 200) {
+      if (token == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Kode Referral berhasil disimpan!")),
+            const SnackBar(
+              content: Text("Session expired. Silakan login ulang."),
+            ),
           );
+          setState(() => _isLoading = false);
         }
-        _referralController.clear();
-        widget.onSaved();
+        return;
+      }
+
+      final response = await _apiService.saveReferralCode(token, code);
+      debugPrint('[BuatTab] Save referral response: ${response.data}');
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final success = data['success'] == true;
+        final message = data['message']?.toString() ?? '';
+        final savedCode = data['referral_code'];
+
+        if (success && savedCode != null) {
+          // Cache the new referral code
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_referralCodeKey, savedCode.toString());
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  message.isNotEmpty
+                      ? message
+                      : "Kode Referral berhasil dibuat!",
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+            _referralController.clear();
+            widget.onSaved();
+          }
+        } else {
+          // success: false - show error message from backend
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  message.isNotEmpty
+                      ? message
+                      : "Gagal menyimpan referral code",
+                ),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
       } else {
         if (mounted) {
+          final errorMsg = (response.data is Map)
+              ? (response.data['message'] ?? "Gagal menyimpan")
+              : "Gagal menyimpan";
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(response.data['message'] ?? "Gagal menyimpan"),
-            ),
+            SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
           );
         }
       }
     } catch (e) {
+      debugPrint('[BuatTab] Error saving referral: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Terjadi kesalahan. Coba kode lain.")),
+          const SnackBar(
+            content: Text("Terjadi kesalahan. Coba lagi."),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -64,10 +127,42 @@ class _BuatTabState extends State<BuatTab> {
   }
 
   void _shareReferral() {
-    if (widget.currentCode == "-") return;
-    Share.share(
-      "Yuk gabung di ${appConfig.appName}! Gunakan kode referral saya: ${widget.currentCode} untuk mendapatkan keuntungan menarik. Download sekarang!",
-    );
+    if (widget.currentCode == "-" || widget.currentCode.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Buat kode referral terlebih dahulu")),
+      );
+      return;
+    }
+
+    // Generate Play Store link dynamically from app_config
+    final subdomain = appConfig.subdomain;
+    final appType = appConfig.appType;
+    final playStoreLink =
+        'https://play.google.com/store/apps/details?id=com.$subdomain.$appType';
+
+    final shareMessage =
+        '''
+🎉 *Hai, Sobat!* 🎉
+
+Aku mau ngajak kamu pakai *${appConfig.appName}* - aplikasi yang bikin hidupmu lebih mudah! 📱✨
+
+🎁 *BONUS SPESIAL* buat kamu yang daftar pakai kode referral aku:
+
+👉 *${widget.currentCode}* 👈
+
+📥 *Download sekarang di Play Store:*
+$playStoreLink
+
+Caranya gampang:
+1️⃣ Download aplikasi
+2️⃣ Daftar akun baru
+3️⃣ Masukkan kode referral: *${widget.currentCode}*
+4️⃣ Nikmati bonus-nya! 🎊
+
+Yuk, buruan download! Jangan sampai ketinggalan ya! 🚀
+''';
+
+    Share.share(shareMessage.trim());
   }
 
   @override

@@ -42,6 +42,8 @@ import '../../tabs/templates/pascabayar/indosat_only4u_pascabayar.dart';
 import '../../tabs/templates/pascabayar/xl_axis_cuanku_pascabayar.dart';
 import '../../tabs/templates/pascabayar/telkomsel_omni_pascabayar.dart';
 import '../../tabs/templates/pascabayar/tri_cuanmax_pascabayar.dart';
+import 'popup.dart';
+import '../../poin/poin.dart';
 
 class PpobTemplate extends StatefulWidget {
   const PpobTemplate({super.key});
@@ -62,6 +64,10 @@ class _PpobTemplateState extends State<PpobTemplate> {
   String _saldo = "0"; // Default saldo
   bool _isLoadingSaldo = true;
 
+  // Poin
+  int _totalPoin = 0;
+  bool _isLoadingPoin = true;
+
   // Menu Prabayar
   List<MenuPrabayarItem> _menuList = [];
   bool _isLoadingMenu = true;
@@ -74,9 +80,13 @@ class _PpobTemplateState extends State<PpobTemplate> {
   // Refresh controller
   bool _isRefreshing = false;
 
+  // Popup Manager
+  late PopupManager _popupManager;
+
   @override
   void initState() {
     super.initState();
+    _popupManager = PopupManager(apiService: apiService);
     _initializeApp();
   }
 
@@ -90,7 +100,18 @@ class _PpobTemplateState extends State<PpobTemplate> {
     // Panggil fetch setelah frame pertama dirender untuk keamanan
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchAllData();
+      // Show popup after data is loaded (with 1-hour interval check)
+      _checkAndShowPopup();
     });
+  }
+
+  /// Check and show popup dialog if conditions are met
+  Future<void> _checkAndShowPopup() async {
+    // Small delay to ensure screen is fully rendered
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      await _popupManager.checkAndShowPopup(context);
+    }
   }
 
   // Load semua data dari cache
@@ -138,6 +159,13 @@ class _PpobTemplateState extends State<PpobTemplate> {
           _saldo = cachedSaldo;
           _isLoadingSaldo = false;
         }
+
+        // Load poin dari cache
+        final cachedPoin = _prefs.getInt('cached_poin');
+        if (cachedPoin != null) {
+          _totalPoin = cachedPoin;
+          _isLoadingPoin = false;
+        }
       });
     }
   }
@@ -147,6 +175,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
     await Future.wait([
       _fetchBanners(),
       _fetchSaldo(),
+      _fetchPoin(),
       _fetchMenuPrabayar(),
       _fetchPascabayar(),
     ]);
@@ -200,6 +229,38 @@ class _PpobTemplateState extends State<PpobTemplate> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingSaldo = false);
+    }
+  }
+
+  // Fetch Poin
+  Future<void> _fetchPoin() async {
+    try {
+      String? token = await SessionManager.getToken();
+
+      if (token == null || token.isEmpty) {
+        setState(() => _isLoadingPoin = false);
+        return;
+      }
+
+      final response = await apiService.getPoinSummary(token);
+
+      if (response.statusCode == 200 && response.data != null) {
+        final totalPoin = (response.data['total_poin'] ?? 0).toInt();
+
+        // Cache to SharedPreference
+        await _prefs.setInt('cached_poin', totalPoin);
+
+        if (mounted) {
+          setState(() {
+            _totalPoin = totalPoin;
+            _isLoadingPoin = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _isLoadingPoin = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingPoin = false);
     }
   }
 
@@ -430,10 +491,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
   @override
   Widget build(BuildContext context) {
     final Color dynamicPrimaryColor = appConfig.primaryColor;
-    final Color primaryColor = Color.alphaBlend(
-      Colors.black.withValues(alpha: 0.0),
-      dynamicPrimaryColor,
-    );
+    final Color primaryColor = appConfig.primaryColor;
     // Update status bar color to match app primary color
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
@@ -560,7 +618,16 @@ class _PpobTemplateState extends State<PpobTemplate> {
                     ),
                   );
                 }),
-                _buildQuickAction(Icons.stars, "Poin: 0", () {}),
+                _buildQuickAction(
+                  Icons.stars,
+                  _isLoadingPoin ? "Poin: ..." : "Poin: $_totalPoin",
+                  () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const PoinPage()),
+                    );
+                  },
+                ),
               ],
             ),
           ],
@@ -982,7 +1049,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const IndosatOnly4uPascabayarPage(),
+                            builder: (context) =>
+                                const IndosatOnly4uPascabayarPage(),
                           ),
                         );
                       } else if (brand.contains('telkomsel omni') ||
@@ -990,7 +1058,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const TelkomselOmniPascabayarPage(),
+                            builder: (context) =>
+                                const TelkomselOmniPascabayarPage(),
                           ),
                         );
                       } else if (brand.contains('xl axis cuanku') ||
@@ -998,7 +1067,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const XlAxisCuankuPascabayarPage(),
+                            builder: (context) =>
+                                const XlAxisCuankuPascabayarPage(),
                           ),
                         );
                       } else if (brand.contains('tri cuanmax') ||
@@ -1006,7 +1076,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const TriCuanMaxPascabayarPage(),
+                            builder: (context) =>
+                                const TriCuanMaxPascabayarPage(),
                           ),
                         );
                       } else {

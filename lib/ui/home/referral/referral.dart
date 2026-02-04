@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/app_config.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/network/session_manager.dart';
@@ -19,6 +20,10 @@ class _ReferralPageState extends State<ReferralPage>
   late TabController _tabController;
   final ApiService _apiService = ApiService(Dio());
 
+  // SharedPreferences keys
+  static const String _referralCodeKey = 'cached_referral_code';
+  static const String _referralListKey = 'cached_referral_list';
+
   String _currentReferralCode = "-";
   List<dynamic> _referralList = [];
   bool _isLoading = false;
@@ -27,6 +32,7 @@ class _ReferralPageState extends State<ReferralPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadFromCache();
     _loadData();
   }
 
@@ -34,6 +40,30 @@ class _ReferralPageState extends State<ReferralPage>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// Load data from SharedPreferences cache first
+  Future<void> _loadFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // Load cached referral code
+      final cachedCode = prefs.getString(_referralCodeKey);
+      if (cachedCode != null && cachedCode.isNotEmpty && mounted) {
+        setState(() {
+          _currentReferralCode = cachedCode;
+        });
+      }
+
+      // Load cached referral list
+      final cachedList = prefs.getStringList(_referralListKey);
+      if (cachedList != null && cachedList.isNotEmpty && mounted) {
+        // Simple parsing - stored as list of strings
+        // For complex data, consider using jsonEncode/jsonDecode
+      }
+    } catch (e) {
+      debugPrint("Error loading from cache: $e");
+    }
   }
 
   Future<void> _loadData() async {
@@ -46,12 +76,24 @@ class _ReferralPageState extends State<ReferralPage>
     try {
       final token = await SessionManager.getToken();
       if (token == null) return;
+
       final response = await _apiService.getReferralCode(token);
-      if (response.statusCode == 200 && response.data['status'] == 'success') {
-        if (mounted) {
-          setState(() {
-            _currentReferralCode = response.data['referral_code'] ?? "-";
-          });
+      debugPrint('[Referral] Get referral code response: ${response.data}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        // Response format: {"referral_code": "anggi123"}
+        final referralCode = response.data['referral_code'];
+
+        if (referralCode != null && referralCode.toString().isNotEmpty) {
+          // Save to cache
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_referralCodeKey, referralCode.toString());
+
+          if (mounted) {
+            setState(() {
+              _currentReferralCode = referralCode.toString();
+            });
+          }
         }
       }
     } catch (e) {
@@ -63,11 +105,16 @@ class _ReferralPageState extends State<ReferralPage>
     try {
       final token = await SessionManager.getToken();
       if (token == null) return;
+
       final response = await _apiService.getReferralList(token);
-      if (response.statusCode == 200) {
-        if (mounted) {
+      debugPrint('[Referral] Get referral list response: ${response.data}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        // Response format: {"status": true, "jumlah_referral": 1, "referrals": [...]}
+        final data = response.data;
+        if (data['status'] == true && mounted) {
           setState(() {
-            _referralList = response.data['data'] ?? [];
+            _referralList = data['referrals'] ?? [];
           });
         }
       }

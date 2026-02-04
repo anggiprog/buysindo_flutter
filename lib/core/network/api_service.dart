@@ -422,6 +422,14 @@ class ApiService {
     return _dio.get('api/banner', queryParameters: {'admin_user_id': adminId});
   }
 
+  /// Mengambil data popup untuk ditampilkan di home
+  Future<Response> getPopup(String token) {
+    return _dio.get(
+      'api/user/popup',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   // ===========================================================================
   // ENDPOINTS AUTH & USER
   // ===========================================================================
@@ -542,7 +550,7 @@ class ApiService {
   /// Ambil Kode Referral User
   Future<Response> getReferralCode(String token) {
     return _dio.get(
-      'api/get-referral-code',
+      'api/user/get-referral-code',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
@@ -550,7 +558,7 @@ class ApiService {
   /// Simpan/Buat Kode Referral User
   Future<Response> saveReferralCode(String token, String code) {
     return _dio.post(
-      'api/save-referral-code',
+      'api/user/save-referral-code',
       data: {'referral_code': code},
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
@@ -559,7 +567,68 @@ class ApiService {
   /// Ambil Daftar User yang diajak (Referral List)
   Future<Response> getReferralList(String token) {
     return _dio.get(
-      'api/referral-status', // Berdasarkan route api.php line 613
+      'api/user/referrals',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil Summary Referral (poin, komisi, downline)
+  Future<Response> getReferralSummary(String token) {
+    return _dio.get(
+      'api/user/referral-summary',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Claim Poin Referral
+  Future<Response> claimReferralPoin(String token, int poinRef) {
+    return _dio.post(
+      'api/user/referrals/claim-poin',
+      data: {'poin_ref': poinRef},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Claim Saldo/Komisi Referral
+  Future<Response> claimReferralSaldo(String token) {
+    return _dio.post(
+      'api/user/referrals/claim-saldo',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  // =============== POIN USER ===============
+
+  /// Get Poin Summary (total_poin, jumlah_poin, jumlah_saldo, percent)
+  Future<Response> getPoinSummary(String token) {
+    return _dio.get(
+      'api/user/poin',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Get Riwayat Tukar Poin
+  Future<Response> getRiwayatPoin(String token) {
+    return _dio.get(
+      'api/user/riwayat-tukar-poin',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Tukar Poin dengan Saldo
+  Future<Response> claimPoinToSaldo(
+    String token,
+    int poin,
+    int saldoPoin,
+    int adminUserId,
+  ) {
+    return _dio.post(
+      'api/user/tukar-poin',
+      data: {
+        'poin': poin,
+        'saldo_poin': saldoPoin,
+        'admin_user_id': adminUserId,
+      },
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }

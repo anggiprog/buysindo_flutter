@@ -62,21 +62,20 @@ class SessionManager {
     final token = prefs.getString(_tokenKey);
 
     // 🔴 DEBUG ONLY: Sembunyikan token di log untuk alasan keamanan
-    /*
+
     if (token != null && token.isNotEmpty) {
-      print('═══════════════════════════════════════════════════');
-      print('🔑 TOKEN DIAMBIL');
-      print('Token: $token');
-      print('Panjang Token: ${token.length}');
-      print('Status: ✅ Ada');
-      print('═══════════════════════════════════════════════════');
+      //  print('═══════════════════════════════════════════════════');
+      // print('🔑 TOKEN DIAMBIL');
+      // print('Token: $token');
+      // print('Panjang Token: ${token.length}');
+      // print('Status: ✅ Ada');
+      // print('═══════════════════════════════════════════════════');
     } else {
-      print('═══════════════════════════════════════════════════');
-      print('❌ TOKEN TIDAK DITEMUKAN');
-      print('Status: Token kosong atau tidak tersimpan');
-      print('═══════════════════════════════════════════════════');
+      // print('═══════════════════════════════════════════════════');
+      // print('❌ TOKEN TIDAK DITEMUKAN');
+      // print('Status: Token kosong atau tidak tersimpan');
+      // print('═══════════════════════════════════════════════════');
     }
-    */
 
     return token;
   }

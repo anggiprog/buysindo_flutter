@@ -28,8 +28,10 @@ val flutterVersionName = if (project.hasProperty("versionName")) {
 android {
     // Namespace default (akan dioverride oleh applicationId di bawah)
     namespace = "com.buysindo.app"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // compileSdk 36 untuk support Android 16 (Baklava)
+    compileSdk = 36
+    // NDK r27+ untuk 16KB page size support
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -62,10 +64,18 @@ android {
         }
         resValue("string", "app_name", customAppName)
 
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        // minSdk 21 = Android 5.0 Lollipop (support hampir semua HP)
+        minSdk = 21
+        // targetSdk 36 untuk memenuhi requirement Google Play 2025+
+        targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
+
+        // 16KB page size support (required for Android 15+ devices)
+        ndk {
+            // Support semua arsitektur ARM (32-bit & 64-bit)
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     signingConfigs {

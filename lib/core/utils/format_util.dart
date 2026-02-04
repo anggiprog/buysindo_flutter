@@ -10,4 +10,10 @@ class FormatUtil {
       decimalDigits: 0,
     ).format(value);
   }
+
+  /// Format number with thousand separator (e.g., 1.000.000)
+  static String formatNumber(dynamic number) {
+    double value = double.tryParse(number.toString()) ?? 0;
+    return NumberFormat('#,###', 'id_ID').format(value.toInt());
+  }
 }

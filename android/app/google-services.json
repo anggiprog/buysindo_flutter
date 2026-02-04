@@ -1,0 +1,851 @@
+{
+  "project_info": {
+    "project_number": "1083245410568",
+    "project_id": "buysindo-000123",
+    "storage_bucket": "buysindo-000123.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:e5b61d67dadca6c21494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.BozeStore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:e3a50394a5bab77f1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.Fcdigital"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:667de1b76687c1321494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.GSMCellular"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:7da766491d90e9b01494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.Gudangpulsa"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:c5e1328eb18e6f9d1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.LibertyPedia"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:b36c96d35999989a1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.Oyenpayment"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:4fdbab2ad20b49f91494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.Shakafast"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:6a63d2023ada1e0a1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.XpressPay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:eafba76a66b597e11494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.adespulsa"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:935f7f50f09a98181494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.admin"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:f6615fd8c7384b291494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.afpayment"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:a17075e74677d53a1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.amrireload"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:92515a19e3fd99e11494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.amristars"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:bb94a633af13a50c1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:aa1f02d84409e9ad1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.bluebisnis"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:b503eaa7be5603771494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.digitalsolutions"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:74aa8fc8a811b5111494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.gzstore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:0a3b8a973741c3531494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.haromain"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:44af67e94a6b280d1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.kawaypay"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:c44de035f641e9c71494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.komcell"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:04a0cf0986f0159d1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.lynstore"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:09d2804a6949da741494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.mudahbayar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:8b241a31afea7eb61494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.olshop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:777b0279365592b11494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.pangkarcell"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:aaf38f78319d0c8b1494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.storeea"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:6b2f8a77883cb6211494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.swtretail"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:ee28aeb94e669ba01494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.tokoaidrop"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:f564dc50442920731494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.wahyumart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1083245410568:android:ca3ba56920ae12e71494bd",
+        "android_client_info": {
+          "package_name": "com.buysindo.zeallstoree"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCwpGMQtFqVs7H2Z3vzwH6LlqwH8cJEtc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1083245410568-sdkho0jbavrip2gbrdplo3k5rd36fj80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
