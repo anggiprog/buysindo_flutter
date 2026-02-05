@@ -17,8 +17,10 @@ import 'dart:async';
 import 'ui/home/customer/notifications_page.dart';
 import 'features/topup/screens/topup_history_screen.dart';
 import 'features/customer/data/models/transaction_pascabayar_model.dart';
+import 'features/customer/data/models/transaction_mutasi_model.dart';
 import 'ui/home/customer/tabs/templates/transaction_pascabayar_detail_page.dart';
 import 'ui/home/customer/tabs/templates/transaction_detail_page.dart';
+import 'ui/home/customer/tabs/templates/transaction_mutasi_detail_page.dart';
 import 'dart:io';
 import 'package:flutter/services.dart' as services;
 import 'package:path_provider/path_provider.dart';
@@ -551,6 +553,147 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               '/home',
               (route) => false,
               arguments: {'initialTab': 2},
+            );
+          }
+        }
+        return;
+      }
+
+      // Handle mutasi detail route
+      if (route == 'mutasi_detail' || route == 'MutasiDetailActivity') {
+        debugPrint('\n========================================');
+        debugPrint('✅ [Routing] MUTASI DETAIL ROUTE');
+        debugPrint('========================================');
+
+        // Extract transaction data from notification
+        final trxId = data['trx_id']?.toString() ?? '';
+        final type = data['type']?.toString() ?? '';
+        final amount = int.tryParse(data['amount']?.toString() ?? '0') ?? 0;
+        final saldoAwal =
+            int.tryParse(data['saldo_awal']?.toString() ?? '0') ?? 0;
+        final saldoAkhir =
+            int.tryParse(data['saldo_akhir']?.toString() ?? '0') ?? 0;
+        final keterangan = data['keterangan']?.toString() ?? '';
+
+        debugPrint('📦 [Mutasi] Transaction Data:');
+        debugPrint('   - Trx ID: $trxId');
+        debugPrint('   - Type: $type');
+        debugPrint('   - Amount: $amount');
+        debugPrint('   - Saldo Awal: $saldoAwal');
+        debugPrint('   - Saldo Akhir: $saldoAkhir');
+        debugPrint('   - Keterangan: $keterangan');
+        debugPrint('========================================\n');
+
+        if (trxId.isNotEmpty) {
+          // Wait for navigator to be ready
+          int retries = 0;
+          while (retries < 50 && navigatorKey.currentState == null) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            retries++;
+          }
+
+          if (navigatorKey.currentState != null) {
+            try {
+              debugPrint(
+                '✅ [Mutasi] Navigator ready - fetching transaction data...',
+              );
+
+              // Fetch full transaction data from API
+              final token = await SessionManager.getToken();
+              debugPrint(
+                '🔑 [Mutasi] Token: ${token != null ? "Available" : "NULL"}',
+              );
+
+              if (token != null) {
+                debugPrint('🌐 [Mutasi] Calling API getLogTransaksiMutasi...');
+                final apiService = ApiService(Dio());
+                final response = await apiService.getLogTransaksiMutasi(token);
+
+                debugPrint('📥 [Mutasi] API Response:');
+                debugPrint('   - Status Code: ${response.statusCode}');
+                debugPrint('   - Has Data: ${response.data != null}');
+
+                if (response.statusCode == 200 && response.data != null) {
+                  final responseData = response.data;
+                  final isSuccess =
+                      responseData['status'] == true ||
+                      responseData['status'] == 'success';
+                  final transactionList = responseData['data'] as List?;
+
+                  debugPrint(
+                    '📋 [Mutasi] Total transaksi: ${transactionList?.length ?? 0}',
+                  );
+
+                  if (isSuccess &&
+                      transactionList != null &&
+                      transactionList.isNotEmpty) {
+                    // Find transaction by trx_id
+                    final transactionData = transactionList.firstWhere(
+                      (t) => t['trx_id']?.toString() == trxId,
+                      orElse: () => transactionList.first,
+                    );
+
+                    // Parse to TransactionMutasi model
+                    final transaction = TransactionMutasi.fromJson(
+                      transactionData,
+                    );
+
+                    debugPrint('✅ [Mutasi] Transaction ditemukan!');
+                    debugPrint('   - ID: ${transaction.id}');
+                    debugPrint('   - Trx ID: ${transaction.trxId}');
+                    debugPrint('   - Keterangan: ${transaction.keterangan}');
+                    debugPrint('🛣️ [Mutasi] Navigating to detail page...');
+
+                    navigatorKey.currentState!.push(
+                      MaterialPageRoute(
+                        builder: (context) => TransactionMutasiDetailPage(
+                          transaction: transaction,
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+                }
+              }
+
+              debugPrint(
+                '\n⚠️ [Mutasi] Failed to fetch transaction - navigating to history tab',
+              );
+              debugPrint(
+                '🛣️ [Mutasi] Akan redirect ke tab Mutasi (index 3)\n',
+              );
+              // Fallback: Navigate to mutasi history tab
+              navigatorKey.currentState!.pushNamedAndRemoveUntil(
+                '/home',
+                (route) => false,
+                arguments: {'initialTab': 3}, // Mutasi tab
+              );
+            } catch (e) {
+              debugPrint('❌ [Mutasi] Error loading transaction detail:');
+              debugPrint('   Error: $e');
+              debugPrint('   Fallback: Navigating to history tab (index 3)');
+              // Fallback to history tab on error
+              navigatorKey.currentState!.pushNamedAndRemoveUntil(
+                '/home',
+                (route) => false,
+                arguments: {'initialTab': 3},
+              );
+            }
+          }
+        } else {
+          debugPrint('⚠️ No trx_id - navigating to history tab');
+          // Navigate to mutasi history tab as fallback
+          int retries = 0;
+          while (retries < 50 && navigatorKey.currentState == null) {
+            await Future.delayed(const Duration(milliseconds: 100));
+            retries++;
+          }
+
+          if (navigatorKey.currentState != null) {
+            navigatorKey.currentState!.pushNamedAndRemoveUntil(
+              '/home',
+              (route) => false,
+              arguments: {'initialTab': 3},
             );
           }
         }

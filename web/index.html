@@ -47,7 +47,27 @@
       margin: 0;
       min-height: 100%;
       background-color: #1DB954;
-          background-size: 100% 100%;
+      background-size: 100% 100%;
+      /* Mobile-like container */
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    /* Mobile frame container */
+    #flutter-app-container {
+      width: 100%;
+      max-width: 450px;
+      min-height: 100vh;
+      position: relative;
+      background-color: #fff;
+      box-shadow: 0 0 20px rgba(0,0,0,0.15);
+    }
+
+    /* Make flutter view fit container */
+    flt-glass-pane {
+      width: 100% !important;
+      max-width: 450px !important;
     }
 
     .center {

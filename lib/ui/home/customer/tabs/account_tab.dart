@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../core/app_config.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/network/session_manager.dart';
@@ -30,12 +31,23 @@ class _AccountTabState extends State<AccountTab> {
   models.ProfileResponse? _profileData;
   String _saldo = "0";
   bool _isLoadingSaldo = true;
+  String _versionName = "";
 
   @override
   void initState() {
     super.initState();
     _fetchProfile();
     _fetchSaldo();
+    _loadVersionInfo();
+  }
+
+  Future<void> _loadVersionInfo() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    if (mounted) {
+      setState(() {
+        _versionName = "v${packageInfo.version}";
+      });
+    }
   }
 
   Future<void> _fetchSaldo() async {
@@ -657,6 +669,14 @@ class _AccountTabState extends State<AccountTab> {
           color: Colors.red,
           onTap: _handleLogout,
         ),
+        const SizedBox(height: 20),
+        Center(
+          child: Text(
+            _versionName,
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+          ),
+        ),
+        const SizedBox(height: 10),
       ],
     );
   }

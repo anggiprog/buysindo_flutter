@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +9,8 @@ import '../../features/customer/data/models/notification_count_model.dart';
 import '../../features/topup/models/topup_response_models.dart';
 import '../../models/topup_history_models.dart';
 import 'session_manager.dart';
+import '../utils/web_helper.dart';
+import '../utils/file_reader.dart';
 
 // Silence all debug logging in this service
 void _noopLog(Object? _) {}
@@ -388,11 +389,20 @@ class ApiService {
   }
 
   final Dio _dio;
-  final String baseUrl;
+  late final String baseUrl;
   static const String _prefKey = "cached_products";
 
-  ApiService(this._dio, {this.baseUrl = 'https://buysindo.com/'}) {
-    _dio.options.baseUrl = baseUrl;
+  /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
+  factory ApiService.auto(Dio dio) {
+    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    debugPrint('[ApiService] Auto baseUrl: $url');
+    return ApiService(dio, baseUrl: url);
+  }
+
+  ApiService(this._dio, {String? baseUrl}) {
+    this.baseUrl =
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);
     _dio.options.headers = {
@@ -1572,11 +1582,10 @@ class ApiService {
         // Use provided bytes (web or already loaded)
         print('🔍 [API] Converting bytes to base64...');
         base64Photo = base64Encode(photoBytes);
-      } else if (photoPath != null && photoPath.isNotEmpty) {
-        // Read file from path (mobile)
+      } else if (!kIsWeb && photoPath != null && photoPath.isNotEmpty) {
+        // Read file from path (mobile only - using conditional import)
         print('🔍 [API] Reading file from path: $photoPath');
-        final file = File(photoPath);
-        final bytes = await file.readAsBytes();
+        final bytes = await readFileBytes(photoPath);
         base64Photo = base64Encode(bytes);
       } else {
         throw Exception('Foto tidak tersedia (tidak ada path atau bytes)');

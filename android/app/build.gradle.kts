@@ -12,6 +12,13 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
+// Load key.properties untuk signing config
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+}
+
 // Ambil variabel dari Laravel Job (-PversionCode & -PversionName)
 val flutterVersionCode = if (project.hasProperty("versionCode")) {
     project.property("versionCode").toString()
@@ -65,35 +72,42 @@ android {
         resValue("string", "app_name", customAppName)
 
         // minSdk 21 = Android 5.0 Lollipop (support hampir semua HP)
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         // targetSdk 36 untuk memenuhi requirement Google Play 2025+
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
         // 16KB page size support (required for Android 15+ devices)
+        // Note: abiFilters removed to allow --split-per-abi builds
+        // When building fat APK, all supported ABIs will be included
         ndk {
-            // Support semua arsitektur ARM (32-bit & 64-bit)
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            // Kosongkan untuk mendukung split-per-abi
+            // Jika ingin fat APK, uncomment baris di bawah:
+            // abiFilters += listOf("armeabi-v7a", "arm64-v8a")
         }
     }
 
     signingConfigs {
         create("release") {
-            // Mengecek parameter dari Laravel Job
+            // Prioritas 1: Parameter dari Laravel Job
             if (project.hasProperty("ksFile")) {
                 val ksFilePath = project.property("ksFile").toString()
                 storeFile = file(ksFilePath)
                 storePassword = project.property("ksPass").toString()
-                
-                // Mengambil Alias dari Laravel (-PksAlias)
                 keyAlias = if (project.hasProperty("ksAlias")) {
                     project.property("ksAlias").toString()
                 } else {
-                    "buysindo_key"
+                    "buysindo"
                 }
-                
                 keyPassword = project.property("ksPass").toString()
+            }
+            // Prioritas 2: Dari key.properties (untuk local build)
+            else if (keystorePropertiesFile.exists()) {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
             }
         }
     }
