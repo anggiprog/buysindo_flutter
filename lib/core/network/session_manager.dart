@@ -1,7 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 //import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+
+// Conditional import for file operations (dart:io not available on web)
+import 'session_file_stub.dart' if (dart.library.io) 'session_file_io.dart';
 
 class SessionManager {
   static const String _tokenKey = 'access_token';
@@ -157,14 +158,7 @@ class SessionManager {
       }
 
       // Delete cached files (splash) if exist in application documents
-      try {
-        final dir = await getApplicationDocumentsDirectory();
-        final f = File('${dir.path}/cached_splash.png');
-        if (await f.exists()) await f.delete();
-        print('🗑️ Cached splash file removed from filesystem if it existed');
-      } catch (e) {
-        print('⚠️ Failed to remove cached splash file: $e');
-      }
+      await SessionFileHelper.deleteCachedSplash();
     } catch (e) {
       print('⚠️ Failed to clear cache except token: $e');
     }

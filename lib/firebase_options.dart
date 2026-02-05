@@ -3,8 +3,10 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart' show debugPrint;
+
+// Conditional import for platform detection (dart:io not available on web)
+import 'platform_stub.dart' if (dart.library.io) 'platform_io.dart';
 
 /// The options required to initialize Firebase.
 class DefaultFirebaseOptions {
@@ -164,10 +166,10 @@ class DefaultFirebaseOptions {
     if (kIsWeb) return web;
     // Platform.isX is not supported on web and is available at runtime for native
     try {
-      if (Platform.isIOS) return ios;
-      if (Platform.isMacOS) return macos;
-      if (Platform.isLinux) return linux;
-      if (Platform.isWindows) return windows;
+      if (PlatformHelper.isIOS) return ios;
+      if (PlatformHelper.isMacOS) return macos;
+      if (PlatformHelper.isLinux) return linux;
+      if (PlatformHelper.isWindows) return windows;
     } catch (_) {
       // ignore platform detection errors
     }
