@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -8,8 +7,10 @@ import 'package:buysindo_app/core/app_config.dart';
 import 'package:buysindo_app/core/network/session_manager.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../core/network/api_service.dart';
+
+// Conditional imports untuk platform-specific code
+import 'splash_cache_stub.dart' if (dart.library.io) 'splash_cache_io.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -73,10 +74,10 @@ class _SplashScreenState extends State<SplashScreen> {
       final tagline = prefs.getString(_kSplashTaglineKey);
       final updatedAt = prefs.getString(_kSplashUpdatedAtKey);
 
-      if (filePath != null && filePath.isNotEmpty) {
-        final f = File(filePath);
-        if (await f.exists()) {
-          final bytes = await f.readAsBytes();
+      // File caching hanya untuk mobile, skip untuk web
+      if (!kIsWeb && filePath != null && filePath.isNotEmpty) {
+        final bytes = await SplashCacheHelper.readCachedFile(filePath);
+        if (bytes != null) {
           setState(() {
             _remoteLogoBytes = bytes;
             _remoteLogoUrl = url;
@@ -117,16 +118,33 @@ class _SplashScreenState extends State<SplashScreen> {
     String? tagline,
     String? updatedAt,
   ) async {
+    // Skip file caching untuk web platform
+    if (kIsWeb) {
+      debugPrint(
+        'ℹ️ Web platform: skipping file cache, using SharedPreferences only',
+      );
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_kSplashUrlKey, url);
+        await prefs.setString(_kSplashTaglineKey, tagline ?? '');
+        await prefs.setString(_kSplashUpdatedAtKey, updatedAt ?? '');
+      } catch (e) {
+        debugPrint('⚠️ Failed to cache splash prefs: $e');
+      }
+      return;
+    }
+
+    // Mobile: cache ke filesystem
     try {
       final prefs = await SharedPreferences.getInstance();
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/cached_splash.png');
-      await file.writeAsBytes(bytes, flush: true);
-      await prefs.setString(_kSplashFileKey, file.path);
+      final filePath = await SplashCacheHelper.saveCachedFile(bytes);
+      if (filePath != null) {
+        await prefs.setString(_kSplashFileKey, filePath);
+      }
       await prefs.setString(_kSplashUrlKey, url);
       await prefs.setString(_kSplashTaglineKey, tagline ?? '');
       await prefs.setString(_kSplashUpdatedAtKey, updatedAt ?? '');
-      debugPrint('✅ Splash cached to filesystem: ${file.path}');
+      debugPrint('✅ Splash cached to filesystem: $filePath');
     } catch (e) {
       debugPrint('⚠️ Failed to cache splash: $e');
     }

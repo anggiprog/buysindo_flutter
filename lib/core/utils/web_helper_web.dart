@@ -54,4 +54,23 @@ class WebHelperImpl {
       return null;
     }
   }
+
+  /// Get hostname only (tanpa protocol)
+  static String? getHostname() {
+    try {
+      return html.window.location.hostname;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Check apakah production (bukatoko.online)
+  static bool isProduction() {
+    try {
+      final hostname = html.window.location.hostname ?? '';
+      return hostname.contains('bukatoko.online');
+    } catch (e) {
+      return false;
+    }
+  }
 }

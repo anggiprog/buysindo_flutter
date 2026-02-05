@@ -39,7 +39,14 @@ class WebHelper {
 
     final subdomain = getSubdomain();
     if (subdomain != null && subdomain.isNotEmpty) {
-      // Untuk development lokal
+      // Detect production vs local berdasarkan hostname
+      final isProduction = WebHelperImpl.isProduction();
+      if (isProduction) {
+        debugPrint('[WebHelper] Production mode: bukatoko.online');
+        return 'https://$subdomain.bukatoko.online/';
+      }
+      // Development lokal
+      debugPrint('[WebHelper] Local mode: bukatoko.local');
       return 'http://$subdomain.bukatoko.local/';
     }
 
