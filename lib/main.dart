@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -21,9 +22,10 @@ import 'features/customer/data/models/transaction_mutasi_model.dart';
 import 'ui/home/customer/tabs/templates/transaction_pascabayar_detail_page.dart';
 import 'ui/home/customer/tabs/templates/transaction_detail_page.dart';
 import 'ui/home/customer/tabs/templates/transaction_mutasi_detail_page.dart';
-import 'dart:io';
 import 'package:flutter/services.dart' as services;
-import 'package:path_provider/path_provider.dart';
+
+// Conditional imports for mobile-only features
+import 'main_io_stub.dart' if (dart.library.io) 'main_io.dart';
 
 // Global navigator key so we can navigate from background/message handlers
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -831,21 +833,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   String? _cachedLargeIconPath;
 
   /// Ensure asset image is written to a file and return the file path
+  /// Returns null on Web platform since local files aren't supported
   Future<String?> _ensureLargeIconFile() async {
+    // Skip file operations on Web platform
+    if (kIsWeb) return null;
+
     try {
       if (_cachedLargeIconPath != null) {
-        final f = File(_cachedLargeIconPath!);
-        if (await f.exists()) return _cachedLargeIconPath;
+        final exists = await MainIoHelper.fileExists(_cachedLargeIconPath!);
+        if (exists) return _cachedLargeIconPath;
       }
 
       // Load asset bytes (use prefixed rootBundle to avoid collisions)
       final byteData = await services.rootBundle.load('assets/images/logo.png');
       final bytes = byteData.buffer.asUint8List();
 
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/notif_large_icon.png');
-      await file.writeAsBytes(bytes, flush: true);
-      _cachedLargeIconPath = file.path;
+      _cachedLargeIconPath = await MainIoHelper.writeNotificationIcon(bytes);
       return _cachedLargeIconPath;
     } catch (e) {
       return null;

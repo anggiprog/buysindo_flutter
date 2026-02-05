@@ -46,8 +46,8 @@ class WebHelper {
         return 'https://$subdomain.bukatoko.online/';
       }
       // Development lokal
-     // debugPrint('[WebHelper] Local mode: bukatoko.local');
-     // return 'http://$subdomain.bukatoko.local/';
+      debugPrint('[WebHelper] Local mode: bukatoko.local');
+      return 'http://$subdomain.bukatoko.local/';
     }
 
     return defaultUrl;
