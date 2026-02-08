@@ -67,7 +67,7 @@ class SessionManager {
     if (token != null && token.isNotEmpty) {
       ////  print('═══════════════════════════════════════════════════');
       //// print('🔑 TOKEN DIAMBIL');
-      // print('Token: $token');
+       print('Token: $token');
       // print('Panjang Token: ${token.length}');
       // print('Status: ✅ Ada');
       // print('═══════════════════════════════════════════════════');

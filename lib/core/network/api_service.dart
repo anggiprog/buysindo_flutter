@@ -23,6 +23,38 @@ void _debugTokenLog(String? token, {String source = ''}) {
 }
 
 class ApiService {
+  /// Ambil custom template preview (URL)
+  Future<Map<String, dynamic>?> getCustomTemplatePreview(String? token) async {
+    try {
+      final response = await _dio.get(
+        'api/custom-template-preview',
+        options: Options(
+          headers: {
+            'Accept': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      // Pastikan response data berbentuk Map
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        } else if (response.data is String) {
+          // Jika API kadang return string JSON
+          return jsonDecode(response.data) as Map<String, dynamic>;
+        }
+      } else {
+        debugPrint(
+          '[ApiService] getCustomTemplatePreview: status ${response.statusCode}, data: ${response.data}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getCustomTemplatePreview ERROR: $e');
+    }
+    return null;
+  }
+
   /// Hapus semua chat antara user dan admin
   Future<bool> deleteAllChat(String token) async {
     try {
@@ -394,14 +426,14 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'http://buysindo.com/');
     debugPrint('[ApiService] Auto baseUrl: $url');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://buysindo.com/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);

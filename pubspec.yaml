@@ -12,6 +12,7 @@ environment:
 
 
 dependencies:
+
   flutter:
     sdk: flutter
 
@@ -19,7 +20,6 @@ dependencies:
   retrofit: ^4.1.0
   json_annotation: ^4.8.1
   provider: ^6.1.1 # Untuk state management tema
-    
   cupertino_icons: ^1.0.8
   flutter_native_splash: ^2.3.0
   http: ^0.13.6
@@ -43,6 +43,9 @@ dependencies:
   logger: ^2.6.2
   flutter_widget_from_html: ^0.17.1
   package_info_plus: ^9.0.0
+  webview_flutter: ^4.0.7
+  equatable: ^2.0.8
+  audio_session: ^0.1.6
 
 dev_dependencies:
   flutter_test:

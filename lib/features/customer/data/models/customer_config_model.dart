@@ -13,6 +13,9 @@ class AppConfigModel {
   final String template2;
   final String tampilan;
   final String status;
+  final String? customHtmlUrl;
+  final int showAppbar;
+  final int showNavbar;
 
   AppConfigModel({
     required this.id,
@@ -27,6 +30,9 @@ class AppConfigModel {
     required this.template2,
     required this.tampilan,
     required this.status,
+    this.customHtmlUrl,
+    required this.showAppbar,
+    required this.showNavbar,
   });
 
   factory AppConfigModel.fromApi(Map<String, dynamic> json) {
@@ -67,6 +73,12 @@ class AppConfigModel {
     final tampilanRaw = json['tampilan'];
     final tampilan = tampilanRaw?.toString() ?? '';
 
+    String? customHtmlUrl;
+    if (tampilan == 'app_custom') {
+      // URL custom HTML dari backend
+      customHtmlUrl = json['custom_html_url']?.toString();
+    }
+
     debugPrint('🔴 FIELD TEMPLATE (CRITICAL):');
     debugPrint('  - Nilai raw: $tampilanRaw');
     debugPrint('  - Tipe: ${tampilanRaw.runtimeType}');
@@ -76,6 +88,12 @@ class AppConfigModel {
     debugPrint('  - Bytes: ${tampilan.codeUnits}');
     debugPrint('');
 
+    final showAppbar = json['show_appbar'] is int
+        ? json['show_appbar']
+        : int.tryParse(json['show_appbar']?.toString() ?? '1') ?? 1;
+    final showNavbar = json['show_navbar'] is int
+        ? json['show_navbar']
+        : int.tryParse(json['show_navbar']?.toString() ?? '1') ?? 1;
     final status = json['status']?.toString() ?? 'nonactive';
 
     debugPrint('✅ SEMUA FIELD BERHASIL DI-EXTRACT');
@@ -94,6 +112,9 @@ class AppConfigModel {
       template2: template2,
       tampilan: tampilan,
       status: status,
+      customHtmlUrl: customHtmlUrl,
+      showAppbar: showAppbar,
+      showNavbar: showNavbar,
     );
   }
 }

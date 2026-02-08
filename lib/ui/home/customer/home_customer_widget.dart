@@ -17,24 +17,17 @@ class HomeCustomerScreen extends StatefulWidget {
 
 class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
   late int _currentIndex;
+  final List<Widget> _pages = [];
 
   @override
   void initState() {
     super.initState();
-    // Use initialTab if provided, otherwise default to 0 (Beranda)
     _currentIndex = widget.initialTab ?? 0;
-    debugPrint(
-      '🎯 HomeCustomerScreen initialized with tab index: $_currentIndex',
-    );
   }
-
-  // Semua tab dalam satu list: Beranda, Riwayat, Notifikasi, Akun
-  final List<Widget> _pages = [];
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize pages here to access widget.subTabIndex
     if (_pages.isEmpty) {
       _pages.addAll([
         const CustomerDashboard(),
@@ -53,73 +46,72 @@ class _HomeCustomerScreenState extends State<HomeCustomerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      // AppBar akan dihandle oleh setiap child tab
-      appBar: null,
-      body: IndexedStack(index: _currentIndex, children: _pages),
+    return AnimatedBuilder(
+      animation: appConfig,
+      builder: (context, _) {
+        // PERBAIKAN: Navbar hanya sembunyi jika showNavbar == 0
+        // Syarat "|| tampilan == 'app_custom'" dihapus
+        final bool hideNavbar = appConfig.showNavbar == 0;
 
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(25.0),
-            topRight: Radius.circular(25.0),
+        return Scaffold(
+          backgroundColor: Colors.white,
+          appBar: null,
+          body: IndexedStack(index: _currentIndex, children: _pages),
+          bottomNavigationBar: hideNavbar ? null : _buildBottomNavigationBar(),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 2,
           ),
-          child: Container(
-            color: appConfig.primaryColor,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 5, bottom: 5),
-              child: BottomNavigationBar(
-                elevation: 0,
-                currentIndex: _currentIndex,
-                onTap: _onTabTapped, // Menggunakan fungsi navigasi baru
-                backgroundColor: Colors.transparent,
-                selectedItemColor: appConfig.textColor,
-                unselectedItemColor: appConfig.textColor.withOpacity(0.5),
-                showUnselectedLabels: true,
-                type: BottomNavigationBarType.fixed,
-                selectedFontSize: 12,
-                unselectedFontSize: 12,
-                items: const [
-                  BottomNavigationBarItem(
-                    icon: Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Icon(Icons.home_filled),
-                    ),
-                    label: "Beranda",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Icon(Icons.receipt_long),
-                    ),
-                    label: "Riwayat",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Icon(Icons.notifications),
-                    ),
-                    label: "Notifikasi",
-                  ),
-                  BottomNavigationBarItem(
-                    icon: Padding(
-                      padding: EdgeInsets.only(bottom: 4),
-                      child: Icon(Icons.person),
-                    ),
-                    label: "Akun",
-                  ),
-                ],
-              ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(25.0),
+          topRight: Radius.circular(25.0),
+        ),
+        child: Container(
+          color: appConfig.primaryColor,
+          child: Padding(
+            padding: const EdgeInsets.only(top: 5, bottom: 5),
+            child: BottomNavigationBar(
+              elevation: 0,
+              currentIndex: _currentIndex,
+              onTap: _onTabTapped,
+              backgroundColor: Colors.transparent,
+              selectedItemColor: appConfig.textColor,
+              unselectedItemColor: appConfig.textColor.withOpacity(0.5),
+              showUnselectedLabels: true,
+              type: BottomNavigationBarType.fixed,
+              selectedFontSize: 12,
+              unselectedFontSize: 12,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_filled),
+                  label: "Beranda",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.receipt_long),
+                  label: "Riwayat",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.notifications),
+                  label: "Notifikasi",
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person),
+                  label: "Akun",
+                ),
+              ],
             ),
           ),
         ),

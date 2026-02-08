@@ -5,6 +5,10 @@ import '../features/customer/data/models/customer_config_model.dart';
 import 'network/api_service.dart';
 
 class AppConfig with ChangeNotifier {
+  int _showAppbar = 1;
+  int _showNavbar = 1;
+  int get showAppbar => _showAppbar;
+  int get showNavbar => _showNavbar;
   // --- KONSTANTA KEYS ---
   static const String _keyAppName = 'cfg_app_name';
   static const String _keyPrimaryColor = 'cfg_primary_color';
@@ -52,6 +56,7 @@ class AppConfig with ChangeNotifier {
   Color get textColor => _textColor;
   String? get logoUrl => _logoUrl;
   String get subdomain => _subdomain;
+  String? get customHtmlUrl => null;
 
   // --- LOAD DARI SHARED PREFERENCES ---
   Future<void> loadLocalConfig() async {
@@ -142,11 +147,17 @@ class AppConfig with ChangeNotifier {
       _tampilan = model.tampilan.trim();
       _status = model.status;
 
+      // Tambahan: showAppbar dan showNavbar
+      _showAppbar = model.showAppbar;
+      _showNavbar = model.showNavbar;
+
       // DEBUG: Log tampilan value
       debugPrint('✅ AppConfig Updated:');
       debugPrint('  - App Name: $_appName');
       debugPrint('  - Tampilan: $_tampilan (raw: "${model.tampilan}")');
       debugPrint('  - Template: ${model.template}');
+      debugPrint('  - showAppbar: $_showAppbar');
+      debugPrint('  - showNavbar: $_showNavbar');
 
       notifyListeners();
     } catch (e) {
