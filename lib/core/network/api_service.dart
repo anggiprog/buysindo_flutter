@@ -23,6 +23,37 @@ void _debugTokenLog(String? token, {String source = ''}) {
 }
 
 class ApiService {
+  /// Ambil halaman custom HTML
+  Future<String?> getCustomHtmlPage({
+    required String token,
+    required String subdomain,
+    String? slug,
+  }) async {
+    try {
+      final params = {'subdomain': subdomain};
+      if (slug != null && slug.isNotEmpty) params['slug'] = slug;
+      final response = await _dio.get(
+        'api/custom-html',
+        queryParameters: params,
+        options: Options(
+          headers: {'Accept': 'text/html', 'Authorization': 'Bearer $token'},
+        ),
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        // Bisa berupa String HTML
+        if (response.data is String) {
+          return response.data as String;
+        } else if (response.data is Map<String, dynamic> &&
+            response.data['html'] != null) {
+          return response.data['html'] as String;
+        }
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getCustomHtmlPage ERROR: $e');
+    }
+    return null;
+  }
+
   /// Ambil custom template preview (URL)
   Future<Map<String, dynamic>?> getCustomTemplatePreview(String? token) async {
     try {
@@ -426,14 +457,14 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-    final url = WebHelper.getBaseUrl(defaultUrl: 'http://buysindo.com/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
     debugPrint('[ApiService] Auto baseUrl: $url');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://buysindo.com/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);

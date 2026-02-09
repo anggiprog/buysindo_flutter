@@ -11,6 +11,20 @@ import 'ui/splash_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/auth/register_screen.dart';
 import 'ui/home/home_screen.dart';
+// Import semua template prabayar
+import 'ui/home/customer/tabs/templates/prabayar/pulsa.dart';
+import 'ui/home/customer/tabs/templates/prabayar/data.dart';
+import 'ui/home/customer/tabs/templates/prabayar/aktivasi_perdana.dart';
+import 'ui/home/customer/tabs/templates/prabayar/aktivasi_voucher.dart';
+import 'ui/home/customer/tabs/templates/prabayar/e_money.dart';
+import 'ui/home/customer/tabs/templates/prabayar/games.dart';
+import 'ui/home/customer/tabs/templates/prabayar/gas.dart';
+import 'ui/home/customer/tabs/templates/prabayar/masa_aktif.dart';
+import 'ui/home/customer/tabs/templates/prabayar/pln.dart';
+import 'ui/home/customer/tabs/templates/prabayar/sms.dart';
+import 'ui/home/customer/tabs/templates/prabayar/streaming.dart';
+import 'ui/home/customer/tabs/templates/prabayar/tv.dart';
+import 'ui/home/customer/tabs/templates/prabayar/voucher.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
@@ -32,6 +46,25 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 // Global notification plugin instance
 final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+
+// Widget placeholder untuk halaman yang belum diimplementasi
+class PlaceholderWidget extends StatelessWidget {
+  final String title;
+  const PlaceholderWidget(this.title, {Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Text(
+          'Halaman $title belum tersedia',
+          style: const TextStyle(fontSize: 18),
+        ),
+      ),
+    );
+  }
+}
 
 Future<void> main() async {
   // Ensure Flutter bindings are initialized for native calls and plugins
@@ -979,7 +1012,116 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 return MaterialPageRoute(
                   builder: (_) => HomeScreen(initialTab: initialTab),
                 );
+              case '/prabayar/pulsa':
+                return MaterialPageRoute(builder: (_) => const PulsaPage());
+              case '/prabayar/data':
+                return MaterialPageRoute(builder: (_) => const DataPage());
+              case '/prabayar/aktivasi_perdana':
+                return MaterialPageRoute(
+                  builder: (_) => const AktivasiPerdanaPage(),
+                );
+              case '/prabayar/aktivasi_voucher':
+                return MaterialPageRoute(
+                  builder: (_) => const AktivasiVoucherPage(),
+                );
+              // Removed unreachable cases for '/prabayar/e_money' and '/prabayar/games'
+              case '/prabayar/gas':
+                return MaterialPageRoute(builder: (_) => const GasPage());
+              case '/prabayar/e_money':
+                return MaterialPageRoute(builder: (_) => const EMoneyPage());
+
+              case '/prabayar/games':
+                return MaterialPageRoute(builder: (_) => const GamesPage());
+              case '/prabayar/sms':
+                return MaterialPageRoute(builder: (_) => const SmsPage());
+              case '/prabayar/streaming':
+                return MaterialPageRoute(builder: (_) => const StreamingPage());
+              case '/prabayar/voucher':
+                return MaterialPageRoute(builder: (_) => const VoucherPage());
+              case '/prabayar/tv':
+                return MaterialPageRoute(builder: (_) => const TVPage());
+
+              case '/prabayar/masa_aktif':
+                return MaterialPageRoute(builder: (_) => const MasaAktifPage());
+              case '/prabayar/pln':
+                return MaterialPageRoute(builder: (_) => const PLNPage());
+
+              case '/info':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Info'),
+                );
+              case '/transaksi':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Transaksi'),
+                );
+              case '/chat':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Chat'),
+                );
+              case '/akun':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Akun'),
+                );
+              case '/cs':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('CS'),
+                );
+              case '/referral':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Referral'),
+                );
+              case '/topup':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Topup'),
+                );
+              case '/histori_topup':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Histori Topup'),
+                );
+              case '/poin':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Poin'),
+                );
+              case '/privacy_policy':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Privacy Policy'),
+                );
+              case '/toko':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Toko'),
+                );
+              case '/password':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Password'),
+                );
+              case '/pin':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Pin'),
+                );
+              case '/tentang_kami':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Tentang Kami'),
+                );
+              case '/logout':
+                return MaterialPageRoute(
+                  builder: (_) => const PlaceholderWidget('Logout'),
+                );
               default:
+                // Handle dinamis prabayar/pascabayar
+                if (settings.name != null &&
+                    settings.name!.startsWith('/prabayar/')) {
+                  final slug = settings.name!.substring('/prabayar/'.length);
+                  return MaterialPageRoute(
+                    builder: (_) => PlaceholderWidget('Prabayar: $slug'),
+                  );
+                }
+                if (settings.name != null &&
+                    settings.name!.startsWith('/pascabayar/')) {
+                  final slug = settings.name!.substring('/pascabayar/'.length);
+                  return MaterialPageRoute(
+                    builder: (_) => PlaceholderWidget('Pascabayar: $slug'),
+                  );
+                }
                 return null;
             }
           },
