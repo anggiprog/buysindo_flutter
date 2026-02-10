@@ -457,14 +457,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    debugPrint('[ApiService] Auto baseUrl: $url');
+     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+          baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+        //baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);

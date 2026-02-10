@@ -25,11 +25,25 @@ import 'ui/home/customer/tabs/templates/prabayar/sms.dart';
 import 'ui/home/customer/tabs/templates/prabayar/streaming.dart';
 import 'ui/home/customer/tabs/templates/prabayar/tv.dart';
 import 'ui/home/customer/tabs/templates/prabayar/voucher.dart';
+
+//menu menu utama
+import 'ui/home/customer/tabs/account_tab.dart';
+import 'ui/home/customer/tabs/transaction_history_tab.dart';
+import 'ui/home/customer/notifications_page.dart';
+import 'ui/home/topup_modal.dart';
+import 'ui/home/tentang_kami.dart';
+import 'ui/home/chat_admin.dart';
+import 'ui/home/kontak_admin.dart';
+import 'ui/home/customer/poin/poin.dart';
+import 'ui/home/customer/tabs/akun/buat_toko.dart';
+import 'ui/home/akun/ganti_password.dart';
+import 'ui/home/pin.dart';
+import 'ui/home/referral/referral.dart';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'ui/home/customer/notifications_page.dart';
 import 'features/topup/screens/topup_history_screen.dart';
 import 'features/customer/data/models/transaction_pascabayar_model.dart';
 import 'features/customer/data/models/transaction_mutasi_model.dart';
@@ -37,6 +51,8 @@ import 'ui/home/customer/tabs/templates/transaction_pascabayar_detail_page.dart'
 import 'ui/home/customer/tabs/templates/transaction_detail_page.dart';
 import 'ui/home/customer/tabs/templates/transaction_mutasi_detail_page.dart';
 import 'package:flutter/services.dart' as services;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:url_launcher/url_launcher_string.dart';
 
 // Conditional imports for mobile-only features
 import 'main_io_stub.dart' if (dart.library.io) 'main_io.dart';
@@ -105,6 +121,117 @@ Future<void> main() async {
   _fetchConfigAsync();
 
   runApp(const MyApp());
+}
+
+// Helper widget to show logout confirmation dialog when /logout route is pushed
+class _LogoutConfirmPage extends StatefulWidget {
+  @override
+  State<_LogoutConfirmPage> createState() => _LogoutConfirmPageState();
+}
+
+class _LogoutConfirmPageState extends State<_LogoutConfirmPage> {
+  bool _dialogShown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_dialogShown) {
+      _dialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Konfirmasi Logout'),
+            content: const Text('Apakah Anda yakin ingin keluar?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Tidak'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Ya, Keluar'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true && mounted) {
+          // Perform logout
+          try {
+            final token = await SessionManager.getToken();
+            if (token != null) {
+              final api = ApiService(Dio());
+              await api.logout(token);
+            }
+          } catch (e) {
+            debugPrint('Logout API error (ignored): $e');
+          }
+          await SessionManager.clearSession();
+          // Navigate to login and clear stack
+          if (mounted) {
+            Navigator.of(
+              context,
+            ).pushNamedAndRemoveUntil('/login', (route) => false);
+          }
+        } else if (mounted) {
+          // User cancelled, go back
+          Navigator.of(context).pop();
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: SizedBox.shrink(),
+    );
+  }
+}
+
+// Helper widget to trigger TopupModal as a bottom sheet when /topup route is pushed
+class _TopupModalRoutePage extends StatefulWidget {
+  @override
+  State<_TopupModalRoutePage> createState() => _TopupModalRoutePageState();
+}
+
+class _TopupModalRoutePageState extends State<_TopupModalRoutePage> {
+  bool _modalShown = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_modalShown) {
+      _modalShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => TopupModal(
+            primaryColor: appConfig.primaryColor,
+            apiService: ApiService(Dio()),
+          ),
+        );
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Return an empty Scaffold to avoid blank screen flash
+    return const Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SizedBox.shrink(),
+    );
+  }
 }
 
 /// Initialize Firebase & API config in background tanpa blocking UI
@@ -218,15 +345,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void _setupForegroundMessageHandler() {
     // 1. Handle message received when app in foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      debugPrint('\n========================================');
-      debugPrint('🔔 [FCM] NOTIFIKASI DITERIMA (Foreground)');
-      debugPrint('========================================');
-      debugPrint('📩 Title: ${message.notification?.title ?? "NO TITLE"}');
-      debugPrint('💬 Body: ${message.notification?.body ?? "NO BODY"}');
-      debugPrint('📦 Data: ${message.data}');
-      debugPrint('🎯 Message ID: ${message.messageId}');
-      debugPrint('========================================\n');
-
       // Show notification using local notifications plugin
       if (message.notification != null) {
         _displayNotification(message);
@@ -237,14 +355,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // 2. Handle notification tap when app is in foreground/background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('\n========================================');
-      debugPrint('👆 [FCM] NOTIFIKASI DI-TAP (Background)');
-      debugPrint('========================================');
-      debugPrint('📩 Title: ${message.notification?.title ?? "NO TITLE"}');
-      debugPrint('💬 Body: ${message.notification?.body ?? "NO BODY"}');
-      debugPrint('📦 Data: ${message.data}');
-      debugPrint('========================================\n');
-
       // Ensure navigation occurs after frame if navigator not ready
       if (navigatorKey.currentState != null) {
         _handleNotificationTap(message.data);
@@ -261,14 +371,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       RemoteMessage? message,
     ) {
       if (message != null) {
-        debugPrint('\n========================================');
-        debugPrint('🚀 [FCM] APP DIBUKA DARI NOTIFIKASI (Terminated)');
-        debugPrint('========================================');
-        debugPrint('📩 Title: ${message.notification?.title ?? "NO TITLE"}');
-        debugPrint('💬 Body: ${message.notification?.body ?? "NO BODY"}');
-        debugPrint('📦 Data: ${message.data}');
-        debugPrint('========================================\n');
-
         // Delay navigation slightly to allow app to finish init
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (navigatorKey.currentState != null) {
@@ -348,11 +450,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   /// Handle notification tap and navigate to appropriate screen
   Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
     try {
-      debugPrint('\n========================================');
-      debugPrint('🛣️ [Routing] Mulai handle notification tap');
-      debugPrint('========================================');
-      debugPrint('📦 Full Data: $data');
-
       // Extract route from data
       final route =
           data['route'] ??
@@ -474,14 +571,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         final customerNo = data['customer_no']?.toString() ?? '';
         final status = data['status']?.toString() ?? '';
 
-        debugPrint('📦 [Pascabayar] Transaction Data:');
-        debugPrint('   - Transaction ID: $transactionId');
-        debugPrint('   - Ref ID: $refId');
-        debugPrint('   - Brand: $brand');
-        debugPrint('   - Customer No: $customerNo');
-        debugPrint('   - Status: $status');
-        debugPrint('========================================\n');
-
         if (transactionId > 0) {
           // Wait for navigator to be ready
           int retries = 0;
@@ -510,10 +599,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 final response = await apiService
                     .getTransactionDetailPascabayar(token);
 
-                debugPrint('📥 [Pascabayar] API Response:');
-                debugPrint('   - Status Code: ${response.statusCode}');
-                debugPrint('   - Has Data: ${response.data != null}');
-
                 if (response.statusCode == 200 && response.data != null) {
                   final transactions = TransactionPascabayarResponse.fromJson(
                     response.data,
@@ -531,13 +616,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     (t) => t.id == transactionId || t.refId == refId,
                     orElse: () => throw Exception('Transaction not found'),
                   );
-
-                  debugPrint('✅ [Pascabayar] Transaction ditemukan!');
-                  debugPrint('   - ID: ${transaction.id}');
-                  debugPrint('   - Ref ID: ${transaction.refId}');
-                  debugPrint('   - Brand: ${transaction.brand}');
-                  debugPrint('   - Status: ${transaction.status}');
-                  debugPrint('🛣️ [Pascabayar] Navigating to detail page...');
 
                   navigatorKey.currentState!.push(
                     MaterialPageRoute(
@@ -672,12 +750,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     final transaction = TransactionMutasi.fromJson(
                       transactionData,
                     );
-
-                    debugPrint('✅ [Mutasi] Transaction ditemukan!');
-                    debugPrint('   - ID: ${transaction.id}');
-                    debugPrint('   - Trx ID: ${transaction.trxId}');
-                    debugPrint('   - Keterangan: ${transaction.keterangan}');
-                    debugPrint('🛣️ [Mutasi] Navigating to detail page...');
 
                     navigatorKey.currentState!.push(
                       MaterialPageRoute(
@@ -1012,6 +1084,80 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 return MaterialPageRoute(
                   builder: (_) => HomeScreen(initialTab: initialTab),
                 );
+              case '/info':
+                return MaterialPageRoute(
+                  builder: (_) => const NotificationsPage(),
+                );
+              case '/transaksi':
+                return MaterialPageRoute(
+                  builder: (_) => const TransactionHistoryTab(),
+                );
+              case '/chat':
+                // Ganti dengan halaman chat asli jika ada
+                return MaterialPageRoute(builder: (_) => const ChatPage());
+              case '/akun':
+                return MaterialPageRoute(builder: (_) => const AccountTab());
+              case '/cs':
+                // Ganti dengan halaman CS asli jika ada
+                return MaterialPageRoute(
+                  builder: (_) => const KontakAdminPage(),
+                );
+              case '/referral':
+                // Ganti dengan halaman referral asli jika ada
+                return MaterialPageRoute(builder: (_) => const ReferralPage());
+              case '/topup':
+                // Show TopupModal as a bottom sheet dialog from route
+                return MaterialPageRoute(
+                  builder: (context) => _TopupModalRoutePage(),
+                );
+
+              case '/histori_topup':
+                return MaterialPageRoute(
+                  builder: (_) => const TopupHistoryScreen(),
+                );
+              case '/poin':
+                // Ganti dengan halaman Poin asli jika ada
+                return MaterialPageRoute(builder: (_) => const PoinPage());
+              case '/privacy_policy':
+                // Open privacy policy in external browser with agicell subdomain from appConfig
+                return MaterialPageRoute(
+                  builder: (context) {
+                    final subdomain = appConfig.subdomain ?? 'agicell';
+                    final url =
+                        'https://buysindo.com/privacy-policy/$subdomain';
+                    Future.microtask(() async {
+                      await launchUrlString(url, webOnlyWindowName: '_blank');
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
+                    });
+                    // Show a placeholder while launching browser
+                    return const Scaffold(
+                      body: Center(child: Text('Membuka Privacy Policy...')),
+                    );
+                  },
+                );
+              case '/toko':
+                // Ganti dengan halaman Toko asli jika ada
+                return MaterialPageRoute(builder: (_) => const BuatTokoPage());
+              case '/password':
+                // Ganti dengan halaman Password asli jika ada
+                return MaterialPageRoute(
+                  builder: (_) => const GantiPasswordPage(),
+                );
+              case '/pin':
+                // Ganti dengan halaman PIN asli jika ada
+                return MaterialPageRoute(builder: (_) => const PinPage());
+              case '/tentang_kami':
+                // Ganti dengan halaman Tentang Kami asli jika ada
+                return MaterialPageRoute(
+                  builder: (_) => const TentangKamiPage(),
+                );
+              case '/logout':
+                // Show logout confirmation dialog
+                return MaterialPageRoute(builder: (_) => _LogoutConfirmPage());
+
+              // Prabayar routes
               case '/prabayar/pulsa':
                 return MaterialPageRoute(builder: (_) => const PulsaPage());
               case '/prabayar/data':
@@ -1024,12 +1170,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 return MaterialPageRoute(
                   builder: (_) => const AktivasiVoucherPage(),
                 );
-              // Removed unreachable cases for '/prabayar/e_money' and '/prabayar/games'
               case '/prabayar/gas':
                 return MaterialPageRoute(builder: (_) => const GasPage());
               case '/prabayar/e_money':
                 return MaterialPageRoute(builder: (_) => const EMoneyPage());
-
               case '/prabayar/games':
                 return MaterialPageRoute(builder: (_) => const GamesPage());
               case '/prabayar/sms':
@@ -1040,77 +1184,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 return MaterialPageRoute(builder: (_) => const VoucherPage());
               case '/prabayar/tv':
                 return MaterialPageRoute(builder: (_) => const TVPage());
-
               case '/prabayar/masa_aktif':
                 return MaterialPageRoute(builder: (_) => const MasaAktifPage());
               case '/prabayar/pln':
                 return MaterialPageRoute(builder: (_) => const PLNPage());
 
-              case '/info':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Info'),
-                );
-              case '/transaksi':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Transaksi'),
-                );
-              case '/chat':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Chat'),
-                );
-              case '/akun':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Akun'),
-                );
-              case '/cs':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('CS'),
-                );
-              case '/referral':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Referral'),
-                );
-              case '/topup':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Topup'),
-                );
-              case '/histori_topup':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Histori Topup'),
-                );
-              case '/poin':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Poin'),
-                );
-              case '/privacy_policy':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Privacy Policy'),
-                );
-              case '/toko':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Toko'),
-                );
-              case '/password':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Password'),
-                );
-              case '/pin':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Pin'),
-                );
-              case '/tentang_kami':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Tentang Kami'),
-                );
-              case '/logout':
-                return MaterialPageRoute(
-                  builder: (_) => const PlaceholderWidget('Logout'),
-                );
               default:
                 // Handle dinamis prabayar/pascabayar
                 if (settings.name != null &&
                     settings.name!.startsWith('/prabayar/')) {
                   final slug = settings.name!.substring('/prabayar/'.length);
+                  // TODO: mapping ke halaman prabayar dinamis jika ada
                   return MaterialPageRoute(
                     builder: (_) => PlaceholderWidget('Prabayar: $slug'),
                   );
@@ -1118,6 +1202,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 if (settings.name != null &&
                     settings.name!.startsWith('/pascabayar/')) {
                   final slug = settings.name!.substring('/pascabayar/'.length);
+                  // TODO: mapping ke halaman pascabayar dinamis jika ada
                   return MaterialPageRoute(
                     builder: (_) => PlaceholderWidget('Pascabayar: $slug'),
                   );

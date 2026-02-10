@@ -35,10 +35,10 @@ val flutterVersionName = if (project.hasProperty("versionName")) {
 android {
     // Namespace default (akan dioverride oleh applicationId di bawah)
     namespace = "com.buysindo.app"
-    // compileSdk 36 untuk support Android 16 (Baklava)
+    // compileSdk 36 diperlukan oleh androidx.core:core-ktx:1.17.0 (compile-time only, aman)
     compileSdk = 36
-    // NDK r27+ untuk 16KB page size support
-    ndkVersion = "27.0.12077973"
+    // NDK version (opsional, biarkan Gradle memilih versi default yang tersedia)
+    // ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -71,9 +71,9 @@ android {
         }
         resValue("string", "app_name", customAppName)
 
-        // minSdk 21 = Android 5.0 Lollipop (support hampir semua HP)
+        // minSdk 23 = Android 6.0 Marshmallow (sesuai config Android Studio yang berhasil di Redmi 10A)
         minSdk = flutter.minSdkVersion
-        // targetSdk 36 untuk memenuhi requirement Google Play 2025+
+        // targetSdk 36 untuk Android 16 (sesuai config Android Studio yang berhasil)
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
@@ -109,6 +109,9 @@ android {
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
             }
+            // Enable v1 dan v2 signing untuk kompatibilitas maksimal dengan MIUI/Xiaomi
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
 

@@ -54,62 +54,72 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                 },
                 onNavigationRequest: (NavigationRequest request) {
                   final url = request.url;
-                  // Semua link dari backend
-                  final linkPatterns = {
-                    'act/beranda': '/home',
-                    'act/info': '/info',
-                    'act/transaksi': '/transaksi',
-                    'act/chat': '/chat',
-                    'act/akun': '/akun',
-                    'act/cs': '/cs',
-                    'act/referral': '/referral',
-                    'act/topup': '/topup',
-                    'act/histori-topup': '/histori_topup',
-                    'act/poin': '/poin',
-                    'act/privacy-policy': '/privacy_policy',
-                    'act/toko': '/toko',
-                    'act/password': '/password',
-                    'act/pin': '/pin',
-                    'act/tentang-kami': '/tentang_kami',
-                    'act/logout': '/logout',
-                  };
-                  // Cek link statis
-                  for (final entry in linkPatterns.entries) {
-                    if (url.contains(entry.key)) {
+
+                  // Handle custom app:// scheme untuk navigasi
+                  if (url.startsWith('app://')) {
+                    final path = url.replaceFirst('app://', '');
+
+                    // Mapping custom scheme ke route Flutter
+                    final linkPatterns = {
+                      'beranda': '/home',
+                      'info': '/info',
+                      'transaksi': '/transaksi',
+                      'chat': '/chat',
+                      'akun': '/akun',
+                      'cs': '/cs',
+                      'referral': '/referral',
+                      'topup': '/topup',
+                      'histori-topup': '/histori_topup',
+                      'poin': '/poin',
+                      'privacy-policy': '/privacy_policy',
+                      'toko': '/toko',
+                      'password': '/password',
+                      'pin': '/pin',
+                      'tentang-kami': '/tentang_kami',
+                      'logout': '/logout',
+                    };
+
+                    // Cek link statis
+                    if (linkPatterns.containsKey(path)) {
+                      final route = linkPatterns[path]!;
                       debugPrint(
-                        '[AppCustomTemplate] Intercepted URL: $url, route: ${entry.value}',
+                        '[AppCustomTemplate] Intercepted app:// URL: $url, route: $route',
                       );
-                      Navigator.of(context).pushNamed(entry.value);
+                      Navigator.of(context).pushNamed(route);
+                      return NavigationDecision.prevent;
+                    }
+
+                    // Cek link dinamis prabayar/pascabayar
+                    final prabayarPattern = RegExp(
+                      r'^prabayar/([a-zA-Z0-9_]+)$',
+                    );
+                    final pascabayarPattern = RegExp(
+                      r'^pascabayar/([a-zA-Z0-9_]+)$',
+                    );
+
+                    final prabayarMatch = prabayarPattern.firstMatch(path);
+                    final pascabayarMatch = pascabayarPattern.firstMatch(path);
+
+                    if (prabayarMatch != null) {
+                      final slug = prabayarMatch.group(1);
+                      final route = '/prabayar/$slug';
+                      debugPrint(
+                        '[AppCustomTemplate] Intercepted app:// URL: $url, route: $route',
+                      );
+                      Navigator.of(context).pushNamed(route);
+                      return NavigationDecision.prevent;
+                    }
+                    if (pascabayarMatch != null) {
+                      final slug = pascabayarMatch.group(1);
+                      final route = '/pascabayar/$slug';
+                      debugPrint(
+                        '[AppCustomTemplate] Intercepted app:// URL: $url, route: $route',
+                      );
+                      Navigator.of(context).pushNamed(route);
                       return NavigationDecision.prevent;
                     }
                   }
-                  // Cek link dinamis prabayar/pascabayar
-                  final prabayarPattern = RegExp(
-                    r'/act/prabayar/([a-zA-Z0-9_]+)',
-                  );
-                  final pascabayarPattern = RegExp(
-                    r'/act/pascabayar/([a-zA-Z0-9_]+)',
-                  );
-                  final prabayarMatch = prabayarPattern.firstMatch(url);
-                  final pascabayarMatch = pascabayarPattern.firstMatch(url);
-                  if (prabayarMatch != null) {
-                    final slug = prabayarMatch.group(1);
-                    final route = '/prabayar/$slug';
-                    debugPrint(
-                      '[AppCustomTemplate] Intercepted URL: $url, route: $route',
-                    );
-                    Navigator.of(context).pushNamed(route);
-                    return NavigationDecision.prevent;
-                  }
-                  if (pascabayarMatch != null) {
-                    final slug = pascabayarMatch.group(1);
-                    final route = '/pascabayar/$slug';
-                    debugPrint(
-                      '[AppCustomTemplate] Intercepted URL: $url, route: $route',
-                    );
-                    Navigator.of(context).pushNamed(route);
-                    return NavigationDecision.prevent;
-                  }
+
                   return NavigationDecision.navigate;
                 },
               ),
