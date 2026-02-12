@@ -178,17 +178,11 @@ class _TopupModalState extends State<TopupModal> {
       // Navigate ke TopupManual dengan amount
       if (mounted) {
         // debug log removed
-        Navigator.pop(context);
-        Navigator.push(
+        // Return result to parent route handler instead of direct navigation
+        // This avoids race condition with modal pop and route pop
+        Navigator.of(
           context,
-          MaterialPageRoute(
-            builder: (context) => TopupManual(
-              amount: value,
-              primaryColor: widget.primaryColor,
-              apiService: widget.apiService,
-            ),
-          ),
-        );
+        ).pop({'action': 'navigate_manual', 'amount': value});
       }
     } catch (e) {
       // debug log removed
@@ -258,17 +252,8 @@ class _TopupModalState extends State<TopupModal> {
 
       // Navigate ke TopupOtomatis dengan amount
       if (mounted) {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TopupOtomatis(
-              amount: value,
-              primaryColor: widget.primaryColor,
-              apiService: widget.apiService,
-            ),
-          ),
-        );
+        // Return result to parent route handler instead of direct navigation
+        Navigator.of(context).pop({'action': 'navigate_auto', 'amount': value});
       }
     } catch (e) {
       if (mounted) {

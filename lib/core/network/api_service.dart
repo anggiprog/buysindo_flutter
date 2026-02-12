@@ -399,6 +399,28 @@ class ApiService {
     );
   }
 
+  /// Check Internet Pascabayar bill (body sama seperti PLN, response mirip)
+  Future<Response> checkInternetPascabayarBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/internet/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   /// Check BPJS Kesehatan bill (body sama seperti PLN, response berbeda)
   Future<Response> checkBpjsBill({
     required int adminUserId,
@@ -457,15 +479,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-          baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-        //baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 10);
     _dio.options.receiveTimeout = const Duration(seconds: 10);

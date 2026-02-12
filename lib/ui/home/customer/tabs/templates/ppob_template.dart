@@ -29,6 +29,7 @@ import '../../tabs/templates/pascabayar/pln_pascabayar.dart';
 import '../../tabs/templates/pascabayar/pdam_pascabayar.dart';
 import '../../tabs/templates/pascabayar/bpjs_kesehatan.dart';
 import '../../tabs/templates/pascabayar/hp_pascabayar.dart';
+import '../../tabs/templates/pascabayar/internet_pascabayar.dart';
 import '../../tabs/templates/pascabayar/multifinance_pascabayar.dart';
 import '../../tabs/templates/pascabayar/pbb_pascabayar.dart';
 import '../../tabs/templates/pascabayar/tv_pascabayar.dart';
@@ -997,6 +998,13 @@ class _PpobTemplateState extends State<PpobTemplate> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const HpPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('internet')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const InternetPascabayar(),
                           ),
                         );
                       } else if (brand.contains('multifinance')) {

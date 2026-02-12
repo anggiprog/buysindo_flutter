@@ -209,6 +209,16 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           buyerSkuCode: widget.buyerSkuCode,
           token: token,
         );
+      } else if (brandUpper.contains('INTERNET') &&
+          brandUpper.contains('PASCABAYAR')) {
+        response = await _apiService.checkInternetPascabayarBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
       } else if (brandUpper.contains('HP')) {
         response = await _apiService.checkHpPascabayarBill(
           adminUserId: widget.adminUserId,

@@ -1,3 +1,5 @@
+import 'package:buysindo_app/ui/home/customer/tabs/templates/pascabayar/bpjs_kesehatan.dart';
+import 'package:buysindo_app/ui/home/customer/tabs/templates/pascabayar/byu_pascabayar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -25,12 +27,27 @@ import 'ui/home/customer/tabs/templates/prabayar/sms.dart';
 import 'ui/home/customer/tabs/templates/prabayar/streaming.dart';
 import 'ui/home/customer/tabs/templates/prabayar/tv.dart';
 import 'ui/home/customer/tabs/templates/prabayar/voucher.dart';
-
+// Import semua template pascabayar
+import 'ui/home/customer/tabs/templates/pascabayar/pln_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/tv_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/emoney_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/gas_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/hp_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/indosat_only4u_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/multifinance_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/pbb_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/pdam_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/pln_nontaglis_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/telkomsel_omni_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/tri_cuanmax_pascabayar.dart';
+import 'ui/home/customer/tabs/templates/pascabayar/xl_axis_cuanku_pascabayar.dart';
 //menu menu utama
 import 'ui/home/customer/tabs/account_tab.dart';
 import 'ui/home/customer/tabs/transaction_history_tab.dart';
 import 'ui/home/customer/notifications_page.dart';
 import 'ui/home/topup_modal.dart';
+import 'ui/home/topup/topup_manual.dart';
+import 'ui/home/topup/topup_otomatis.dart';
 import 'ui/home/tentang_kami.dart';
 import 'ui/home/chat_admin.dart';
 import 'ui/home/kontak_admin.dart';
@@ -51,7 +68,7 @@ import 'ui/home/customer/tabs/templates/transaction_pascabayar_detail_page.dart'
 import 'ui/home/customer/tabs/templates/transaction_detail_page.dart';
 import 'ui/home/customer/tabs/templates/transaction_mutasi_detail_page.dart';
 import 'package:flutter/services.dart' as services;
-import 'package:url_launcher/url_launcher.dart';
+//import 'package:url_launcher/url_launcher.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
 // Conditional imports for mobile-only features
@@ -208,7 +225,7 @@ class _TopupModalRoutePageState extends State<_TopupModalRoutePage> {
     if (!_modalShown) {
       _modalShown = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await showModalBottomSheet(
+        final result = await showModalBottomSheet(
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
@@ -218,7 +235,37 @@ class _TopupModalRoutePageState extends State<_TopupModalRoutePage> {
           ),
         );
         if (mounted) {
-          Navigator.of(context).pop();
+          // Handle navigation based on result
+          if (result is Map && result['action'] != null) {
+            Navigator.of(context).pop(); // Pop this route page
+
+            // Small delay to ensure pop completes before pushing new route
+            await Future.delayed(const Duration(milliseconds: 50));
+
+            if (result['action'] == 'navigate_manual') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TopupManual(
+                    amount: result['amount'],
+                    primaryColor: appConfig.primaryColor,
+                    apiService: ApiService(Dio()),
+                  ),
+                ),
+              );
+            } else if (result['action'] == 'navigate_auto') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TopupOtomatis(
+                    amount: result['amount'],
+                    primaryColor: appConfig.primaryColor,
+                    apiService: ApiService(Dio()),
+                  ),
+                ),
+              );
+            }
+          } else {
+            Navigator.of(context).pop();
+          }
         }
       });
     }
@@ -567,9 +614,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         final transactionId =
             int.tryParse(data['transaction_id']?.toString() ?? '0') ?? 0;
         final refId = data['ref_id']?.toString() ?? '';
-        final brand = data['brand']?.toString() ?? '';
-        final customerNo = data['customer_no']?.toString() ?? '';
-        final status = data['status']?.toString() ?? '';
 
         if (transactionId > 0) {
           // Wait for navigator to be ready
@@ -1122,7 +1166,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 // Open privacy policy in external browser with agicell subdomain from appConfig
                 return MaterialPageRoute(
                   builder: (context) {
-                    final subdomain = appConfig.subdomain ?? 'agicell';
+                    final subdomain = appConfig.subdomain;
                     final url =
                         'https://buysindo.com/privacy-policy/$subdomain';
                     Future.microtask(() async {
@@ -1188,8 +1232,63 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 return MaterialPageRoute(builder: (_) => const MasaAktifPage());
               case '/prabayar/pln':
                 return MaterialPageRoute(builder: (_) => const PLNPage());
+              // Pascabayar routes
+              case '/pascabayar/pln_pascabayar':
+                return MaterialPageRoute(
+                  builder: (_) => const PlnPascabayarPage(),
+                );
+              case '/pascabayar/tv_pascabayar':
+                return MaterialPageRoute(builder: (_) => const TvPascabayar());
+              case '/pascabayar/bpjs_kesehatan':
+                return MaterialPageRoute(
+                  builder: (_) => const BpjsKesehatanPage(),
+                );
 
-              default:
+              case '/pascabayar/byu':
+                return MaterialPageRoute(
+                  builder: (_) => const ByuPascabayarPage(),
+                );
+              case '/pascabayar/emoney_pascabayar':
+                return MaterialPageRoute(
+                  builder: (_) => const EmoneyPascabayar(),
+                );
+              case '/pascabayar/gas_negara':
+                return MaterialPageRoute(builder: (_) => const GasPascabayar());
+              case '/pascabayar/hp_pascabayar':
+                return MaterialPageRoute(builder: (_) => const HpPascabayar());
+              case '/pascabayar/indosat_only4u':
+                return MaterialPageRoute(
+                  builder: (_) => const IndosatOnly4uPascabayarPage(),
+                );
+              case '/pascabayar/multifinance_pascabayar':
+                return MaterialPageRoute(
+                  builder: (_) => const MultifinancePascabayar(),
+                );
+              case '/pascabayar/pbb_pascabayar':
+                return MaterialPageRoute(builder: (_) => const PbbPascabayar());
+              case '/pascabayar/pln_nontaglis_pascabayar':
+                return MaterialPageRoute(
+                  builder: (_) => const PlnNontaglisPascabayarPage(),
+                );
+              case '/pascabayar/telkomsel_omni':
+                return MaterialPageRoute(
+                  builder: (_) => const TelkomselOmniPascabayarPage(),
+                );
+              case '/pascabayar/tri_cuanmax':
+                return MaterialPageRoute(
+                  builder: (_) => const TriCuanMaxPascabayarPage(),
+                );
+              case '/pascabayar/xl_axis_cuanku':
+                return MaterialPageRoute(
+                  builder: (_) => const XlAxisCuankuPascabayarPage(),
+                );
+              case '/pascabayar/pdam':
+                return MaterialPageRoute(
+                  builder: (_) => const PdamPascabayar(),
+                );
+                
+                
+                default:
                 // Handle dinamis prabayar/pascabayar
                 if (settings.name != null &&
                     settings.name!.startsWith('/prabayar/')) {

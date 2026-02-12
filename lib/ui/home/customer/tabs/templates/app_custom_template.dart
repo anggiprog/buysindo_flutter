@@ -4,6 +4,7 @@ import '../../../../../core/network/api_service.dart';
 
 import '../../../../../core/network/session_manager.dart';
 import '../../../../../core/app_config.dart';
+import 'popup.dart';
 
 class AppCustomTemplate extends StatefulWidget {
   const AppCustomTemplate({super.key});
@@ -16,6 +17,7 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
   WebViewController? _controller;
   bool _isLoading = true;
   String? _errorMessage;
+  final PopupManager _popupManager = PopupManager();
 
   @override
   void initState() {
@@ -47,18 +49,46 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
             ..setNavigationDelegate(
               NavigationDelegate(
                 onPageFinished: (String url) {
-                  if (mounted) setState(() => _isLoading = false);
+                  if (mounted) {
+                    setState(() => _isLoading = false);
+                    // Show popup after page loads
+                    _checkAndShowPopup();
+                  }
                 },
                 onWebResourceError: (error) {
                   debugPrint("WebView Error: ${error.description}");
                 },
                 onNavigationRequest: (NavigationRequest request) {
                   final url = request.url;
+                  debugPrint('[AppCustomTemplate] 🔗 Navigation request: $url');
 
-                  // Handle custom app:// scheme untuk navigasi
+                  String? extractedPath;
+
+                  // Handle custom app:// scheme
                   if (url.startsWith('app://')) {
-                    final path = url.replaceFirst('app://', '');
+                    extractedPath = url.replaceFirst('app://', '');
+                    debugPrint(
+                      '[AppCustomTemplate] 📱 Extracted from app:// scheme: "$extractedPath"',
+                    );
+                  }
+                  // Handle HTTP URLs with /act/ pattern (e.g., http://192.168.100.7/act/prabayar/pulsa)
+                  else if (url.contains('/act/')) {
+                    final actPattern = RegExp(
+                      r'/act/(prabayar|pascabayar)/([a-zA-Z0-9_]+)',
+                    );
+                    final match = actPattern.firstMatch(url);
+                    if (match != null) {
+                      final type = match.group(1); // prabayar or pascabayar
+                      final slug = match.group(2); // pulsa, pln, etc.
+                      extractedPath = '$type/$slug';
+                      debugPrint(
+                        '[AppCustomTemplate] 📱 Extracted from HTTP /act/ URL: "$extractedPath"',
+                      );
+                    }
+                  }
 
+                  // Process extracted path if exists
+                  if (extractedPath != null) {
                     // Mapping custom scheme ke route Flutter
                     final linkPatterns = {
                       'beranda': '/home',
@@ -80,12 +110,14 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                     };
 
                     // Cek link statis
-                    if (linkPatterns.containsKey(path)) {
-                      final route = linkPatterns[path]!;
+                    if (linkPatterns.containsKey(extractedPath)) {
+                      final route = linkPatterns[extractedPath]!;
                       debugPrint(
-                        '[AppCustomTemplate] Intercepted app:// URL: $url, route: $route',
+                        '[AppCustomTemplate] ✅ Static route matched: $route',
                       );
-                      Navigator.of(context).pushNamed(route);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.of(context).pushNamed(route);
+                      });
                       return NavigationDecision.prevent;
                     }
 
@@ -97,29 +129,44 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                       r'^pascabayar/([a-zA-Z0-9_]+)$',
                     );
 
-                    final prabayarMatch = prabayarPattern.firstMatch(path);
-                    final pascabayarMatch = pascabayarPattern.firstMatch(path);
+                    final prabayarMatch = prabayarPattern.firstMatch(
+                      extractedPath,
+                    );
+                    final pascabayarMatch = pascabayarPattern.firstMatch(
+                      extractedPath,
+                    );
 
                     if (prabayarMatch != null) {
                       final slug = prabayarMatch.group(1);
                       final route = '/prabayar/$slug';
                       debugPrint(
-                        '[AppCustomTemplate] Intercepted app:// URL: $url, route: $route',
+                        '[AppCustomTemplate] ✅ Prabayar route matched: $route (slug: $slug)',
                       );
-                      Navigator.of(context).pushNamed(route);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.of(context).pushNamed(route);
+                      });
                       return NavigationDecision.prevent;
                     }
                     if (pascabayarMatch != null) {
                       final slug = pascabayarMatch.group(1);
                       final route = '/pascabayar/$slug';
                       debugPrint(
-                        '[AppCustomTemplate] Intercepted app:// URL: $url, route: $route',
+                        '[AppCustomTemplate] ✅ Pascabayar route matched: $route (slug: $slug)',
                       );
-                      Navigator.of(context).pushNamed(route);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        Navigator.of(context).pushNamed(route);
+                      });
                       return NavigationDecision.prevent;
                     }
+
+                    debugPrint(
+                      '[AppCustomTemplate] ⚠️ No pattern matched for path: "$extractedPath"',
+                    );
                   }
 
+                  debugPrint(
+                    '[AppCustomTemplate] ➡️ Allowing navigation to: $url',
+                  );
                   return NavigationDecision.navigate;
                 },
               ),
@@ -143,6 +190,14 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
         _isLoading = false;
       });
     }
+  }
+
+  void _checkAndShowPopup() {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        await _popupManager.checkAndShowPopup(context);
+      }
+    });
   }
 
   Future<bool> _onWillPop() async {
