@@ -33,13 +33,73 @@ class _TransactionPascabayarDetailPageState
   bool _isLoading = true;
   final GlobalKey _receiptKey = GlobalKey();
 
+  // Editable admin fee
+  late TextEditingController _adminController;
+  bool _isEditingAdmin = false;
+  late int _currentAdminFee;
+  late int _currentTotal;
+
   @override
   void initState() {
     super.initState();
     _printerService = BluetoothPrinterService();
     _apiService = ApiService(Dio());
     _transaction = widget.transaction;
+
+    // Calculate markup admin (adminfee)
+    final nilaiTagihan =
+        int.tryParse(_transaction.nilaiTagihan.toString()) ?? 0;
+    final adminBase = int.tryParse(_transaction.admin.toString()) ?? 0;
+    final denda = int.tryParse(_transaction.denda.toString()) ?? 0;
+    final totalPembayaran =
+        int.tryParse(_transaction.totalPembayaranUser.toString()) ?? 0;
+
+    // adminfee (markup) = totalPembayaranUser - (nilaiTagihan + admin + denda)
+    final markupAdmin = totalPembayaran - (nilaiTagihan + adminBase + denda);
+
+    // Admin field shows: admin + adminfee (markup)
+    _currentAdminFee = adminBase + markupAdmin;
+    _adminController = TextEditingController(text: _currentAdminFee.toString());
+
+    // Use totalPembayaranUser from transaction
+    _currentTotal = totalPembayaran;
+
     _loadStoreInfo();
+  }
+
+  @override
+  void dispose() {
+    _adminController.dispose();
+    super.dispose();
+  }
+
+  void _saveAdminFee() {
+    final newAdminFee = int.tryParse(_adminController.text) ?? 0;
+    if (newAdminFee < 0) {
+      _showError('Biaya admin tidak boleh negatif');
+      return;
+    }
+
+    setState(() {
+      _currentAdminFee = newAdminFee;
+      _isEditingAdmin = false;
+
+      // Recalculate total
+      final nilaiTagihan =
+          int.tryParse(_transaction.nilaiTagihan.toString()) ?? 0;
+      final denda = int.tryParse(_transaction.denda.toString()) ?? 0;
+      _currentTotal = nilaiTagihan + _currentAdminFee + denda;
+    });
+
+    _showSuccess('Biaya admin berhasil diperbarui');
+  }
+
+  String _formatCurrency(dynamic value) {
+    final intValue = value is int ? value : int.tryParse(value.toString()) ?? 0;
+    return intValue.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
   }
 
   Future<void> _loadStoreInfo() async {
@@ -237,13 +297,13 @@ class _TransactionPascabayarDetailPageState
         return;
       }
 
-      // Print receipt
+      // Print receipt with updated values
       final printed = await _printerService.printReceipt(
         refId: _transaction.refId,
         productName: _transaction.productName,
         nomorHp: _transaction.customerNo,
-        price: _transaction.formattedTotal,
-        totalPrice: _transaction.formattedTotal,
+        price: 'Rp ${_formatCurrency(_currentTotal)}',
+        totalPrice: 'Rp ${_formatCurrency(_currentTotal)}',
         status: _transaction.status,
         tanggalTransaksi: _transaction.createdAt,
         serialNumber: _transaction.sn.isNotEmpty ? _transaction.sn : null,
@@ -377,7 +437,7 @@ class _TransactionPascabayarDetailPageState
   Future<void> _shareViaWhatsApp(String imagePath) async {
     try {
       final message =
-          'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: ${_transaction.formattedTotal}';
+          'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: Rp ${_formatCurrency(_currentTotal)}';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ WhatsApp share error: $e');
@@ -388,7 +448,7 @@ class _TransactionPascabayarDetailPageState
   Future<void> _shareViaTelegram(String imagePath) async {
     try {
       final message =
-          'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: ${_transaction.formattedTotal}';
+          'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: Rp ${_formatCurrency(_currentTotal)}';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ Telegram share error: $e');
@@ -401,7 +461,7 @@ class _TransactionPascabayarDetailPageState
       await Share.shareXFiles(
         [XFile(imagePath)],
         text:
-            'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}',
+            'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: Rp ${_formatCurrency(_currentTotal)}',
       );
     } catch (e) {
       debugPrint('❌ Default share error: $e');
@@ -431,7 +491,7 @@ class _TransactionPascabayarDetailPageState
   Future<void> _handleCopyReference() async {
     try {
       final referenceText =
-          'Ref ID: ${_transaction.refId}\nTanggal: ${_transaction.createdAt}\nTotal: ${_transaction.formattedTotal}';
+          'Ref ID: ${_transaction.refId}\nTanggal: ${_transaction.createdAt}\nTotal: Rp ${_formatCurrency(_currentTotal)}';
       await Clipboard.setData(ClipboardData(text: referenceText));
       _showSuccess('Reference ID berhasil disalin ke clipboard');
     } catch (e) {
@@ -595,7 +655,6 @@ class _TransactionPascabayarDetailPageState
                     _receiptSection('DETAIL PRODUK', [
                       _receiptRow('Produk', _transaction.productName),
                       _receiptRow('Brand', _transaction.brand),
-                      _receiptRow('SKU Code', _transaction.buyerSkuCode),
                       if (_transaction.daya != null)
                         _receiptRow('Daya', '${_transaction.daya} VA'),
                       if (_transaction.lembarTagihan != null)
@@ -608,16 +667,12 @@ class _TransactionPascabayarDetailPageState
                       _receiptRow('Periode', _transaction.formattedPeriode),
                       _receiptRow(
                         'Nilai Tagihan',
-                        _transaction.formattedNilaiTagihan,
+                        'Rp ${_formatCurrency(_transaction.nilaiTagihan)}',
                       ),
-                      _receiptRow(
-                        'Admin',
-                        _transaction.formattedAdmin,
-                        color: Colors.orange,
-                      ),
+                      _buildEditableAdminRow(),
                       _receiptRow(
                         'Denda',
-                        _transaction.formattedDenda,
+                        'Rp ${_formatCurrency(_transaction.denda)}',
                         color: Colors.red,
                       ),
                     ]),
@@ -628,7 +683,7 @@ class _TransactionPascabayarDetailPageState
                       ),
                       _receiptRow(
                         'TOTAL',
-                        _transaction.formattedTotal,
+                        'Rp ${_formatCurrency(_currentTotal)}',
                         isBold: true,
                         fontSize: 16,
                         color: primaryColor,
@@ -751,6 +806,125 @@ class _TransactionPascabayarDetailPageState
                       ),
                     ),
                   ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditableAdminRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            'Admin',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_isEditingAdmin)
+                  Expanded(
+                    child: TextField(
+                      controller: _adminController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.right,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.orange,
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: const BorderSide(color: Colors.orange),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(4),
+                          borderSide: const BorderSide(
+                            color: Colors.orange,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _isEditingAdmin = true),
+                      child: Text(
+                        'Rp ${_formatCurrency(_currentAdminFee)}',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_isEditingAdmin) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: _saveAdminFee,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.save,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _adminController.text = _currentAdminFee.toString();
+                        _isEditingAdmin = false;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () => setState(() => _isEditingAdmin = true),
+                    child: Icon(
+                      Icons.edit,
+                      size: 14,
+                      color: appConfig.primaryColor,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

@@ -7,6 +7,8 @@ import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/session_manager.dart';
 import '../../../pin.dart';
 import '../../../topup_modal.dart';
+import '../../../topup/topup_manual.dart';
+import '../../../topup/topup_otomatis.dart';
 import '../../../../../../ui/widgets/pin_validation_dialog.dart';
 import 'transaction_success_page.dart';
 
@@ -72,15 +74,41 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
     }
   }
 
-  void _showTopupModal() {
-    showModalBottomSheet(
+  void _showTopupModal() async {
+    final result = await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => TopupModal(
         primaryColor: appConfig.primaryColor,
         apiService: _apiService,
       ),
     );
+
+    // Handle navigation based on result
+    if (result is Map && result['action'] != null && mounted) {
+      if (result['action'] == 'navigate_manual') {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TopupManual(
+              amount: result['amount'],
+              primaryColor: appConfig.primaryColor,
+              apiService: _apiService,
+            ),
+          ),
+        );
+      } else if (result['action'] == 'navigate_auto') {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TopupOtomatis(
+              amount: result['amount'],
+              primaryColor: appConfig.primaryColor,
+              apiService: _apiService,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _checkPinAndProcess() async {

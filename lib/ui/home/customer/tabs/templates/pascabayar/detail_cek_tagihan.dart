@@ -7,6 +7,8 @@ import '../../../../../../core/network/api_service.dart';
 import '../../../../../../core/network/session_manager.dart';
 import '../../../../../widgets/pin_validation_dialog.dart';
 import '../../../../topup_modal.dart';
+import '../../../../topup/topup_manual.dart';
+import '../../../../topup/topup_otomatis.dart';
 import '../../../../../../features/customer/data/models/transaction_pascabayar_model.dart';
 import '../transaction_pascabayar_detail_page.dart';
 
@@ -472,7 +474,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
     if (_billData == null) return;
 
     // Cek saldo cukup atau tidak
-    final totalTagihan = _billData!['total_tagihan'] ?? 0;
+    final totalTagihan = _billData?['total_tagihan'] ?? 0;
     if (_saldo < totalTagihan) {
       _showSnackbar('Saldo tidak mencukupi', Colors.red);
       return;
@@ -608,26 +610,28 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
 
       print('🚀 [Payment] Processing transaction...');
       print('   - PIN: ${pin.substring(0, 2)}****');
-      print('   - Total: Rp ${_formatCurrency(_billData!['total_tagihan'])}');
-      print('   - Ref ID: ${_billData!['ref_id']}');
+      print(
+        '   - Total: Rp ${_formatCurrency(_billData?['total_tagihan'] ?? 0)}',
+      );
+      print('   - Ref ID: ${_billData?['ref_id'] ?? '-'}');
       print('   - Admin User ID: ${widget.adminUserId}');
-      print('   - Customer No: ${_billData!['customer_no']}');
-      print('   - Brand: ${_billData!['brand']}');
+      print('   - Customer No: ${_billData?['customer_no'] ?? '-'}');
+      print('   - Brand: ${_billData?['brand'] ?? '-'}');
 
       print('📤 [Payment] Sending API request...');
       final response = await _apiService.processPascabayarTransaction(
         adminUserId: widget.adminUserId,
         pin: pin,
-        refId: _billData!['ref_id'] ?? '',
-        brand: _billData!['brand'] ?? widget.brand,
-        customerNo: _billData!['customer_no'] ?? '',
-        customerName: _billData!['customer_name'] ?? '',
-        tagihan: _billData!['tagihan'] ?? 0,
-        admin: _billData!['admin'] ?? 0,
-        denda: _billData!['denda'] ?? 0,
-        totalTagihan: _billData!['total_tagihan'] ?? 0,
-        productName: _billData!['product_name'] ?? '',
-        buyerSkuCode: _billData!['buyer_sku_code'] ?? '',
+        refId: _billData?['ref_id'] ?? '',
+        brand: _billData?['brand'] ?? widget.brand,
+        customerNo: _billData?['customer_no'] ?? '',
+        customerName: _billData?['customer_name'] ?? '',
+        tagihan: _billData?['tagihan'] ?? 0,
+        admin: _billData?['admin'] ?? 0,
+        denda: _billData?['denda'] ?? 0,
+        totalTagihan: _billData?['total_tagihan'] ?? 0,
+        productName: _billData?['product_name'] ?? '',
+        buyerSkuCode: _billData?['buyer_sku_code'] ?? '',
         token: token,
       );
 
@@ -707,25 +711,25 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                       id: 0, // ID akan di-update dari database nanti
                       userId: widget.adminUserId,
                       refId:
-                          responseData['ref_id'] ?? _billData!['ref_id'] ?? '',
-                      brand: _billData!['brand'] ?? '',
-                      buyerSkuCode: _billData!['buyer_sku_code'] ?? '',
-                      customerNo: _billData!['customer_no'] ?? '',
-                      customerName: _billData!['customer_name'] ?? '',
-                      nilaiTagihan: _billData!['tagihan']?.toString() ?? '0',
-                      admin: _billData!['admin']?.toString() ?? '0',
+                          responseData['ref_id'] ?? _billData?['ref_id'] ?? '',
+                      brand: _billData?['brand'] ?? '',
+                      buyerSkuCode: _billData?['buyer_sku_code'] ?? '',
+                      customerNo: _billData?['customer_no'] ?? '',
+                      customerName: _billData?['customer_name'] ?? '',
+                      nilaiTagihan: _billData?['tagihan']?.toString() ?? '0',
+                      admin: _billData?['admin']?.toString() ?? '0',
                       totalPembayaranUser:
-                          _billData!['total_tagihan']?.toString() ?? '0',
-                      periode: _billData!['periode'] ?? '',
-                      denda: _billData!['denda']?.toString() ?? '0',
+                          _billData?['total_tagihan']?.toString() ?? '0',
+                      periode: (_billData?['periode'] ?? '').toString(),
+                      denda: _billData?['denda']?.toString() ?? '0',
                       status: responseData['status'] ?? 'Sukses',
                       daya: null,
-                      lembarTagihan: _billData!['lembar_tagihan'] ?? 1,
+                      lembarTagihan: _billData?['lembar_tagihan'] ?? 1,
                       meterAwal: null,
                       meterAkhir: null,
                       createdAt: DateTime.now().toString(),
                       sn: responseData['data']?['sn'] ?? '-',
-                      productName: _billData!['product_name'] ?? '',
+                      productName: _billData?['product_name'] ?? '',
                       namaToko: '',
                     );
 
@@ -1155,7 +1159,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                         ),
                       ),
                       Text(
-                        _billData!['ref_id'] ?? '-',
+                        _billData?['ref_id'] ?? '-',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1173,28 +1177,28 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 _buildCompactInfoRow(
                   icon: Icons.person,
                   label: 'Nama',
-                  value: (_billData!['customer_name'] ?? '-').toString(),
+                  value: (_billData?['customer_name'] ?? '-').toString(),
                   primaryColor: primaryColor,
                 ),
                 const Divider(height: 16, thickness: 0.5),
                 _buildCompactInfoRow(
                   icon: Icons.badge,
                   label: 'ID Pelanggan',
-                  value: (_billData!['customer_no'] ?? '-').toString(),
+                  value: (_billData?['customer_no'] ?? '-').toString(),
                   primaryColor: primaryColor,
                 ),
                 const Divider(height: 16, thickness: 0.5),
                 _buildCompactInfoRow(
                   icon: Icons.calendar_today,
                   label: 'Periode',
-                  value: (_billData!['periode'] ?? '-').toString(),
+                  value: (_billData?['periode']?.toString() ?? '-'),
                   primaryColor: primaryColor,
                 ),
                 const Divider(height: 16, thickness: 0.5),
                 _buildCompactInfoRow(
                   icon: Icons.receipt,
                   label: 'Lembar',
-                  value: (_billData!['lembar_tagihan'] ?? 1).toString(),
+                  value: (_billData?['lembar_tagihan'] ?? 1).toString(),
                   primaryColor: primaryColor,
                 ),
 
@@ -1207,24 +1211,24 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   label: (widget.brand.toUpperCase().contains('E-MONEY'))
                       ? 'Nominal'
                       : 'Tagihan',
-                  amount: _billData!['tagihan'] ?? 0,
+                  amount: _billData?['tagihan'] ?? 0,
                 ),
                 const SizedBox(height: 8),
                 _buildCompactAmountRow(
                   label: 'Admin',
-                  amount: _billData!['admin'] ?? 0,
+                  amount: _billData?['admin'] ?? 0,
                 ),
                 const SizedBox(height: 8),
                 _buildCompactAmountRow(
                   label: 'Denda',
-                  amount: _billData!['denda'] ?? 0,
+                  amount: _billData?['denda'] ?? 0,
                   isDenda: true,
                 ),
                 const SizedBox(height: 8),
-                if (_billData!['biaya_lain'] != null)
+                if (_billData?['biaya_lain'] != null)
                   _buildCompactAmountRow(
                     label: 'Biaya Lain',
-                    amount: _billData!['biaya_lain'] ?? 0,
+                    amount: _billData?['biaya_lain'] ?? 0,
                   ),
 
                 const SizedBox(height: 12),
@@ -1254,7 +1258,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                         ),
                       ),
                       Text(
-                        'Rp ${_formatCurrency(_billData!['total_tagihan'] ?? 0)}',
+                        'Rp ${_formatCurrency(_billData?['total_tagihan'] ?? 0)}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1415,10 +1419,10 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               ),
               if (!_isLoadingSaldo && !isSaldoCukup)
                 InkWell(
-                  onTap: () {
+                  onTap: () async {
                     // Close bottom sheet dan buka topup modal
                     Navigator.pop(context);
-                    showModalBottomSheet(
+                    final result = await showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
@@ -1427,6 +1431,32 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                         apiService: _apiService,
                       ),
                     );
+                    // Handle navigation based on result
+                    if (result is Map &&
+                        result['action'] != null &&
+                        context.mounted) {
+                      if (result['action'] == 'navigate_manual') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => TopupManual(
+                              amount: result['amount'],
+                              primaryColor: appConfig.primaryColor,
+                              apiService: _apiService,
+                            ),
+                          ),
+                        );
+                      } else if (result['action'] == 'navigate_auto') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => TopupOtomatis(
+                              amount: result['amount'],
+                              primaryColor: appConfig.primaryColor,
+                              apiService: _apiService,
+                            ),
+                          ),
+                        );
+                      }
+                    }
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -1467,10 +1497,10 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 ? null
                 : isSaldoCukup
                 ? (_isProcessingPayment ? null : _processPayment)
-                : () {
+                : () async {
                     // Close bottom sheet dan buka topup modal
                     Navigator.pop(context);
-                    showModalBottomSheet(
+                    final result = await showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
@@ -1479,6 +1509,32 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                         apiService: _apiService,
                       ),
                     );
+                    // Handle navigation based on result
+                    if (result is Map &&
+                        result['action'] != null &&
+                        context.mounted) {
+                      if (result['action'] == 'navigate_manual') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => TopupManual(
+                              amount: result['amount'],
+                              primaryColor: appConfig.primaryColor,
+                              apiService: _apiService,
+                            ),
+                          ),
+                        );
+                      } else if (result['action'] == 'navigate_auto') {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => TopupOtomatis(
+                              amount: result['amount'],
+                              primaryColor: appConfig.primaryColor,
+                              apiService: _apiService,
+                            ),
+                          ),
+                        );
+                      }
+                    }
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: isSaldoCukup ? Colors.green : Colors.orange,

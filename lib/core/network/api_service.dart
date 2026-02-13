@@ -1411,6 +1411,167 @@ class ApiService {
     }
   }
 
+  /// Ambil informasi user termasuk admin_user_id
+  Future<Map<String, dynamic>> getUserInfo(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/user',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      _noopLog('❌ Error get user info: $e');
+      rethrow;
+    }
+  }
+
+  /// Create topup transaction via Ipaymu
+  Future<Map<String, dynamic>> createIpaymuTopup({
+    required String token,
+    required int adminUserId,
+    required int amount,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'api/ipaymu/topup',
+        data: {
+          'admin_user_id': adminUserId.toString(),
+          'amount': amount.toString(),
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      // Check if response is successful
+      if (response.data == null) {
+        throw Exception('Response kosong dari server');
+      }
+
+      // Check if there's an error field in response
+      if (response.data is Map && response.data['error'] != null) {
+        throw Exception(response.data['error']);
+      }
+
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _noopLog('❌ DioException create Ipaymu topup: ${e.response?.data}');
+
+      // Handle error response from backend
+      if (e.response?.data != null && e.response?.data is Map) {
+        final errorMsg =
+            e.response?.data['error'] ??
+            e.response?.data['message'] ??
+            'Gagal membuat transaksi';
+        throw Exception(errorMsg);
+      }
+
+      throw Exception('Gagal menghubungi server: ${e.message}');
+    } catch (e) {
+      _noopLog('❌ Error create Ipaymu topup: $e');
+      rethrow;
+    }
+  }
+
+  /// Get Tripay payment channels
+  Future<Map<String, dynamic>> getTripayChannels({
+    required String token,
+    required int amount,
+  }) async {
+    try {
+      final response = await _dio.get(
+        'api/tripay/channels',
+        queryParameters: {'amount': amount},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.data == null) {
+        throw Exception('Response kosong dari server');
+      }
+
+      if (response.data is Map && response.data['success'] == false) {
+        throw Exception(response.data['message'] ?? 'Gagal memuat channel');
+      }
+
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _noopLog('❌ DioException get Tripay channels: ${e.response?.data}');
+
+      if (e.response?.data != null && e.response?.data is Map) {
+        final errorMsg = e.response?.data['message'] ?? 'Gagal memuat channel';
+        throw Exception(errorMsg);
+      }
+
+      throw Exception('Gagal menghubungi server: ${e.message}');
+    } catch (e) {
+      _noopLog('❌ Error get Tripay channels: $e');
+      rethrow;
+    }
+  }
+
+  /// Create Tripay transaction
+  Future<Map<String, dynamic>> createTripayTransaction({
+    required String token,
+    required String method,
+    required int amount,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'api/tripay/checkout',
+        data: {'method': method, 'amount': amount},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.data == null) {
+        throw Exception('Response kosong dari server');
+      }
+
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _noopLog('❌ DioException create Tripay transaction: ${e.response?.data}');
+
+      if (e.response?.data != null && e.response?.data is Map) {
+        final errorMsg =
+            e.response?.data['message'] ?? 'Gagal membuat transaksi';
+        throw Exception(errorMsg);
+      }
+
+      throw Exception('Gagal menghubungi server: ${e.message}');
+    } catch (e) {
+      _noopLog('❌ Error create Tripay transaction: $e');
+      rethrow;
+    }
+  }
+
+  /// Check Tripay payment status by reference
+  Future<Map<String, dynamic>> checkTripayPaymentStatus({
+    required String token,
+    required String reference,
+  }) async {
+    try {
+      final response = await _dio.get(
+        'api/tripay/status/$reference',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.data == null) {
+        throw Exception('Response kosong dari server');
+      }
+
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      _noopLog('❌ DioException check Tripay status: ${e.response?.data}');
+
+      if (e.response?.data != null && e.response?.data is Map) {
+        final errorMsg = e.response?.data['message'] ?? 'Gagal mengecek status';
+        throw Exception(errorMsg);
+      }
+
+      throw Exception('Gagal menghubungi server: ${e.message}');
+    } catch (e) {
+      _noopLog('❌ Error check Tripay status: $e');
+      rethrow;
+    }
+  }
+
   /// Ambil daftar rekening bank untuk pembayaran manual
   Future<BankAccountResponse> getBankAccounts(String token) async {
     try {

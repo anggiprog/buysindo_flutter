@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_service.dart';
 import '../../core/network/session_manager.dart';
-import './topup/topup_manual.dart';
-import './topup/topup_otomatis.dart';
+//import './topup/topup_manual.dart';
+//import './topup/topup_otomatis.dart';
 
 class TopupModal extends StatefulWidget {
   final Color primaryColor;
@@ -25,7 +25,6 @@ class _TopupModalState extends State<TopupModal> {
   bool _isLoading = false;
   int? _minimalTopup;
   String? _rekeningStatus;
-  String? _paymentMerchant;
   int? _paymentStatus;
 
   final currencyFormatter = NumberFormat.currency(
@@ -69,7 +68,6 @@ class _TopupModalState extends State<TopupModal> {
 
       // Fetch payment status
       final paymentResponse = await widget.apiService.getStatusPayment(token);
-      _paymentMerchant = paymentResponse.merchant;
       _paymentStatus = paymentResponse.status;
 
       // Set default selected method based on available options
@@ -351,45 +349,90 @@ class _TopupModalState extends State<TopupModal> {
                 ),
               const SizedBox(height: 16),
 
-              // Select metode pembayaran
-              if (_rekeningStatus == 'active' || _paymentStatus == 1)
-                DropdownButtonFormField<String>(
-                  value: _selectedMethod,
-                  items: [
-                    if (_rekeningStatus == 'active')
-                      const DropdownMenuItem(
-                        value: 'manual',
-                        child: Text(
-                          'Pembayaran Manual',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ),
-                    if (_paymentStatus == 1)
-                      const DropdownMenuItem(
-                        value: 'auto',
-                        child: Text(
-                          'Pembayaran Otomatis',
-                          style: TextStyle(color: Colors.black),
-                        ),
-                      ),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) {
-                      setState(() => _selectedMethod = v);
-                    }
-                  },
-                  isExpanded: true,
-                  style: const TextStyle(color: Colors.black),
-                  decoration: InputDecoration(
-                    labelText: 'Metode Pembayaran',
-                    labelStyle: const TextStyle(color: Colors.black87),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              // Select metode pembayaran dengan radio button
+              if (_rekeningStatus == 'active' || _paymentStatus == 1) ...[
+                const Text(
+                  'Metode Pembayaran',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
                 ),
+                const SizedBox(height: 12),
+                if (_rekeningStatus == 'active')
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                      color: _selectedMethod == 'manual'
+                          ? widget.primaryColor.withOpacity(0.08)
+                          : Colors.white,
+                    ),
+                    child: RadioListTile<String>(
+                      value: 'manual',
+                      groupValue: _selectedMethod,
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() => _selectedMethod = v);
+                        }
+                      },
+                      title: const Text(
+                        'Pembayaran Manual',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Transfer melalui rekening bank',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                      activeColor: widget.primaryColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                    ),
+                  ),
+                if (_rekeningStatus == 'active' && _paymentStatus == 1)
+                  const SizedBox(height: 12),
+                if (_paymentStatus == 1)
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(12),
+                      color: _selectedMethod == 'auto'
+                          ? widget.primaryColor.withOpacity(0.08)
+                          : Colors.white,
+                    ),
+                    child: RadioListTile<String>(
+                      value: 'auto',
+                      groupValue: _selectedMethod,
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() => _selectedMethod = v);
+                        }
+                      },
+                      title: Text(
+                        'Pembayaran Otomatis',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Via payment gateway',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                      activeColor: widget.primaryColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                    ),
+                  ),
+              ],
 
               const SizedBox(height: 18),
 
@@ -471,10 +514,10 @@ class _TopupModalState extends State<TopupModal> {
                     Expanded(
                       child: Text(
                         _selectedMethod == null
-                            ? 'Memuat informasi pembayaran...'
+                            ? 'Pilih metode pembayaran yang tersedia'
                             : _selectedMethod == 'manual'
-                            ? 'Pembayaran manual: transfer ke rekening. Status: ${_rekeningStatus ?? 'loading'}'
-                            : 'Pembayaran otomatis via ${_paymentMerchant ?? 'payment gateway'}',
+                            ? 'Transfer ke rekening bank yang tersedia'
+                            : 'Pembayaran menggunakan Virtual Account, E-Wallet, atau Retail',
                         style: const TextStyle(
                           color: Colors.black87,
                           fontSize: 13,

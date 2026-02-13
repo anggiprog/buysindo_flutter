@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../core/network/api_service.dart';
+import '../../../core/network/session_manager.dart';
+import './topup_ipaymu.dart';
+import './topup_tripay.dart';
 
 class TopupOtomatis extends StatefulWidget {
   final int amount;
@@ -18,53 +21,81 @@ class TopupOtomatis extends StatefulWidget {
 }
 
 class _TopupOtomatisState extends State<TopupOtomatis> {
+  String? _merchant;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkMerchantAndRedirect();
+  }
+
+  Future<void> _checkMerchantAndRedirect() async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) throw Exception('Token not found');
+
+      // Ambil merchant dari API
+      final paymentResponse = await widget.apiService.getStatusPayment(token);
+      _merchant = paymentResponse.merchant;
+
+      if (!mounted) return;
+
+      // Redirect berdasarkan merchant
+      if (_merchant == 'Ipaymu') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TopupIpaymu(
+              amount: widget.amount,
+              primaryColor: widget.primaryColor,
+              apiService: widget.apiService,
+            ),
+          ),
+        );
+      } else if (_merchant == 'Tripay') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TopupTripay(
+              amount: widget.amount,
+              primaryColor: widget.primaryColor,
+              apiService: widget.apiService,
+            ),
+          ),
+        );
+      } else {
+        // Default ke Ipaymu jika merchant tidak dikenali
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TopupIpaymu(
+              amount: widget.amount,
+              primaryColor: widget.primaryColor,
+              apiService: widget.apiService,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        Navigator.pop(context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: widget.primaryColor,
         elevation: 0,
         title: const Text('Top Up Otomatis'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.credit_card,
-              size: 64,
-              color: widget.primaryColor.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Top Up Otomatis (Coming Soon)',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Amount: Rp ${widget.amount}',
-              style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Kembali ke Top Up'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: widget.primaryColor,
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: const Center(child: CircularProgressIndicator()),
     );
   }
 }

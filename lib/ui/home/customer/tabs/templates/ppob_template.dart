@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../../core/app_config.dart';
 import '../../../topup_modal.dart';
+import '../../../topup/topup_manual.dart';
+import '../../../topup/topup_otomatis.dart';
 import '../../../../../core/network/api_service.dart';
 import '../../../../../features/customer/data/models/banner_model.dart';
 import '../../../../../features/customer/data/models/menu_prabayar_model.dart';
@@ -367,19 +369,41 @@ class _PpobTemplateState extends State<PpobTemplate> {
     }
   }
 
-  void _showTopup() {
-    showModalBottomSheet(
+  void _showTopup() async {
+    final result = await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) => TopupModal(
         primaryColor: appConfig.primaryColor,
         apiService: apiService,
       ),
     );
+
+    // Handle navigation based on result
+    if (result is Map && result['action'] != null && mounted) {
+      if (result['action'] == 'navigate_manual') {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TopupManual(
+              amount: result['amount'],
+              primaryColor: appConfig.primaryColor,
+              apiService: apiService,
+            ),
+          ),
+        );
+      } else if (result['action'] == 'navigate_auto') {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TopupOtomatis(
+              amount: result['amount'],
+              primaryColor: appConfig.primaryColor,
+              apiService: apiService,
+            ),
+          ),
+        );
+      }
+    }
   }
 
   @override
