@@ -71,18 +71,21 @@ android {
         }
         resValue("string", "app_name", customAppName)
 
-        // minSdk 23 = Android 6.0 Marshmallow (sesuai config Android Studio yang berhasil di Redmi 10A)
+        // minSdk 21 untuk proper NDK support (Android 5.0+) - diperlukan untuk 16KB alignment
         minSdk = flutter.minSdkVersion
-        // targetSdk 36 untuk Android 16 (sesuai config Android Studio yang berhasil)
-        targetSdk = 36
+        // targetSdk 35+ REQUIRED untuk 16KB page size support declaration ke Play Store
+        targetSdk = 35
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
         // 16KB page size support - CRITICAL for Android 15+ and Play Store
-        // Explicitly specify supported ABIs for proper native library compilation
+        // IMPORTANT: Ini adalah deklarasi ke Play Store bahwa app FULLY SUPPORTS 16KB page size
+        // Tanpa setting ini dengan benar, Play Store akan menolak atau memberi warning
         ndk {
-            // Support both 4KB (armeabi-v7a) and 16KB (arm64-v8a) page sizes
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            // Support both 4KB (armeabi-v7a) dan 16KB (arm64-v8a) page sizes
+            // CRITICAL: Both ABIs harus di-list untuk proper compilation
+            abiFilters.clear()
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
         }
         
         // Manifest placeholders for proper app identification
@@ -129,30 +132,35 @@ android {
     }
     
     // Bundle configuration for proper ABI splits (16KB page size support)
+    // CRITICAL: This ensures Play Store gets the right AAB variants per device
     bundle {
         abi {
-            // Enable ABI splits in AAB - Play Store will serve proper version per device
+            // CRITICAL: Enable ABI splits - Play Store REQUIRES this for 16KB page size support
             enableSplit = true
         }
         language {
+            // Jangan split bahasa, fokus ke ABI split untuk 16KB support
             enableSplit = false
         }
         density {
-            enableSplit = true
+            enableSplit = false
+        }
+        texture {
+            enableSplit = false
         }
     }
     
     // 16KB Page Size Support - Packaging Configuration (AGP 8.1+)
-    // CRITICAL: Native libraries must be properly aligned for arm64-v8a devices
+    // CRITICAL: Native libraries harus properly aligned untuk arm64-v8a devices
     packaging {
         jniLibs {
-            // Modern packaging with proper 16KB alignment (not legacy)
+            // Modern packaging dengan proper 16KB alignment (WAJIB untuk Play Store Android 15+)
             useLegacyPackaging = false
-            // Keep all ABIs - don't exclude arm64-v8a or armeabi-v7a
-            excludes += listOf()
+            // PENTING: Jangan exclude armeabi-v7a atau arm64-v8a!
+            excludes.clear()
         }
         resources {
-            // Exclude duplicate files that might cause conflicts
+            // Hindari duplicate files yang bisa cause conflicts saat packaging
             excludes += listOf(
                 "META-INF/DEPENDENCIES",
                 "META-INF/LICENSE",
@@ -161,10 +169,15 @@ android {
                 "META-INF/NOTICE",
                 "META-INF/NOTICE.txt",
                 "META-INF/notice.txt",
-                "META-INF/*.kotlin_module"
+                "META-INF/*.kotlin_module",
+                "META-INF/versions/**",
+                "META-INF/INDEX.LIST"
             )
-            // Keep all native library files for proper 16KB page size support
+            // CRITICAL: Keep all native library files untuk proper 16KB page size support
+            // pickFirsts ensures no .so files are excluded
+            pickFirsts.clear()
             pickFirsts += listOf("lib/**/*.so")
+            pickFirsts += listOf("META-INF/proguard/androidx-*.pro")
         }
     }
 }
