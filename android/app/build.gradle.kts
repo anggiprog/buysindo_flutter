@@ -78,15 +78,12 @@ android {
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
-        // 16KB page size support - CRITICAL for Android 15+ and Play Store
-        // Explicitly specify supported ABIs for proper native library compilation
+        // 16KB page size support (required for Android 15+ and Play Store requirements)
+        // Support armeabi-v7a (4KB) dan arm64-v8a (16KB compatible)
         ndk {
-            // Support both 4KB (armeabi-v7a) and 16KB (arm64-v8a) page sizes
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            // Kosongkan untuk mendukung split-per-abi builds
+            // Flutter build appbundle akan generate native libs untuk semua platform yang didukung
         }
-        
-        // Manifest placeholders for proper app identification
-        manifestPlaceholders["appPackage"] = customPackageName
     }
 
     signingConfigs {
@@ -128,28 +125,12 @@ android {
         }
     }
     
-    // Bundle configuration for proper ABI splits (16KB page size support)
-    bundle {
-        abi {
-            // Enable ABI splits in AAB - Play Store will serve proper version per device
-            enableSplit = true
-        }
-        language {
-            enableSplit = false
-        }
-        density {
-            enableSplit = true
-        }
-    }
-    
-    // 16KB Page Size Support - Packaging Configuration (AGP 8.1+)
-    // CRITICAL: Native libraries must be properly aligned for arm64-v8a devices
+    // 16KB Page Size Support (AGP 8.1+ / Android 15+ / Play Store Compatible)
+    // Native libraries automatically aligned for arm64-v8a devices with 16KB page size
     packaging {
         jniLibs {
-            // Modern packaging with proper alignment (not legacy)
+            // Use modern packaging (not legacy) for proper 16KB alignment
             useLegacyPackaging = false
-            // Keep all native libraries (don't exclude any)
-            pickFirsts += listOf()
         }
     }
 }
