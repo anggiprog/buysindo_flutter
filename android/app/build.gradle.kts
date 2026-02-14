@@ -78,13 +78,11 @@ android {
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
-        // 16KB page size support (required for Android 15+ devices)
-        // Note: abiFilters removed to allow --split-per-abi builds
-        // When building fat APK, all supported ABIs will be included
+        // 16KB page size support (required for Android 15+ and Play Store requirements)
+        // Support armeabi-v7a (4KB) dan arm64-v8a (16KB compatible)
         ndk {
-            // Kosongkan untuk mendukung split-per-abi
-            // Jika ingin fat APK, uncomment baris di bawah:
-            // abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+            // Kosongkan untuk mendukung split-per-abi builds
+            // Flutter build appbundle akan generate native libs untuk semua platform yang didukung
         }
     }
 
