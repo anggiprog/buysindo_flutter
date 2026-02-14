@@ -124,6 +124,14 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+    
+    // 16KB Page Size Support Configuration (CRITICAL for Android 15+ / Play Store)
+    packaging {
+        jniLibs {
+            // Ensure native libraries use legacy packaging for 16KB page alignment
+            useLegacyPackaging = false
+        }
+    }
 }
 
 flutter {
