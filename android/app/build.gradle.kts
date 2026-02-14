@@ -125,10 +125,11 @@ android {
         }
     }
     
-    // 16KB Page Size Support Configuration (CRITICAL for Android 15+ / Play Store)
+    // 16KB Page Size Support (AGP 8.1+ / Android 15+ / Play Store Compatible)
+    // Native libraries automatically aligned for arm64-v8a devices with 16KB page size
     packaging {
         jniLibs {
-            // Ensure native libraries use legacy packaging for 16KB page alignment
+            // Use modern packaging (not legacy) for proper 16KB alignment
             useLegacyPackaging = false
         }
     }
