@@ -65,10 +65,25 @@ bundle {
 // 16KB Page Size Support - Packaging Configuration (AGP 8.1+)
 packaging {
     jniLibs {
-        // Modern packaging with proper alignment (not legacy)
+        // Modern packaging with proper 16KB alignment (not legacy)
         useLegacyPackaging = false
-        // Keep all native libraries (don't exclude any)
-        pickFirsts += listOf()
+        // Keep all ABIs - don't exclude arm64-v8a or armeabi-v7a
+        excludes += listOf()
+    }
+    resources {
+        // Exclude duplicate files that might cause conflicts
+        excludes += listOf(
+            "META-INF/DEPENDENCIES",
+            "META-INF/LICENSE",
+            "META-INF/LICENSE.txt",
+            "META-INF/license.txt",
+            "META-INF/NOTICE",
+            "META-INF/NOTICE.txt",
+            "META-INF/notice.txt",
+            "META-INF/*.kotlin_module"
+        )
+        // Keep all native library files for proper 16KB page size support
+        pickFirsts += listOf("lib/**/*.so")
     }
 }
 ```
@@ -76,6 +91,8 @@ packaging {
 **Mengapa Penting:**
 - ✅ Modern packaging method support 16KB alignment otomatis
 - ✅ Legacy packaging tidak support 16KB dengan benar
+- ✅ `pickFirsts` untuk .so files memastikan native libs tidak hilang
+- ✅ Resource excludes mencegah conflict saat packaging
 - ✅ Compatible dengan AGP 8.1+
 
 ---
@@ -150,11 +167,18 @@ $this->runProcess("$flutter build appbundle --release --target-platform android-
    packaging {
        jniLibs {
            useLegacyPackaging = false
+           excludes += listOf()
+       }
+       resources {
+           excludes += listOf("META-INF/**")
+           pickFirsts += listOf("lib/**/*.so")
        }
    }
    ```
    - Modern packaging method
    - Native libs aligned dengan page size (4KB atau 16KB)
+   - pickFirsts memastikan semua .so files ter-include
+   - Prevents duplicate META-INF files
 
 ---
 

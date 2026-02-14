@@ -146,10 +146,25 @@ android {
     // CRITICAL: Native libraries must be properly aligned for arm64-v8a devices
     packaging {
         jniLibs {
-            // Modern packaging with proper alignment (not legacy)
+            // Modern packaging with proper 16KB alignment (not legacy)
             useLegacyPackaging = false
-            // Keep all native libraries (don't exclude any)
-            pickFirsts += listOf()
+            // Keep all ABIs - don't exclude arm64-v8a or armeabi-v7a
+            excludes += listOf()
+        }
+        resources {
+            // Exclude duplicate files that might cause conflicts
+            excludes += listOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/*.kotlin_module"
+            )
+            // Keep all native library files for proper 16KB page size support
+            pickFirsts += listOf("lib/**/*.so")
         }
     }
 }
