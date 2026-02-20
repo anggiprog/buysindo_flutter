@@ -81,7 +81,7 @@ class TransactionMutasi {
   String get formattedSaldoAkhir =>
       'Rp ${saldoAkhir.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
   String get formattedJumlah {
-    final isDebit = jumlah < 0;
+    // Use isDebit property for consistency with keterangan-based logic
     final absValue = jumlah.abs();
     return '${isDebit ? '-' : '+'}Rp ${absValue.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
   }
@@ -91,6 +91,32 @@ class TransactionMutasi {
   String get formattedAdminFee =>
       'Rp ${adminFee.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
 
-  bool get isDebit => jumlah < 0;
-  bool get isCredit => jumlah > 0;
+  /// Determine if this is a debit (pengeluaran) based on keterangan or saldo comparison
+  /// Primary: check keterangan field
+  /// Fallback: compare saldoAwal and saldoAkhir
+  bool get isDebit {
+    final lowerKeterangan = keterangan.toLowerCase();
+
+    // Primary check: look for keywords in keterangan
+    if (lowerKeterangan.contains('pengurangan') ||
+        lowerKeterangan.contains('pengeluaran') ||
+        lowerKeterangan.contains('komisi') ||
+        lowerKeterangan.contains('biaya') ||
+        lowerKeterangan.contains('fee') ||
+        lowerKeterangan.contains('debit') ||
+        lowerKeterangan.contains('tarik') ||
+        lowerKeterangan.contains('withdraw')) {
+      return true;
+    }
+
+    // Fallback: if keterangan doesn't give clear indication, compare saldo
+    // If saldoAkhir < saldoAwal, it's a debit (money went out)
+    if (saldoAkhir < saldoAwal) {
+      return true;
+    }
+
+    return false;
+  }
+
+  bool get isCredit => !isDebit;
 }
