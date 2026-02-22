@@ -34,11 +34,12 @@ val flutterVersionName = if (project.hasProperty("versionName")) {
 
 android {
     // Namespace default (akan dioverride oleh applicationId di bawah)
-    namespace = "com.buysindo.app"
+    namespace = "com.buysindostore.app"
     // compileSdk 36 diperlukan oleh androidx.core:core-ktx:1.17.0 (compile-time only, aman)
     compileSdk = 36
-    // NDK version (opsional, biarkan Gradle memilih versi default yang tersedia)
-    // ndkVersion = "27.0.12077973"
+    // NDK version untuk 16KB page size alignment support
+    // Versi 27.0+ support proper 16KB alignment untuk Android 12+
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -59,7 +60,7 @@ android {
             project.property("appPackage").toString()
         } else {
             // Keep consistent with the module namespace
-            "com.buysindo.app"
+            "com.buysindostore.app"
         }
         applicationId = customPackageName
 
@@ -71,10 +72,12 @@ android {
         }
         resValue("string", "app_name", customAppName)
 
-        // minSdk 21 untuk proper NDK support (Android 5.0+) - diperlukan untuk 16KB alignment
-        minSdk = flutter.minSdkVersion
-        // targetSdk 35+ REQUIRED untuk 16KB page size support declaration ke Play Store
-        targetSdk = 35
+        // minSdk 31 REQUIRED untuk proper 16KB page size alignment support pada Play Store
+        // CRITICAL: minSdk < 31 tidak akan support 16KB alignment dengan optimal
+        // Android 12+ (API 31+) fully supported 16KB page size alignment
+        minSdk = 31
+        // targetSdk 36 REQUIRED untuk 16KB page size support declaration ke Play Store (Android 15+)
+        targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
@@ -82,8 +85,10 @@ android {
         // IMPORTANT: Ini adalah deklarasi ke Play Store bahwa app FULLY SUPPORTS 16KB page size
         // Tanpa setting ini dengan benar, Play Store akan menolak atau memberi warning
         ndk {
-            // Support both 4KB (armeabi-v7a) dan 16KB (arm64-v8a) page sizes
-            // CRITICAL: Both ABIs harus di-list untuk proper compilation
+            // Support both 4KB (armeabi-v7a) dalam 4KB alignment dan 16KB (arm64-v8a) dalam 16KB alignment
+            // CRITICAL: BOTH ABIs harus di-list untuk proper 16KB page size support:
+            // - armeabi-v7a: untuk backward compatibility Android 6.0+ (4KB page size)
+            // - arm64-v8a: untuk Android 15+ (dapat menggunakan 16KB-aligned native libraries)
             abiFilters.clear()
             abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
         }
@@ -132,10 +137,13 @@ android {
     }
     
     // Bundle configuration for proper ABI splits (16KB page size support)
-    // CRITICAL: This ensures Play Store gets the right AAB variants per device
+    // CRITICAL: This ensures Play Store gets the right AAB variants per device with proper 16KB alignment
     bundle {
         abi {
             // CRITICAL: Enable ABI splits - Play Store REQUIRES this for 16KB page size support
+            // When enabled, Play Store akan generate:
+            // 1. APK untuk arm64-v8a devices (dapat use 16KB-aligned native libs di Android 15+)
+            // 2. APK untuk armeabi-v7a devices (uses 4KB alignment, backward compatible)
             enableSplit = true
         }
         language {
@@ -155,9 +163,12 @@ android {
     packaging {
         jniLibs {
             // Modern packaging dengan proper 16KB alignment (WAJIB untuk Play Store Android 15+)
+            // useLegacyPackaging = false adalah CRITICAL untuk 16KB page size support
+            // Legacy packaging tidak support proper 16KB alignment generator di Android 15+ devices
             useLegacyPackaging = false
-            // PENTING: Jangan exclude armeabi-v7a atau arm64-v8a!
-            excludes.clear()
+            // PENTING: JANGAN exclude native libraries - semua harus included
+            // Play Store akan automatically check 16KB alignment support
+            pickFirsts.clear()
         }
         resources {
             // Hindari duplicate files yang bisa cause conflicts saat packaging

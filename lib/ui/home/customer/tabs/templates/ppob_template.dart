@@ -663,7 +663,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
   Widget _buildMenuGrid() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      padding: const EdgeInsets.only(top: 30, left: 12, right: 12, bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
@@ -679,7 +679,6 @@ class _PpobTemplateState extends State<PpobTemplate> {
             "Yuk Pilih Produk Disini",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          SizedBox(height: 16),
         ],
       ),
     );
@@ -688,7 +687,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
   // 🎨 Separate grid content untuk optimalkan rebuild dengan RepaintBoundary
   Widget _buildMenuGridContent() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
+      padding: const EdgeInsets.only(left: 15, right: 15, top: 0),
       child: RepaintBoundary(
         child: Column(
           children: [
@@ -705,9 +704,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 4,
-                  mainAxisSpacing: 10,
+                  mainAxisSpacing: 0,
                   crossAxisSpacing: 10,
-                  mainAxisExtent: 105,
+                  mainAxisExtent: 82,
                 ),
                 itemCount: _showAllMenus
                     ? _menuList.length
@@ -932,7 +931,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
   // ==========================================
   Widget _buildPascabayarGrid() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      padding: const EdgeInsets.only(top: 30, left: 12, right: 12, bottom: 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
@@ -948,7 +947,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
             "Bayar tagihan bulanan lebih mudah",
             style: TextStyle(color: Colors.grey, fontSize: 12),
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 0),
         ],
       ),
     );
@@ -956,7 +955,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
   Widget _buildPascabayarGridContent() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
+      padding: const EdgeInsets.only(top: 0, left: 12, right: 12, bottom: 0),
       child: RepaintBoundary(
         child: Column(
           children: [

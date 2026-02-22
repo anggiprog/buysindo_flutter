@@ -19,6 +19,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     
+    <!-- OpenGL ES 2.0+ REQUIRED for 16KB page size support on modern devices -->
+    <uses-feature android:name="android.hardware.opengles.aep" android:required="true" />
+    
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
@@ -60,6 +63,12 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/ic_launcher_background" />
+        
+        <!-- 16KB Page Size Support Declaration for Play Store Android 15+ -->
+        <!-- CRITICAL: Declares app support for 16KB page alignment (required for modern Play Store) -->
+        <meta-data
+            android:name="android.supports_16kb_alignment"
+            android:value="true" />
     </application>
         <!-- Required to query activities for url_launcher and text processing -->
         <queries>
