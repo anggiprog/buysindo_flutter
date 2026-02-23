@@ -1,33 +1,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet & Basic Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
-    
-    <!-- Notification Permissions (for FCM) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
-    <!-- Contact Permissions -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
-    
-    <!-- Bluetooth Permissions -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    
-    <!-- Camera Permission (for barcode scanner) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     
-    <!-- OpenGL ES 2.0+ REQUIRED for 16KB page size support on modern devices -->
     <uses-feature android:name="android.hardware.opengles.aep" android:required="true" />
-    
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
-        
-        <activity
+        android:usesCleartextTraffic="true"
+        android:extractNativeLibs="false"> <activity
             android:name=".MainActivity"
             android:exported="true"
             android:theme="@style/LaunchTheme"
@@ -39,58 +28,41 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             
-            <!-- Handle notification click intent -->
             <intent-filter>
                 <action android:name="FLUTTER_NOTIFICATION_CLICK" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <!-- <queries> block moved outside <application> as per Android requirements -->
 
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
             
-        <!-- Firebase Cloud Messaging Meta Data -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="buysindo_fcm_channel" />
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification" />
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_color"
-            android:resource="@color/ic_launcher_background" />
         
-        <!-- 16KB Page Size Support Declaration for Play Store Android 15+ -->
-        <!-- CRITICAL: Declares app support for 16KB page alignment (required for modern Play Store) -->
         <meta-data
             android:name="android.supports_16kb_alignment"
             android:value="true" />
     </application>
-        <!-- Required to query activities for url_launcher and text processing -->
-        <queries>
-            <!-- Pisahkan setiap scheme ke intent terpisah untuk kompatibilitas MIUI/Android 11 -->
-            <intent>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="http"/>
-            </intent>
-            <intent>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https"/>
-            </intent>
-            <intent>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="mailto"/>
-            </intent>
-            <intent>
-                <action android:name="android.intent.action.PROCESS_TEXT"/>
-                <data android:mimeType="text/plain"/>
-            </intent>
-        </queries>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mailto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+    </queries>
 </manifest>
