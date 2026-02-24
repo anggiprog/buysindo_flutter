@@ -12,12 +12,14 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
+// Load key.properties untuk signing config
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+// Ambil variabel dari Laravel Job (-PversionCode & -PversionName)
 val flutterVersionCode = if (project.hasProperty("versionCode")) {
     project.property("versionCode").toString()
 } else {
@@ -31,12 +33,17 @@ val flutterVersionName = if (project.hasProperty("versionName")) {
 }
 
 android {
+    // Namespace default (akan dioverride oleh applicationId di bawah)
     namespace = "com.buysindostore.app"
-    compileSdk = 36 // Android 15 (Vanilla Ice Cream)
+    // compileSdk 36 diperlukan oleh androidx.core:core-ktx:1.17.0 (compile-time only, aman)
+    compileSdk = 36
+    // NDK r27+ REQUIRED untuk 16KB page size alignment support (Play Store Android 15+ requirement)
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Mengaktifkan core library desugaring yang diperlukan oleh beberapa AAR (mis. flutter_local_notifications)
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -46,12 +53,16 @@ android {
     }
 
     defaultConfig {
-        applicationId = if (project.hasProperty("appPackage")) {
+        // Determine applicationId from project property or fallback to namespace
+        val customPackageName = if (project.hasProperty("appPackage")) {
             project.property("appPackage").toString()
         } else {
+            // Keep consistent with the module namespace
             "com.buysindostore.app"
         }
+        applicationId = customPackageName
 
+        // 2. Ambil Nama Aplikasi dari Laravel (-PappName)
         val customAppName = if (project.hasProperty("appName")) {
             project.property("appName").toString()
         } else {
@@ -59,32 +70,65 @@ android {
         }
         resValue("string", "app_name", customAppName)
 
-        minSdk = 31 // Android 12+ (Wajib untuk 16KB support yang stabil)
+        // minSdk 24 untuk kompatibilitas Android 7.0+ (mayoritas device aktif)
+        // 16KB page size support TIDAK memerlukan minSdk tinggi - controlled by NDK 27+ dan proper packaging
+        minSdk = 24
+        
+        // 16KB page size alignment - CRITICAL for Play Store Android 15+
+        // Linker flag untuk compile native libs dengan 16KB alignment
+        externalNativeBuild {
+            cmake {
+                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+                cFlags += listOf("-D__BIONIC_NO_PAGE_SIZE_MACRO")
+                cppFlags += listOf("-D__BIONIC_NO_PAGE_SIZE_MACRO")
+            }
+            ndkBuild {
+                arguments += listOf("APP_SUPPORT_FLEXIBLE_PAGE_SIZES=true")
+            }
+        }
+        // targetSdk 36 REQUIRED untuk 16KB page size support declaration ke Play Store (Android 15+)
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
+        // 16KB page size support - CRITICAL for Android 15+ and Play Store
+        // IMPORTANT: Ini adalah deklarasi ke Play Store bahwa app FULLY SUPPORTS 16KB page size
+        // Tanpa setting ini dengan benar, Play Store akan menolak atau memberi warning
         ndk {
-            // HANYA sertakan arm64-v8a untuk 16KB. 
-            // Play Store akan memproses armeabi-v7a secara terpisah via bundle split.
+            // Support KEDUA arm64-v8a dan armeabi-v7a untuk proper ABI support
+            // - arm64-v8a: Primary ABI dengan 16KB alignment support di Android 15+
+            // - armeabi-v7a: Legacy ABI untuk Android 6-14 backward compatibility
+            // Exclude x86/x86_64 karena library pihak ketiga tidak support dan mengurangi APK size
             abiFilters.clear()
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
         }
+        
+        // Manifest placeholders for proper app identification
+        manifestPlaceholders["appPackage"] = customPackageName
     }
 
     signingConfigs {
         create("release") {
+            // Prioritas 1: Parameter dari Laravel Job
             if (project.hasProperty("ksFile")) {
-                storeFile = file(project.property("ksFile").toString())
+                val ksFilePath = project.property("ksFile").toString()
+                storeFile = file(ksFilePath)
                 storePassword = project.property("ksPass").toString()
-                keyAlias = if (project.hasProperty("ksAlias")) project.property("ksAlias").toString() else "buysindo"
+                keyAlias = if (project.hasProperty("ksAlias")) {
+                    project.property("ksAlias").toString()
+                } else {
+                    "buysindo"
+                }
                 keyPassword = project.property("ksPass").toString()
-            } else if (keystorePropertiesFile.exists()) {
+            }
+            // Prioritas 2: Dari key.properties (untuk local build)
+            else if (keystorePropertiesFile.exists()) {
                 storeFile = file(keystoreProperties.getProperty("storeFile"))
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
             }
+            // Enable v1 dan v2 signing untuk kompatibilitas maksimal dengan MIUI/Xiaomi
             enableV1Signing = true
             enableV2Signing = true
         }
@@ -92,39 +136,80 @@ android {
 
     buildTypes {
         release {
+            // Menggunakan signingConfig release yang dibuat di atas
             signingConfig = signingConfigs.getByName("release")
+            
             isMinifyEnabled = false
+            // Ensure resource shrinking is not enabled unless code shrinking (minify) is enabled
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     
+    // Bundle configuration for proper ABI splits (16KB page size support)
+    // CRITICAL: This ensures Play Store gets the right AAB variants per device with proper 16KB alignment
     bundle {
         abi {
-            // CRITICAL: Harus true agar Play Store bisa mengemas biner 16KB secara benar per-perangkat
+            // CRITICAL: Enable ABI splits - Play Store REQUIRES this for 16KB page size support
+            // When enabled, Play Store akan generate:
+            // 1. APK untuk arm64-v8a devices (dapat use 16KB-aligned native libs di Android 15+)
+            // 2. APK untuk armeabi-v7a devices (uses 4KB alignment, backward compatible)
             enableSplit = true
+        }
+        language {
+            // Jangan split bahasa, fokus ke ABI split untuk 16KB support
+            enableSplit = false
+        }
+        density {
+            enableSplit = false
+        }
+        texture {
+            enableSplit = false
         }
     }
     
+    // 16KB Page Size Support - Packaging Configuration (AGP 8.1+)
+    // CRITICAL: Native libraries harus properly aligned untuk arm64-v8a dan armeabi-v7a devices
     packaging {
         jniLibs {
-            // CRITICAL: Harus false agar .so files tidak dikompresi (Uncompressed)
+            // Modern packaging dengan proper 16KB alignment (WAJIB untuk Play Store Android 15+)
+            // useLegacyPackaging = false adalah CRITICAL untuk 16KB page size support
+            // Legacy packaging tidak support proper 16KB alignment generator di Android 15+ devices
             useLegacyPackaging = false
-            
-            // Hapus arsitektur yang tidak mendukung 16KB secara native di Play Store
+            // PENTING: Support KEDUA arm64-v8a dan armeabi-v7a untuk baseline profile generation
+            // Exclude x86 dan x86_64 saja (tidak diperlukan untuk Play Store pada mayoritas devices)
+            excludes.clear()
             excludes.addAll(listOf(
-                "lib/x86_64/**",
-                "lib/x86/**"
+                "lib/x86/**",
+                "lib/x86_64/**"
             ))
         }
         resources {
-            excludes += listOf(
-                "META-INF/*.kotlin_module",
+            // Hindari duplicate files yang bisa cause conflicts saat packaging
+            excludes.clear()
+            excludes.addAll(listOf(
                 "META-INF/DEPENDENCIES",
-                "META-INF/LICENSE*",
-                "META-INF/NOTICE*"
-            )
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/*.kotlin_module",
+                "META-INF/versions/**",
+                "META-INF/INDEX.LIST",
+                "META-INF/MANIFEST.MF",
+                "META-INF/AL2.0",
+                "META-INF/LGPL2.1"
+            ))
+            // CRITICAL: Keep all native library files untuk proper 16KB page size support
+            // pickFirsts handles duplicate proguard and config files - take first occurrence
             pickFirsts.clear()
+            pickFirsts.addAll(listOf(
+                "lib/**/*.so",
+                "META-INF/proguard/**",
+                "META-INF/com.android.tools/**"
+            ))
         }
     }
 }
@@ -133,8 +218,35 @@ flutter {
     source = "../.."
 }
 
+// Tambahkan blok dependencies untuk coreLibraryDesugaring
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    // Versi desugar 2.1.4+ required oleh flutter_local_notifications 20.x
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Ensure Material Components and AppCompat are present so Theme.MaterialComponents.* is resolved
     implementation("com.google.android.material:material:1.9.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
 }
+
+// ====== FIX: Create missing baseline-prof.txt for ArtProfile compilation ======
+// This prevents the "baseline-prof.txt not found" error caused by
+// AGP 8.x + desugaring library incompatibility
+// The file must be created BEFORE compileReleaseArtProfile runs
+tasks.whenTaskAdded {
+    if (name == "compileReleaseArtProfile") {
+        doFirst {
+            // Create the directory structure and file that the task expects
+            val baselineDir = file("${project.buildDir}/intermediates/l8_art_profile/release/l8DexDesugarLibRelease")
+            if (!baselineDir.exists()) {
+                baselineDir.mkdirs()
+            }
+            val baselineFile = File(baselineDir, "baseline-prof.txt")
+            if (!baselineFile.exists()) {
+                baselineFile.writeText("# Empty baseline profile - workaround for AGP 8.x + desugaring\n")
+                println("[BUILD FIX] Created baseline-prof.txt for ArtProfile compilation")
+            }
+        }
+    }
+}
+
+

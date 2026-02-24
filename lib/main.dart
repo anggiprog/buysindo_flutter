@@ -472,7 +472,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Initialize local notifications
       await flutterLocalNotificationsPlugin.initialize(
-        const InitializationSettings(
+        settings: const InitializationSettings(
           android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         ),
         onDidReceiveNotificationResponse: (NotificationResponse response) {
@@ -1045,10 +1045,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       );
 
       await flutterLocalNotificationsPlugin.show(
-        notification.hashCode,
-        notification?.title,
-        notification?.body,
-        platformChannelSpecifics,
+        id: notification.hashCode,
+        title: notification?.title,
+        body: notification?.body,
+        notificationDetails: platformChannelSpecifics,
         payload: jsonEncode(payload),
       );
     } catch (e) {
@@ -1286,9 +1286,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 return MaterialPageRoute(
                   builder: (_) => const PdamPascabayar(),
                 );
-                
-                
-                default:
+
+              default:
                 // Handle dinamis prabayar/pascabayar
                 if (settings.name != null &&
                     settings.name!.startsWith('/prabayar/')) {
