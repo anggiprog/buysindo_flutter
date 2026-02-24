@@ -17,11 +17,51 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isObscure = true;
   bool _isLoading = false;
+  bool _checkingPendingOtp = true; // Block UI until check completes
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _checkPendingOtp();
+  }
+
+  Future<void> _checkPendingOtp() async {
+    final pendingEmail = await SessionManager.getPendingOtpEmail();
+    if (pendingEmail != null && pendingEmail.isNotEmpty && mounted) {
+      debugPrint(
+        '📧 Found pending OTP for email: $pendingEmail - redirecting to OTP screen',
+      );
+      // Use pushReplacement to prevent going back to login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => OtpScreen(email: pendingEmail)),
+      );
+      return;
+    }
+    if (mounted) {
+      setState(() => _checkingPendingOtp = false);
+    }
+  }
+
   Future<void> _handleLogin() async {
+    // First check if there's a pending OTP - block login if so
+    final pendingEmail = await SessionManager.getPendingOtpEmail();
+    if (pendingEmail != null && pendingEmail.isNotEmpty) {
+      debugPrint('🔒 Login blocked - pending OTP exists for: $pendingEmail');
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OtpScreen(email: pendingEmail),
+          ),
+        );
+      }
+      return;
+    }
+
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Email dan Password harus diisi")),
@@ -51,6 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // Check if OTP is required
       if (loginResponse.requireOtp == true) {
         debugPrint('🔑 OTP REQUIRED - Navigating to OTP Screen');
+        // Save pending OTP email so if user exits app, they'll be redirected back
+        await SessionManager.savePendingOtpEmail(_emailController.text.trim());
         if (mounted) {
           Navigator.push(
             context,
@@ -143,6 +185,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show loading while checking pending OTP
+    if (_checkingPendingOtp) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: AnimatedBuilder(
@@ -411,7 +461,10 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text("Belum Punya Akun "),
+            const Text(
+              "Belum Punya Akun? ",
+              style: TextStyle(color: Colors.black54),
+            ),
             GestureDetector(
               onTap: () {
                 Navigator.push(

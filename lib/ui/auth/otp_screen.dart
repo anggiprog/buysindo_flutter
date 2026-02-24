@@ -5,6 +5,7 @@ import 'package:pinput/pinput.dart';
 import 'package:dio/dio.dart';
 import '../../core/app_config.dart';
 import '../../core/network/api_service.dart';
+import '../../core/network/session_manager.dart';
 
 class OtpScreen extends StatefulWidget {
   final String email;
@@ -55,6 +56,9 @@ class _OtpScreenState extends State<OtpScreen> {
 
       if (response.status == true) {
         debugPrint('✅ OTP verification successful');
+
+        // Clear pending OTP email since verification is complete
+        await SessionManager.clearPendingOtpEmail();
 
         // Update device token di server
         if (response.token != null && response.token!.isNotEmpty) {
@@ -155,166 +159,170 @@ class _OtpScreenState extends State<OtpScreen> {
       ),
     );
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.pop(context),
+    return PopScope(
+      canPop: false, // Prevent back navigation - user must complete OTP
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false, // Remove back button
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            // Animasi / Icon Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.shield_outlined, size: 60, color: primaryColor),
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              "Verifikasi Akun",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 15,
-                  height: 1.5,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              // Animasi / Icon Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                children: [
-                  const TextSpan(
-                    text: "Masukkan kode OTP yang kami kirim ke\n",
+                child: Icon(
+                  Icons.shield_outlined,
+                  size: 60,
+                  color: primaryColor,
+                ),
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                "Verifikasi Akun",
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 15,
+                    height: 1.5,
                   ),
-                  TextSpan(
-                    text: widget.email,
-                    style: TextStyle(
+                  children: [
+                    const TextSpan(
+                      text: "Masukkan kode OTP yang kami kirim ke\n",
+                    ),
+                    TextSpan(
+                      text: widget.email,
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 48),
+
+              // INPUT PINPUT
+              Pinput(
+                length: 4,
+                controller: _otpController,
+                defaultPinTheme: defaultPinTheme,
+                focusedPinTheme: focusedPinTheme,
+                separatorBuilder: (index) => const SizedBox(width: 16),
+                hapticFeedbackType: HapticFeedbackType.lightImpact,
+                onCompleted: (pin) => _verifyOtp(pin),
+                cursor: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      width: 20,
+                      height: 2,
                       color: primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 50),
+
+              if (_isLoading)
+                CircularProgressIndicator(color: primaryColor)
+              else
+                Column(
+                  children: [
+                    _timerSeconds > 0
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.timer_outlined,
+                                size: 18,
+                                color: Colors.grey.shade500,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Kirim ulang dalam $_timerSeconds detik",
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              Text(
+                                "Tidak menerima kode?",
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                              TextButton(
+                                onPressed: _resendOtp,
+                                style: TextButton.styleFrom(
+                                  foregroundColor: primaryColor,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                  ),
+                                ),
+                                child: const Text(
+                                  "KIRIM ULANG OTP",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ],
+                ),
+              const SizedBox(height: 40),
+
+              // Tombol verifikasi manual (Optional)
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _otpController.text.length == 4 && !_isLoading
+                      ? () => _verifyOtp(_otpController.text)
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    "VERIFIKASI SEKARANG",
+                    style: TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 48),
-
-            // INPUT PINPUT
-            Pinput(
-              length: 4,
-              controller: _otpController,
-              defaultPinTheme: defaultPinTheme,
-              focusedPinTheme: focusedPinTheme,
-              separatorBuilder: (index) => const SizedBox(width: 16),
-              hapticFeedbackType: HapticFeedbackType.lightImpact,
-              onCompleted: (pin) => _verifyOtp(pin),
-              cursor: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    width: 20,
-                    height: 2,
-                    color: primaryColor,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 50),
-
-            if (_isLoading)
-              CircularProgressIndicator(color: primaryColor)
-            else
-              Column(
-                children: [
-                  _timerSeconds > 0
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.timer_outlined,
-                              size: 18,
-                              color: Colors.grey.shade500,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              "Kirim ulang dalam $_timerSeconds detik",
-                              style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            Text(
-                              "Tidak menerima kode?",
-                              style: TextStyle(color: Colors.grey.shade600),
-                            ),
-                            TextButton(
-                              onPressed: _resendOtp,
-                              style: TextButton.styleFrom(
-                                foregroundColor: primaryColor,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                              ),
-                              child: const Text(
-                                "KIRIM ULANG OTP",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                ],
-              ),
-            const SizedBox(height: 40),
-
-            // Tombol verifikasi manual (Optional)
-            SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: _otpController.text.length == 4 && !_isLoading
-                    ? () => _verifyOtp(_otpController.text)
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  "VERIFIKASI SEKARANG",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

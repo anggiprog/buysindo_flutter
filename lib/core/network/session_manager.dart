@@ -7,6 +7,7 @@ import 'session_file_stub.dart' if (dart.library.io) 'session_file_io.dart';
 class SessionManager {
   static const String _tokenKey = 'access_token';
   static const String _adminUserIdKey = 'admin_user_id';
+  static const String _pendingOtpEmailKey = 'pending_otp_email';
 
   // Menyimpan token setelah login berhasil
   static Future<void> saveToken(String token) async {
@@ -67,7 +68,7 @@ class SessionManager {
     if (token != null && token.isNotEmpty) {
       ////  print('═══════════════════════════════════════════════════');
       //// print('🔑 TOKEN DIAMBIL');
-       print('Token: $token');
+      print('Token: $token');
       // print('Panjang Token: ${token.length}');
       // print('Status: ✅ Ada');
       // print('═══════════════════════════════════════════════════');
@@ -81,12 +82,33 @@ class SessionManager {
     return token;
   }
 
+  // Simpan email yang pending OTP (untuk kasus user keluar app sebelum verifikasi)
+  static Future<void> savePendingOtpEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pendingOtpEmailKey, email);
+    print('📧 Pending OTP email disimpan: $email');
+  }
+
+  // Ambil email yang pending OTP
+  static Future<String?> getPendingOtpEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pendingOtpEmailKey);
+  }
+
+  // Hapus pending OTP email (setelah berhasil verifikasi)
+  static Future<void> clearPendingOtpEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_pendingOtpEmailKey);
+    print('✅ Pending OTP email dihapus');
+  }
+
   // Menghapus token (Logout)
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.remove(_tokenKey);
     await prefs.remove(_adminUserIdKey);
+    await prefs.remove(_pendingOtpEmailKey);
 
     // 🔴 DEBUG ONLY: Sembunyikan konfirmasi token dihapus jika mengandung data sensitif
     /*

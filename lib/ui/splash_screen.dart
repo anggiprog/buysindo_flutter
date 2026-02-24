@@ -50,6 +50,12 @@ class _SplashScreenState extends State<SplashScreen> {
           if (!mounted) return;
           final token = await SessionManager.getToken();
           if (!mounted) return;
+          // Check for pending OTP first
+          final pendingOtp = await SessionManager.getPendingOtpEmail();
+          if (pendingOtp != null && pendingOtp.isNotEmpty) {
+            Navigator.pushReplacementNamed(context, '/login');
+            return;
+          }
           final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
           Navigator.pushReplacementNamed(context, next);
         });
@@ -193,6 +199,12 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
       final token = await SessionManager.getToken();
       if (!mounted) return;
+      // Check for pending OTP first
+      final pendingOtp = await SessionManager.getPendingOtpEmail();
+      if (pendingOtp != null && pendingOtp.isNotEmpty) {
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
       final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
       Navigator.pushReplacementNamed(context, next);
       return;
@@ -279,6 +291,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
     final token = await SessionManager.getToken();
     if (!mounted) return;
+    // Check for pending OTP first
+    final pendingOtp = await SessionManager.getPendingOtpEmail();
+    if (pendingOtp != null && pendingOtp.isNotEmpty) {
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
     final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
     Navigator.pushReplacementNamed(context, next);
   }
