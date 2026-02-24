@@ -71,37 +71,21 @@ android {
         resValue("string", "app_name", customAppName)
 
         // minSdk 24 untuk kompatibilitas Android 7.0+ (mayoritas device aktif)
-        // 16KB page size support TIDAK memerlukan minSdk tinggi - controlled by NDK 27+ dan proper packaging
+        // 16KB page size support handled by:
+        // - NDK 27+ (set di android block)
+        // - useLegacyPackaging = false (packaging block)
+        // - extractNativeLibs = false (AndroidManifest.xml)
+        // - Play Store handles actual 16KB alignment during delivery
         minSdk = 24
-        
-        // 16KB page size alignment - CRITICAL for Play Store Android 15+
-        // Linker flag untuk compile native libs dengan 16KB alignment
-        externalNativeBuild {
-            cmake {
-                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
-                cFlags += listOf("-D__BIONIC_NO_PAGE_SIZE_MACRO")
-                cppFlags += listOf("-D__BIONIC_NO_PAGE_SIZE_MACRO")
-            }
-            ndkBuild {
-                arguments += listOf("APP_SUPPORT_FLEXIBLE_PAGE_SIZES=true")
-            }
-        }
+
         // targetSdk 36 REQUIRED untuk 16KB page size support declaration ke Play Store (Android 15+)
         targetSdk = 36
         versionCode = flutterVersionCode.toInt()
         versionName = flutterVersionName
 
-        // 16KB page size support - CRITICAL for Android 15+ and Play Store
-        // IMPORTANT: Ini adalah deklarasi ke Play Store bahwa app FULLY SUPPORTS 16KB page size
-        // Tanpa setting ini dengan benar, Play Store akan menolak atau memberi warning
-        ndk {
-            // Support KEDUA arm64-v8a dan armeabi-v7a untuk proper ABI support
-            // - arm64-v8a: Primary ABI dengan 16KB alignment support di Android 15+
-            // - armeabi-v7a: Legacy ABI untuk Android 6-14 backward compatibility
-            // Exclude x86/x86_64 karena library pihak ketiga tidak support dan mengurangi APK size
-            abiFilters.clear()
-            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
-        }
+        // 16KB page size support - handled by NDK 27+ and Flutter's build system
+        // Note: Don't use ndk.abiFilters with --split-per-abi (Flutter build command handles ABIs)
+        // The NDK 27 set at android level + useLegacyPackaging=false ensures 16KB alignment
         
         // Manifest placeholders for proper app identification
         manifestPlaceholders["appPackage"] = customPackageName
