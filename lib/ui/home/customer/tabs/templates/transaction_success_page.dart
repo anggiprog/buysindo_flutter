@@ -245,9 +245,13 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
               child: Text(
                 'Status: ${_transactionDetail!.status}',
                 style: TextStyle(
-                  fontSize: 12,
-                  color: primaryColor,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 32,
+                  color: _transactionDetail!.status == 'SUKSES'
+                      ? Colors.green
+                      : _transactionDetail!.status == 'PENDING'
+                      ? Colors.orange
+                      : Colors.red,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -336,9 +340,13 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
             child: Text(
               'Status: ${_transactionDetail!.status}',
               style: TextStyle(
-                fontSize: 12,
-                color: Colors.orange,
-                fontWeight: FontWeight.w600,
+                fontSize: 32,
+                color: _transactionDetail!.status == 'SUKSES'
+                    ? Colors.green
+                    : _transactionDetail!.status == 'PENDING'
+                    ? Colors.orange
+                    : Colors.red,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),

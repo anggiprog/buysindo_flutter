@@ -40,7 +40,7 @@ class _StreamingPageState extends State<StreamingPage>
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   @override
@@ -1122,7 +1122,7 @@ class _StreamingPageState extends State<StreamingPage>
 
   Widget _buildProductCard(ProductPrabayar product, Color primaryColor) {
     final hasDiscount = product.produkDiskon > 0;
-    final int originalPrice = product.totalHarga + product.produkDiskon;
+    final int originalPrice = product.hargaJualMember + product.produkDiskon;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1282,7 +1282,7 @@ class _StreamingPageState extends State<StreamingPage>
                         ],
                       ),
                       child: Text(
-                        'Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
+                        'Rp ${product.hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

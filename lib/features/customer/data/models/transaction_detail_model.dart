@@ -25,6 +25,8 @@ class TransactionDetail {
   final String sn;
   final String totalPrice;
   final String diskon;
+  final int markupMember;
+  final int hargaJualMember;
   final String paymentType;
   final String status;
   final String tanggalTransaksi;
@@ -40,6 +42,8 @@ class TransactionDetail {
     required this.sn,
     required this.totalPrice,
     required this.diskon,
+    required this.markupMember,
+    required this.hargaJualMember,
     required this.paymentType,
     required this.status,
     required this.tanggalTransaksi,
@@ -47,6 +51,18 @@ class TransactionDetail {
   });
 
   factory TransactionDetail.fromJson(Map<String, dynamic> json) {
+    final int totalPrice =
+        int.tryParse(json['total_price']?.toString() ?? '0') ?? 0;
+    final int markupMember =
+        int.tryParse(json['markup_member']?.toString() ?? '0') ?? 0;
+    int hargaJualMember =
+        int.tryParse(json['harga_jual_member']?.toString() ?? '0') ?? 0;
+
+    // Fallback: jika harga_jual_member = 0, gunakan total_price (untuk transaksi lama)
+    if (hargaJualMember == 0) {
+      hargaJualMember = totalPrice;
+    }
+
     return TransactionDetail(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
@@ -57,6 +73,8 @@ class TransactionDetail {
       sn: json['sn'] ?? '',
       totalPrice: json['total_price']?.toString() ?? '0',
       diskon: json['diskon']?.toString() ?? '0',
+      markupMember: markupMember,
+      hargaJualMember: hargaJualMember,
       paymentType: json['payment_type'] ?? '',
       status: json['status'] ?? '',
       tanggalTransaksi: json['tanggal_transaksi'] ?? '',
@@ -64,13 +82,42 @@ class TransactionDetail {
     );
   }
 
-  // Format price dengan separator
+  // Format price dengan separator - menggunakan hargaJualMember
   String get formattedPrice {
     try {
-      int price = int.parse(totalPrice);
-      return 'Rp ${price.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+      return 'Rp ${hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
     } catch (e) {
-      return 'Rp $totalPrice';
+      return 'Rp $hargaJualMember';
+    }
+  }
+
+  // Format harga sebelum diskon (hargaJualMember + diskon)
+  String get formattedHargaSebelumDiskon {
+    try {
+      int discount = int.tryParse(diskon) ?? 0;
+      int hargaSebelumDiskon = hargaJualMember + discount;
+      return 'Rp ${hargaSebelumDiskon.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+    } catch (e) {
+      return 'Rp $hargaJualMember';
+    }
+  }
+
+  // Cek apakah ada diskon
+  bool get hasDiskon {
+    try {
+      int discount = int.tryParse(diskon) ?? 0;
+      return discount > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Format markup member
+  String get formattedMarkupMember {
+    try {
+      return 'Rp ${markupMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+    } catch (e) {
+      return 'Rp $markupMember';
     }
   }
 
@@ -86,4 +133,10 @@ class TransactionDetail {
 
   // Get status color
   bool get isSuccess => status.toUpperCase() == 'SUKSES';
+
+  // Check if transaction is pending
+  bool get isPending => status.toUpperCase() == 'PENDING';
+
+  // Check if transaction failed
+  bool get isFailed => !isSuccess && !isPending;
 }

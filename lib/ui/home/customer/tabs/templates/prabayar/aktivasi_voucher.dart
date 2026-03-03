@@ -38,7 +38,7 @@ class _AktivasiVoucherPageState extends State<AktivasiVoucherPage>
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   @override
@@ -669,7 +669,7 @@ class _AktivasiVoucherPageState extends State<AktivasiVoucherPage>
 
   Widget _buildProductCard(ProductPrabayar product, Color primaryColor) {
     final hasDiscount = product.produkDiskon > 0;
-    final int originalPrice = product.totalHarga + product.produkDiskon;
+    final int originalPrice = product.hargaJualMember + product.produkDiskon;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -787,7 +787,7 @@ class _AktivasiVoucherPageState extends State<AktivasiVoucherPage>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
+                      'Rp ${product.hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,

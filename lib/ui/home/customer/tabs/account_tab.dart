@@ -13,6 +13,7 @@ import '../notifications_page.dart';
 import '../../../../features/topup/screens/topup_history_screen.dart';
 import 'animated_list_tile.dart';
 import 'akun/buat_toko.dart';
+import 'akun/daftar_harga_page.dart';
 import '../../kontak_admin.dart';
 import '../../akun/ganti_password.dart';
 import '../../pin.dart';
@@ -444,6 +445,17 @@ class _AccountTabState extends State<AccountTab> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const BuatTokoPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.price_change_outlined,
+          title: "Daftar Harga / Ubah Harga",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const DaftarHargaPage()),
             );
           },
         ),

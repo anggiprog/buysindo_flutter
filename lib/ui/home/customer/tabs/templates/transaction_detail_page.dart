@@ -87,6 +87,8 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 sn: transaction.sn,
                 totalPrice: transaction.totalPrice,
                 diskon: transaction.diskon,
+                markupMember: transaction.markupMember,
+                hargaJualMember: transaction.hargaJualMember,
                 paymentType: transaction.paymentType,
                 status: transaction.status,
                 tanggalTransaksi: transaction.tanggalTransaksi,
@@ -282,8 +284,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
 
   Future<void> _shareViaWhatsApp(String imagePath) async {
     try {
+      final statusText = _transaction!.isSuccess
+          ? "BERHASIL"
+          : (_transaction!.isPending ? "PENDING" : "GAGAL");
       final message =
-          'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: ${_transaction!.isSuccess ? "BERHASIL" : "GAGAL"}\nTotal: ${_transaction!.formattedPrice}';
+          'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: $statusText\nTotal: ${_transaction!.formattedPrice}';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ WhatsApp share error: $e');
@@ -293,8 +298,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
 
   Future<void> _shareViaTelegram(String imagePath) async {
     try {
+      final statusText = _transaction!.isSuccess
+          ? "BERHASIL"
+          : (_transaction!.isPending ? "PENDING" : "GAGAL");
       final message =
-          'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: ${_transaction!.isSuccess ? "BERHASIL" : "GAGAL"}\nTotal: ${_transaction!.formattedPrice}';
+          'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: $statusText\nTotal: ${_transaction!.formattedPrice}';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ Telegram share error: $e');
@@ -304,10 +312,13 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
 
   Future<void> _shareViaDefault(String imagePath) async {
     try {
+      final statusText = _transaction!.isSuccess
+          ? "BERHASIL"
+          : (_transaction!.isPending ? "PENDING" : "GAGAL");
       await Share.shareXFiles(
         [XFile(imagePath)],
         text:
-            'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: ${_transaction!.isSuccess ? "BERHASIL" : "GAGAL"}',
+            'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: $statusText',
       );
     } catch (e) {
       debugPrint('❌ Default share error: $e');
@@ -539,14 +550,20 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                                 shape: BoxShape.circle,
                                 color: _transaction!.isSuccess
                                     ? Colors.green[50]
+                                    : _transaction!.isPending
+                                    ? Colors.orange[50]
                                     : Colors.red[50],
                               ),
                               child: Icon(
                                 _transaction!.isSuccess
                                     ? Icons.check_circle
+                                    : _transaction!.isPending
+                                    ? Icons.access_time
                                     : Icons.cancel,
                                 color: _transaction!.isSuccess
                                     ? Colors.green
+                                    : _transaction!.isPending
+                                    ? Colors.orange
                                     : Colors.red,
                                 size: 40,
                               ),
@@ -555,14 +572,14 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                             Text(
                               _transaction!.isSuccess
                                   ? 'TRANSAKSI BERHASIL'
+                                  : _transaction!.isPending
+                                  ? 'TRANSAKSI PENDING'
                                   : 'TRANSAKSI GAGAL',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 22,
                                 letterSpacing: 1.2,
-                                color: _transaction!.isSuccess
-                                    ? Colors.green[700]
-                                    : Colors.red[700],
+                                color: Colors.red,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -599,16 +616,22 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                             _receiptRow('SN', _transaction!.sn, isSn: true),
                           ]),
                           _receiptSection('PEMBAYARAN', [
-                            _receiptRow('Harga', _transaction!.formattedPrice),
-                            _receiptRow(
-                              'Diskon',
-                              '- ${_transaction!.formattedDiskon}',
-                              color: Colors.green,
-                            ),
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              child: DottedLine(),
-                            ),
+                            if (_transaction!.hasDiskon)
+                              _receiptRow(
+                                'Harga',
+                                _transaction!.formattedHargaSebelumDiskon,
+                              ),
+                            if (_transaction!.hasDiskon)
+                              _receiptRow(
+                                'Diskon',
+                                '- ${_transaction!.formattedDiskon}',
+                                color: Colors.green,
+                              ),
+                            if (_transaction!.hasDiskon)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 8),
+                                child: DottedLine(),
+                              ),
                             _receiptRow(
                               'TOTAL',
                               _transaction!.formattedPrice,

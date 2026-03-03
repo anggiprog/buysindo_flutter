@@ -51,7 +51,7 @@ class _GamesPageState extends State<GamesPage> with TickerProviderStateMixin {
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   @override
@@ -1051,7 +1051,7 @@ class _GamesPageState extends State<GamesPage> with TickerProviderStateMixin {
                               const SizedBox(width: 3),
                               Flexible(
                                 child: Text(
-                                  'Rp ${product.price.toStringAsFixed(0)}',
+                                  'Rp ${product.hargaJualMember.toStringAsFixed(0)}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,

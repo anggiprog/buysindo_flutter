@@ -219,6 +219,8 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         phoneNumber: widget.phone,
         discount: widget.product.produkDiskon,
         total: widget.product.totalHarga,
+        markupMember: widget.product.markupMember,
+        hargaJualMember: widget.product.hargaJualMember,
         token: token,
       );
 
@@ -233,7 +235,7 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
                 builder: (context) => TransactionSuccessPage(
                   productName: widget.product.productName,
                   phoneNumber: widget.phone,
-                  totalPrice: widget.product.totalHarga,
+                  totalPrice: widget.product.hargaJualMember,
                   transaction: transaction,
                 ),
               ),
@@ -297,20 +299,21 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
                 ]),
                 const SizedBox(height: 16),
                 _buildSection("Rincian Harga", [
-                  _rowInfo(
-                    "Harga Produk",
-                    "Rp ${widget.product.totalHarga + widget.product.produkDiskon}",
-                  ),
+                  if (widget.product.produkDiskon > 0)
+                    _rowInfo(
+                      "Harga Normal",
+                      "Rp ${widget.product.hargaJualMember + widget.product.produkDiskon}",
+                    ),
                   if (widget.product.produkDiskon > 0)
                     _rowInfo(
                       "Diskon",
                       "- Rp ${widget.product.produkDiskon}",
                       valueColor: Colors.green,
                     ),
-                  const Divider(),
+                  if (widget.product.produkDiskon > 0) const Divider(),
                   _rowInfo(
                     "Total Bayar",
-                    "Rp ${widget.product.totalHarga}",
+                    "Rp ${widget.product.hargaJualMember}",
                     isBold: true,
                     valueColor: primaryColor,
                   ),

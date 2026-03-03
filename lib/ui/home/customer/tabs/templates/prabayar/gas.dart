@@ -34,7 +34,7 @@ class _GasPageState extends State<GasPage> with TickerProviderStateMixin {
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   @override
@@ -656,9 +656,13 @@ class _GasPageState extends State<GasPage> with TickerProviderStateMixin {
 
     // Sorting
     if (_filterStatus == 1) {
-      filteredProducts.sort((a, b) => a.totalHarga.compareTo(b.totalHarga));
+      filteredProducts.sort(
+        (a, b) => a.hargaJualMember.compareTo(b.hargaJualMember),
+      );
     } else if (_filterStatus == 2) {
-      filteredProducts.sort((a, b) => b.totalHarga.compareTo(a.totalHarga));
+      filteredProducts.sort(
+        (a, b) => b.hargaJualMember.compareTo(a.hargaJualMember),
+      );
     }
 
     if (filteredProducts.isEmpty) {
@@ -828,7 +832,7 @@ class _GasPageState extends State<GasPage> with TickerProviderStateMixin {
                   children: [
                     Expanded(
                       child: Text(
-                        'Rp ${product.totalHarga.toStringAsFixed(0)}',
+                        'Rp ${product.hargaJualMember.toStringAsFixed(0)}',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,

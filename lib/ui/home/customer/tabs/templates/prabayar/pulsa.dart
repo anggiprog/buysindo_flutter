@@ -39,7 +39,9 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(
+      forceRefresh: true,
+    ); // Force refresh untuk ambil data terbaru dengan harga_jual_member
   }
 
   Future<void> _pickContact() async {
@@ -48,7 +50,10 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
       if (status.isGranted) {
         final contact = await FlutterContacts.openExternalPick();
         if (contact != null && contact.phones.isNotEmpty) {
-          String phone = contact.phones.first.number.replaceAll(RegExp(r'[^0-9]'), '');
+          String phone = contact.phones.first.number.replaceAll(
+            RegExp(r'[^0-9]'),
+            '',
+          );
           if (phone.startsWith('62')) {
             phone = '0${phone.substring(2)}';
           } else if (phone.startsWith('8')) {
@@ -71,7 +76,10 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
       final String? token = await SessionManager.getToken();
       // Jika forceRefresh = true (dari pull-to-refresh), fetch dari API
       // Jika forceRefresh = false (initial load), gunakan cache terlebih dahulu
-      final products = await _apiService.getProducts(token, forceRefresh: forceRefresh);
+      final products = await _apiService.getProducts(
+        token,
+        forceRefresh: forceRefresh,
+      );
 
       if (mounted) {
         setState(() {
@@ -87,7 +95,9 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
         if (forceRefresh && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Produk diperbarui (${_allProducts.length} produk)'),
+              content: Text(
+                'Produk diperbarui (${_allProducts.length} produk)',
+              ),
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
             ),
@@ -155,7 +165,10 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
         _dynamicTypes = types;
         _tabController?.dispose();
         if (_dynamicTypes.isNotEmpty) {
-          _tabController = TabController(length: _dynamicTypes.length, vsync: this);
+          _tabController = TabController(
+            length: _dynamicTypes.length,
+            vsync: this,
+          );
         }
       });
     }
@@ -214,13 +227,17 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                     labelColor: primaryColor,
                     unselectedLabelColor: Colors.grey,
                     indicatorColor: primaryColor,
-                    tabs: _dynamicTypes.map((t) => Tab(text: t.toUpperCase())).toList(),
+                    tabs: _dynamicTypes
+                        .map((t) => Tab(text: t.toUpperCase()))
+                        .toList(),
                   ),
                 ),
               Expanded(
                 child: TabBarView(
                   controller: _tabController,
-                  children: _dynamicTypes.map((type) => _buildProductList(type)).toList(),
+                  children: _dynamicTypes
+                      .map((type) => _buildProductList(type))
+                      .toList(),
                 ),
               ),
             ] else
@@ -274,7 +291,11 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                   children: [
                     if (_phoneController.text.isNotEmpty)
                       IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.grey, size: 20),
+                        icon: const Icon(
+                          Icons.cancel,
+                          color: Colors.grey,
+                          size: 20,
+                        ),
                         onPressed: () {
                           _phoneController.clear();
                           setState(() {
@@ -348,7 +369,11 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.close,
+                            size: 18,
+                            color: Colors.grey,
+                          ),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {});
@@ -356,7 +381,10 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
                 ),
                 onChanged: (value) => setState(() {}),
               ),
@@ -389,7 +417,8 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                 Icons.filter_list,
                 color: _filterStatus != 0 ? primaryColor : Colors.grey,
               ),
-              onPressed: () => setState(() => _filterStatus = (_filterStatus + 1) % 3),
+              onPressed: () =>
+                  setState(() => _filterStatus = (_filterStatus + 1) % 3),
               tooltip: _filterStatus == 0
                   ? 'Urutkan: Normal'
                   : _filterStatus == 1
@@ -407,11 +436,16 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
     List<ProductPrabayar> filtered = _allProducts.where((p) {
       return p.brand.toUpperCase() == _operatorName &&
           p.type == type &&
-          p.productName.toLowerCase().contains(_searchController.text.toLowerCase());
+          p.productName.toLowerCase().contains(
+            _searchController.text.toLowerCase(),
+          );
     }).toList();
 
-    if (_filterStatus == 1) filtered.sort((a, b) => a.totalHarga.compareTo(b.totalHarga));
-    if (_filterStatus == 2) filtered.sort((a, b) => b.totalHarga.compareTo(a.totalHarga));
+    // Sort berdasarkan hargaJualMember (harga yang ditampilkan ke member)
+    if (_filterStatus == 1)
+      filtered.sort((a, b) => a.hargaJualMember.compareTo(b.hargaJualMember));
+    if (_filterStatus == 2)
+      filtered.sort((a, b) => b.hargaJualMember.compareTo(a.hargaJualMember));
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -423,13 +457,14 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
   Widget _buildProductCard(ProductPrabayar product) {
     final bool isAvailable = product.status != 0;
 
-    // Hitung harga asli dari totalHarga dikurangi diskon
+    // Tampilkan hargaJualMember (harga yang akan dijual member ke customer)
+    // Harga asli sebelum diskon = hargaJualMember + diskon
     final int discountAmount = product.produkDiskon;
-    final int originalPrice = product.totalHarga + discountAmount;
+    final int originalPrice = product.hargaJualMember + discountAmount;
     final String strikePrice =
         "Rp ${originalPrice.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
     final String salePrice =
-        "Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
+        "Rp ${product.hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -444,8 +479,10 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
             : () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      DetailPulsaPage(product: product, phone: _phoneController.text),
+                  builder: (context) => DetailPulsaPage(
+                    product: product,
+                    phone: _phoneController.text,
+                  ),
                 ),
               ),
         child: Padding(
@@ -488,7 +525,10 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(8),
                     color: Colors.grey.shade200,
                   ),
-                  child: Icon(Icons.phone_android, color: appConfig.primaryColor),
+                  child: Icon(
+                    Icons.phone_android,
+                    color: appConfig.primaryColor,
+                  ),
                 ),
               Expanded(
                 child: Column(
@@ -507,12 +547,18 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                       children: [
                         Text(
                           product.description,
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         // STATUS BADGE DI SAMPING DESKRIPSI
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: isAvailable
                                 ? Colors.green.withOpacity(0.1)
@@ -531,7 +577,9 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
                               Text(
                                 isAvailable ? "Tersedia" : "Gangguan",
                                 style: TextStyle(
-                                  color: isAvailable ? Colors.green : Colors.red,
+                                  color: isAvailable
+                                      ? Colors.green
+                                      : Colors.red,
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -595,7 +643,11 @@ class _PulsaPageState extends State<PulsaPage> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.phonelink_ring_outlined, size: 70, color: Colors.grey.shade300),
+          Icon(
+            Icons.phonelink_ring_outlined,
+            size: 70,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             _operatorName.isEmpty

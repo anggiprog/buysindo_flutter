@@ -40,7 +40,7 @@ class _AktivasiPerdanaPageState extends State<AktivasiPerdanaPage>
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   @override
@@ -1121,7 +1121,7 @@ class _AktivasiPerdanaPageState extends State<AktivasiPerdanaPage>
 
   Widget _buildProductCard(ProductPrabayar product, Color primaryColor) {
     final hasDiscount = product.produkDiskon > 0;
-    final int originalPrice = product.totalHarga + product.produkDiskon;
+    final int originalPrice = product.hargaJualMember + product.produkDiskon;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1277,7 +1277,7 @@ class _AktivasiPerdanaPageState extends State<AktivasiPerdanaPage>
                         ],
                       ),
                       child: Text(
-                        'Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
+                        'Rp ${product.hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,

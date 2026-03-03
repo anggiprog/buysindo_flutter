@@ -56,7 +56,7 @@ class _EMoneyPageState extends State<EMoneyPage> with TickerProviderStateMixin {
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {
@@ -535,10 +535,11 @@ class _EMoneyPageState extends State<EMoneyPage> with TickerProviderStateMixin {
           );
     }).toList();
 
+    // Sort berdasarkan hargaJualMember
     if (_filterStatus == 1)
-      filtered.sort((a, b) => a.totalHarga.compareTo(b.totalHarga));
+      filtered.sort((a, b) => a.hargaJualMember.compareTo(b.hargaJualMember));
     if (_filterStatus == 2)
-      filtered.sort((a, b) => b.totalHarga.compareTo(a.totalHarga));
+      filtered.sort((a, b) => b.hargaJualMember.compareTo(a.hargaJualMember));
 
     if (filtered.isEmpty) {
       return Center(
@@ -572,11 +573,11 @@ class _EMoneyPageState extends State<EMoneyPage> with TickerProviderStateMixin {
     final bool isAvailable = product.status != 0;
 
     final int discountAmount = product.produkDiskon;
-    final int originalPrice = product.totalHarga + discountAmount;
+    final int originalPrice = product.hargaJualMember + discountAmount;
     final String strikePrice =
         "Rp ${originalPrice.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
     final String salePrice =
-        "Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
+        "Rp ${product.hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
 
     return GestureDetector(
       onTap: () => _handleProductTap(product),

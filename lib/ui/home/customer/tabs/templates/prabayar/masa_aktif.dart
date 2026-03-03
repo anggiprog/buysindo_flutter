@@ -39,7 +39,7 @@ class _MasaAktifPageState extends State<MasaAktifPage>
     super.initState();
     _apiService = ApiService(Dio());
     _searchController.addListener(() => setState(() {}));
-    _loadData();
+    _loadData(forceRefresh: true);
   }
 
   Future<void> _pickContact() async {
@@ -437,10 +437,11 @@ class _MasaAktifPageState extends State<MasaAktifPage>
           );
     }).toList();
 
+    // Sort berdasarkan hargaJualMember (harga yang ditampilkan ke member)
     if (_filterStatus == 1)
-      filtered.sort((a, b) => a.totalHarga.compareTo(b.totalHarga));
+      filtered.sort((a, b) => a.hargaJualMember.compareTo(b.hargaJualMember));
     if (_filterStatus == 2)
-      filtered.sort((a, b) => b.totalHarga.compareTo(a.totalHarga));
+      filtered.sort((a, b) => b.hargaJualMember.compareTo(a.hargaJualMember));
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -452,13 +453,14 @@ class _MasaAktifPageState extends State<MasaAktifPage>
   Widget _buildProductCard(ProductPrabayar product) {
     final bool isAvailable = product.status != 0;
 
-    // Hitung harga asli dari totalHarga dikurangi diskon
+    // Tampilkan hargaJualMember (harga yang akan dijual member ke customer)
+    // Harga asli sebelum diskon = hargaJualMember + diskon
     final int discountAmount = product.produkDiskon;
-    final int originalPrice = product.totalHarga + discountAmount;
+    final int originalPrice = product.hargaJualMember + discountAmount;
     final String strikePrice =
         "Rp ${originalPrice.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
     final String salePrice =
-        "Rp ${product.totalHarga.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
+        "Rp ${product.hargaJualMember.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

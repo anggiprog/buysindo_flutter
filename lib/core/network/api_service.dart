@@ -489,13 +489,26 @@ class ApiService {
         baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
     // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
     _dio.options.baseUrl = this.baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 10);
-    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.connectTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 30);
     _dio.options.headers = {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
     _dio.options.validateStatus = (status) => status! < 500;
+
+    // Add LogInterceptor for debugging (hapus di production)
+    _dio.interceptors.add(
+      LogInterceptor(
+        request: true,
+        requestHeader: true,
+        requestBody: true,
+        responseHeader: false,
+        responseBody: true,
+        error: true,
+        logPrint: (obj) => debugPrint(obj.toString()),
+      ),
+    );
   }
 
   /// Getter untuk URL dasar Gambar
@@ -604,9 +617,21 @@ class ApiService {
         }
         return otpResponse;
       } else {
-        throw Exception('OTP verification failed: ${response.statusMessage}');
+        // Ambil pesan error dari response body jika ada
+        String errorMsg = response.statusMessage ?? 'Unknown error';
+        if (response.data != null && response.data is Map) {
+          errorMsg =
+              response.data['message'] ??
+              response.data['error'] ??
+              response.data['errors']?.toString() ??
+              errorMsg;
+        }
+        debugPrint('❌ [ApiService] verifyOtp failed: $errorMsg');
+        debugPrint('❌ [ApiService] Response data: ${response.data}');
+        throw Exception('OTP verification failed: $errorMsg');
       }
     } on DioException catch (e) {
+      debugPrint('❌ [ApiService] verifyOtp DioException: ${e.response?.data}');
       throw _handleDioError(e);
     }
   }
@@ -614,15 +639,35 @@ class ApiService {
   /// Resend OTP to email
   Future<void> resendOtp(String email) async {
     try {
+      debugPrint('📤 [ApiService] resendOtp: Sending to email: $email');
+      debugPrint('📤 [ApiService] resendOtp: BaseURL: ${_dio.options.baseUrl}');
+      debugPrint('📤 [ApiService] resendOtp: Endpoint: api/resend-otp');
+
       final response = await _dio.post(
         'api/resend-otp',
         data: {'email': email},
       );
 
+      debugPrint(
+        '📥 [ApiService] resendOtp: Status code: ${response.statusCode}',
+      );
+      debugPrint('📥 [ApiService] resendOtp: Response: ${response.data}');
+
       if (response.statusCode != 200) {
-        throw Exception('Resend OTP failed: ${response.statusMessage}');
+        String errorMsg = response.statusMessage ?? 'Unknown error';
+        if (response.data != null && response.data is Map) {
+          errorMsg =
+              response.data['message'] ?? response.data['error'] ?? errorMsg;
+        }
+        debugPrint('❌ [ApiService] resendOtp failed: $errorMsg');
+        throw Exception('Resend OTP failed: $errorMsg');
       }
+
+      debugPrint('✅ [ApiService] resendOtp: Success!');
     } on DioException catch (e) {
+      debugPrint('❌ [ApiService] resendOtp DioException: ${e.type}');
+      debugPrint('❌ [ApiService] resendOtp Error: ${e.message}');
+      debugPrint('❌ [ApiService] resendOtp Response: ${e.response?.data}');
       throw _handleDioError(e);
     }
   }
@@ -928,6 +973,8 @@ class ApiService {
     required String phoneNumber,
     required int discount,
     required int total,
+    required int markupMember,
+    required int hargaJualMember,
     required String token,
   }) {
     return _dio.post(
@@ -940,6 +987,8 @@ class ApiService {
         'no_handphone': phoneNumber,
         'diskon': discount,
         'total': total,
+        'markup_member': markupMember,
+        'harga_jual_member': hargaJualMember,
       },
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
@@ -1009,6 +1058,40 @@ class ApiService {
   Future<String?> getNamaTokoFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_prefNamaToko);
+  }
+
+  // ===========================================================================
+  // DAFTAR HARGA / PRICE LIST ENDPOINTS (Digiflazz)
+  // ===========================================================================
+
+  /// Ambil daftar harga produk prabayar dari Digiflazz (dengan markup/diskon dari admin)
+  Future<Response> getDaftarHarga(String token) {
+    return _dio.get(
+      'api/produk-prabayar',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Ambil daftar harga produk pascabayar dari Digiflazz (dengan markup/diskon dari admin)
+  Future<Response> getDaftarHargaPascabayar(String token) {
+    return _dio.get(
+      'api/pascabayar',
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Simpan/update markup member untuk produk
+  /// Formula: harga_jual_member = total_harga + markup
+  Future<Response> simpanMarkupMember({
+    required String token,
+    required String buyerSkuCode,
+    required int markup,
+  }) {
+    return _dio.post(
+      'api/produk-prabayar/update-harga',
+      data: {'buyer_sku_code': buyerSkuCode, 'markup': markup},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
   }
 
   // ===========================================================================
