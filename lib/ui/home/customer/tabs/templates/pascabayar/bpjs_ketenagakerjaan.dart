@@ -5,20 +5,21 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import '../../../../../../core/app_config.dart';
 import '../../../../../../core/network/api_service.dart';
 import '../../../../../../core/network/session_manager.dart';
 import '../../../../../../features/customer/data/models/product_pascabayar_model.dart';
 import 'detail_cek_tagihan.dart';
 
-class PdamPascabayar extends StatefulWidget {
-  const PdamPascabayar({super.key});
+class BpjsKetenagakerjaan extends StatefulWidget {
+  const BpjsKetenagakerjaan({super.key});
 
   @override
-  State<PdamPascabayar> createState() => _PdamPascabayarState();
+  State<BpjsKetenagakerjaan> createState() => _BpjsKetenagakerjaanState();
 }
 
-class _PdamPascabayarState extends State<PdamPascabayar> {
+class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
   final TextEditingController _customerIdController = TextEditingController();
 
   late ApiService _apiService;
@@ -32,7 +33,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
   bool _hasShownBrandDialog = false;
   bool _isRefreshing = false;
 
-  static const String _cacheKey = 'pdam_products_cache';
+  static const String _cacheKey = 'bpjs_ketenagakerjaan_products_cache';
 
   @override
   void initState() {
@@ -49,14 +50,14 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
   // Load pascabayar products (with cache support)
   Future<void> _loadProducts({bool forceRefresh = false}) async {
-    print('🔄 [PDAM] _loadProducts called (forceRefresh: $forceRefresh)');
+    print('🔄 [BPJS] _loadProducts called (forceRefresh: $forceRefresh)');
 
     try {
       // Cek cache terlebih dahulu jika bukan force refresh
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [PDAM] Using cached products: ${cachedProducts.length}');
+          print('📦 [BPJS] Using cached products: ${cachedProducts.length}');
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -79,35 +80,41 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
       // Fetch dari API
       final token = await SessionManager.getToken();
-      print('🔑 [PDAM] Token: ${token?.substring(0, 20)}...');
+      print('🔑 [BPJS] Token: ${token?.substring(0, 20)}...');
 
       if (token == null) {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [PDAM] Fetching from API...');
+      print('🌐 [BPJS] Fetching from API...');
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [PDAM] Response status: ${response.statusCode}');
+      print('📥 [BPJS] Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
         );
 
-        // Filter hanya produk PDAM
-        final pdamProducts = productResponse.products
-            .where((p) => p.brand.toUpperCase().contains('PDAM'))
+        // Filter hanya produk BPJS Ketenagakerjaan
+        final bpjsKetenagakerjaanProducts = productResponse.products
+            .where(
+              (p) =>
+                  p.brand.toUpperCase().contains('BPJS') &&
+                  p.brand.toUpperCase().contains('KETENAGAKERJAAN'),
+            )
             .toList();
 
-        print('📦 [PDAM] PDAM products fetched: ${pdamProducts.length}');
+        print(
+          '📦 [BPJS] BPJS Ketenagakerjaan products fetched: ${bpjsKetenagakerjaanProducts.length}',
+        );
 
         // Simpan ke cache
-        await _saveToCache(pdamProducts);
+        await _saveToCache(bpjsKetenagakerjaanProducts);
 
         if (mounted) {
           setState(() {
-            _allProducts = pdamProducts;
+            _allProducts = bpjsKetenagakerjaanProducts;
             _availableBrands =
                 _allProducts.map((p) => p.productName).toSet().toList()..sort();
           });
@@ -122,17 +129,22 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
             });
           }
 
-          print('✅ [PDAM] Products loaded: ${_availableBrands.length} brands');
+          print(
+            '✅ [BPJS] BPJS Ketenagakerjaan products loaded: ${_availableBrands.length} brands',
+          );
         }
       } else {
-        print('❌ [PDAM] Response status not 200: ${response.statusCode}');
+        print('❌ [BPJS] Response status not 200: ${response.statusCode}');
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [PDAM] Error loading products: $e');
-      print('❌ [PDAM] Error type: ${e.runtimeType}');
+      print('❌ [BPJS] Error loading products: $e');
+      print('❌ [BPJS] Error type: ${e.runtimeType}');
       if (mounted) {
-        _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
+        _showSnackbar(
+          'Error loading BPJS Ketenagakerjaan products: ${e.toString()}',
+          Colors.red,
+        );
       }
     }
   }
@@ -150,7 +162,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [PDAM] Error loading from cache: $e');
+      print('⚠️ [BPJS] Error loading from cache: $e');
     }
     return [];
   }
@@ -161,9 +173,9 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [PDAM] Saved ${products.length} products to cache');
+      print('💾 [BPJS] Saved ${products.length} products to cache');
     } catch (e) {
-      print('⚠️ [PDAM] Error saving to cache: $e');
+      print('⚠️ [BPJS] Error saving to cache: $e');
     }
   }
 
@@ -178,7 +190,10 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
     try {
       await _loadProducts(forceRefresh: true);
       if (mounted) {
-        _showSnackbar('Data PDAM berhasil diperbarui', Colors.green);
+        _showSnackbar(
+          'Data BPJS Ketenagakerjaan berhasil diperbarui',
+          Colors.green,
+        );
       }
     } finally {
       if (mounted) {
@@ -236,7 +251,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
-                            Icons.water_drop,
+                            Icons.phone_android,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -247,7 +262,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Pilih PDAM',
+                                'Pilih Provider',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -255,7 +270,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                                 ),
                               ),
                               Text(
-                                'Pilih daerah PDAM Anda',
+                                'Pilih provider Bpjs Ketenagakerjaan',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.white70,
@@ -290,7 +305,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                                   color: Colors.white,
                                   size: 24,
                                 ),
-                          tooltip: 'Refresh daftar PDAM',
+                          tooltip: 'Refresh daftar provider',
                         ),
                       ],
                     ),
@@ -309,7 +324,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                         });
                       },
                       decoration: InputDecoration(
-                        hintText: 'Cari daerah PDAM....',
+                        hintText: 'Cari provider....',
                         hintStyle: TextStyle(color: Colors.grey[400]),
                         prefixIcon: Icon(Icons.search, color: primaryColor),
                         border: OutlineInputBorder(
@@ -348,7 +363,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
-                                    'PDAM tidak ditemukan',
+                                    'Provider tidak ditemukan',
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: Colors.grey[600],
@@ -398,36 +413,35 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                                       child: Row(
                                         children: [
                                           Container(
-                                            width: 60,
-                                            height: 60,
+                                            padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
                                               color: primaryColor.withOpacity(
                                                 0.1,
                                               ),
                                               borderRadius:
-                                                  BorderRadius.circular(12),
+                                                  BorderRadius.circular(10),
                                             ),
                                             child: Icon(
-                                              Icons.water_drop,
+                                              Icons.phone_android,
                                               color: primaryColor,
-                                              size: 32,
+                                              size: 24,
                                             ),
                                           ),
-                                          const SizedBox(width: 16),
+                                          const SizedBox(width: 12),
                                           Expanded(
                                             child: Text(
                                               productName,
                                               style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
                                                 color: Colors.black87,
                                               ),
                                             ),
                                           ),
                                           Icon(
-                                            Icons.chevron_right,
-                                            color: primaryColor,
-                                            size: 28,
+                                            Icons.arrow_forward_ios,
+                                            size: 16,
+                                            color: Colors.grey[400],
                                           ),
                                         ],
                                       ),
@@ -438,6 +452,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                             },
                           ),
                   ),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),
@@ -449,39 +464,42 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    print('🏢 [PDAM] Brand selected: $productName');
+    print('📌 [HP] Brand selected: $productName');
 
-    setState(() {
-      _selectedBrand = productName;
-      _products = _allProducts
-          .where((p) => p.productName == productName)
-          .toList();
+    // Filter products berdasarkan product_name yang dipilih
+    final brandProducts = _allProducts
+        .where((p) => p.productName == productName)
+        .toList();
 
-      // Auto select first product
-      if (_products.isNotEmpty) {
-        _selectedProduct = _products.first;
-        print(
-          '✅ [PDAM] Auto-selected product: ${_selectedProduct!.productName}',
-        );
-      }
-    });
+    if (brandProducts.isNotEmpty) {
+      setState(() {
+        _selectedBrand = productName;
+        _products = brandProducts;
+        _selectedProduct = brandProducts.first; // Auto select pertama
+      });
+
+      print(
+        '✅ [HP] Selected: $_selectedBrand with ${_products.length} products',
+      );
+      print('✅ [HP] Auto-selected product: ${_selectedProduct!.buyerSkuCode}');
+    }
   }
 
-  // Cek Tagihan menggunakan widget global
+  // Cek Tagihan
   Future<void> _checkBill() async {
-    print('🔍 [PDAM] _checkBill called');
-    print('🔍 [PDAM] Selected Product: $_selectedProduct');
-    print('🔍 [PDAM] Customer ID: ${_customerIdController.text}');
+    print('🔍 [HP] _checkBill called');
+    print('🔍 [HP] Selected Product: $_selectedProduct');
+    print('🔍 [HP] Customer ID: ${_customerIdController.text}');
 
     if (_selectedProduct == null) {
-      print('⚠️ [PDAM] No product selected');
-      _showSnackbar('Pilih PDAM terlebih dahulu', Colors.orange);
+      print('⚠️ [HP] No product selected');
+      _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [PDAM] Customer ID is empty');
-      _showSnackbar('Masukkan ID pelanggan terlebih dahulu', Colors.orange);
+      print('⚠️ [HP] Customer ID is empty');
+      _showSnackbar('Masukkan nomor terlebih dahulu', Colors.orange);
       return;
     }
 
@@ -489,13 +507,13 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       // Get admin ID from AppConfig
       final adminUserId = int.parse(appConfig.adminId);
 
-      print('📝 [PDAM] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [PDAM] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [PDAM] Brand: ${_selectedProduct!.brand}');
-      print('📝 [PDAM] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      print('📝 [HP] Admin User ID (from AppConfig): $adminUserId');
+      print('📝 [HP] Product Name: ${_selectedProduct!.productName}');
+      print('📝 [HP] Brand: ${_selectedProduct!.brand}');
+      print('📝 [HP] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
 
-      // Show bottom sheet cek tagihan (gunakan widget global)
-      print('🚀 [PDAM] Showing CekTagihan bottom sheet...');
+      // Show bottom sheet cek tagihan
+      print('🚀 [HP] Showing CekTagihan bottom sheet...');
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -507,17 +525,16 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [PDAM] Bill Data Response: $billData');
+      print('📥 [HP] Bill Data Response: $billData');
 
-      // Bottom sheet ditutup, tidak perlu action lagi di sini
       if (billData != null) {
-        print('✅ [PDAM] Bill data received from bottom sheet');
+        print('✅ [HP] Bill data received from bottom sheet');
       } else {
-        print('ℹ️ [PDAM] User cancelled the bill check');
+        print('ℹ️ [HP] User cancelled the bill check');
       }
     } catch (e) {
-      print('❌ [PDAM] Error in _checkBill: $e');
-      print('❌ [PDAM] Error type: ${e.runtimeType}');
+      print('❌ [HP] Error in _checkBill: $e');
+      print('❌ [HP] Error type: ${e.runtimeType}');
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -537,9 +554,123 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
     );
   }
 
+  Future<void> _pickContact() async {
+    try {
+      // Request contacts permission
+      final status = await Permission.contacts.request();
+
+      if (status.isDenied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Izin akses kontak diperlukan'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Izin Kontak Diperlukan'),
+              content: const Text(
+                'Aplikasi memerlukan akses kontak untuk memilih nomor BPJS Ketenagakerjaan. '
+                'Silakan aktifkan izin kontak di pengaturan aplikasi.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: const Text('Buka Pengaturan'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      // Pick a contact
+      final contact = await FlutterContacts.openExternalPick();
+
+      if (contact != null && mounted) {
+        // Get the full contact details including phone numbers
+        final fullContact = await FlutterContacts.getContact(
+          contact.id,
+          withProperties: true,
+        );
+
+        if (fullContact != null && fullContact.phones.isNotEmpty) {
+          // Clean the phone number (remove spaces, dashes, parentheses)
+          String phoneNumber = fullContact.phones.first.number.replaceAll(
+            RegExp(r'[\s\-\(\)\+]'),
+            '',
+          );
+
+          // Remove country code if starts with 62
+          if (phoneNumber.startsWith('62')) {
+            phoneNumber = '0${phoneNumber.substring(2)}';
+          }
+          // Remove +62
+          else if (phoneNumber.startsWith('+62')) {
+            phoneNumber = '0${phoneNumber.substring(3)}';
+          }
+          // Ensure starts with 0
+          else if (!phoneNumber.startsWith('0')) {
+            phoneNumber = '0$phoneNumber';
+          }
+
+          setState(() {
+            _customerIdController.text = phoneNumber;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Kontak dipilih: ${fullContact.displayName} - $phoneNumber',
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Kontak tidak memiliki nomor telepon'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka kontak: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _scanBarcode() async {
     try {
-      // Request camera permission - will show system dialog automatically
       final status = await Permission.camera.request();
 
       if (status.isDenied) {
@@ -557,7 +688,6 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
       if (status.isPermanentlyDenied) {
         if (mounted) {
-          // Show dialog to open settings
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
@@ -585,7 +715,6 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
         return;
       }
 
-      // Permission granted, proceed with scanning
       final result = await Navigator.push<String>(
         context,
         MaterialPageRoute(builder: (context) => const _BarcodeScannerScreen()),
@@ -598,7 +727,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('ID Pelanggan: $result'),
+            content: Text('Nomor BPJS Ketenagakerjaan: $result'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 2),
           ),
@@ -635,7 +764,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       backgroundColor: const Color(0xFFF5F7F9),
       appBar: AppBar(
         title: const Text(
-          'PDAM Pascabayar',
+          'Bpjs Ketenagakerjaan',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -653,7 +782,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await _loadProducts();
+          await _loadProducts(forceRefresh: true);
         },
         color: primaryColor,
         child: SingleChildScrollView(
@@ -661,7 +790,11 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
           child: Column(
             children: [
               _buildHeaderCard(primaryColor),
-              _buildCustomerIdInput(primaryColor),
+              if (_selectedProduct != null) ...[
+                _buildSelectedBrandInfo(primaryColor),
+                _buildCustomerIdInput(primaryColor),
+              ] else
+                _buildNoBrandSelected(primaryColor),
             ],
           ),
         ),
@@ -694,7 +827,11 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.water_drop, color: Colors.white, size: 32),
+            child: const Icon(
+              Icons.phone_android,
+              color: Colors.white,
+              size: 32,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -702,7 +839,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'PDAM Pascabayar',
+                  'Bpjs Ketenagakerjaan',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -711,9 +848,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _selectedBrand.isNotEmpty
-                      ? _selectedBrand
-                      : 'Bayar tagihan air Anda',
+                  'Bayar tagihan Bpjs Ketenagakerjaan',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     fontSize: 13,
@@ -722,22 +857,120 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
               ],
             ),
           ),
-          if (_selectedBrand.isNotEmpty)
-            InkWell(
-              onTap: _showBrandSelectionDialog,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedBrandInfo(Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.phone_android, color: primaryColor, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Provider Dipilih',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                child: const Icon(
-                  Icons.swap_horiz,
-                  color: Colors.white,
-                  size: 24,
+                const SizedBox(height: 4),
+                Text(
+                  _selectedBrand,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _showBrandSelectionDialog,
+            style: TextButton.styleFrom(
+              foregroundColor: primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: const Text(
+              'Ganti',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoBrandSelected(Color primaryColor) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.phone_android_outlined, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            'Pilih Provider Terlebih Dahulu',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Klik tombol dibawah untuk memilih provider Bpjs Ketenagakerjaan',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _showBrandSelectionDialog,
+            icon: const Icon(Icons.location_on),
+            label: const Text('Pilih Provider'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -789,7 +1022,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'ID Pelanggan',
+                    'Nomor Bpjs Ketenagakerjaan',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -797,7 +1030,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
                     ),
                   ),
                   Text(
-                    'Masukkan nomor pelanggan PDAM',
+                    'Masukkan nomor Bpjs Ketenagakerjaan',
                     style: TextStyle(fontSize: 11, color: Colors.grey),
                   ),
                 ],
@@ -805,68 +1038,70 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
             ],
           ),
           const SizedBox(height: 15),
+          TextField(
+            controller: _customerIdController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              letterSpacing: 0.5,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Contoh: 500000100001',
+              hintStyle: TextStyle(
+                color: Colors.grey[400],
+                fontWeight: FontWeight.normal,
+              ),
+              counterText: '',
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: primaryColor, width: 2.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _customerIdController,
-                  keyboardType: TextInputType.text,
-                  maxLength: 20,
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                    letterSpacing: 0.5,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Contoh: 123456789',
-                    hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontWeight: FontWeight.normal,
-                    ),
-                    counterText: '',
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: Colors.grey[200]!,
-                        width: 1.5,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: primaryColor, width: 2.5),
+                child: OutlinedButton.icon(
+                  onPressed: _pickContact,
+                  icon: Icon(Icons.contacts, size: 20),
+                  label: const Text('Kontak'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              InkWell(
-                onTap: _scanBarcode,
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor, primaryColor.withOpacity(0.7)],
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _scanBarcode,
+                  icon: Icon(Icons.qr_code_scanner, size: 20),
+                  label: const Text('Scan Barcode'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryColor,
+                    side: BorderSide(color: primaryColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: primaryColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.qr_code_scanner,
-                    color: Colors.white,
-                    size: 28,
                   ),
                 ),
               ),
@@ -944,7 +1179,6 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
-
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
@@ -1023,16 +1257,7 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
 
               // Dark overlay with transparent center
               Positioned.fill(
-                child: CustomPaint(
-                  painter: _ScannerOverlayPainter(
-                    scanRect: Rect.fromLTWH(
-                      scanAreaLeft,
-                      scanAreaTop,
-                      scanAreaSize,
-                      scanAreaSize,
-                    ),
-                  ),
-                ),
+                child: CustomPaint(painter: _ScannerOverlayPainter()),
               ),
 
               // Scanner frame and UI
@@ -1093,7 +1318,7 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
                   ),
                   child: Column(
                     children: [
-                      Text(
+                      const Text(
                         'Arahkan Kamera ke Barcode',
                         style: TextStyle(
                           color: Colors.white,
@@ -1126,7 +1351,6 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
   List<Widget> _buildCornerBrackets(Color color, double scanAreaSize) {
     final double size = scanAreaSize * 0.15;
     final double thickness = 4.0;
-
     return [
       // Top-left
       Positioned(
@@ -1153,7 +1377,6 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
           ),
         ),
       ),
-
       // Top-right
       Positioned(
         top: 0,
@@ -1179,7 +1402,6 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
           ),
         ),
       ),
-
       // Bottom-left
       Positioned(
         bottom: 0,
@@ -1209,7 +1431,6 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
           ),
         ),
       ),
-
       // Bottom-right
       Positioned(
         bottom: 0,
@@ -1241,16 +1462,19 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
       ),
     ];
   }
+
+  // (Removed duplicate and broken _buildCornerBrackets and stray widget code)
 }
 
-// Custom painter for scanner overlay
 class _ScannerOverlayPainter extends CustomPainter {
-  final Rect scanRect;
-  _ScannerOverlayPainter({required this.scanRect});
-
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.black.withOpacity(0.6);
+
+    const scanAreaSize = 280.0;
+    final left = (size.width - scanAreaSize) / 2;
+    final top = (size.height - scanAreaSize) / 2;
+    final scanRect = Rect.fromLTWH(left, top, scanAreaSize, scanAreaSize);
 
     final path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))

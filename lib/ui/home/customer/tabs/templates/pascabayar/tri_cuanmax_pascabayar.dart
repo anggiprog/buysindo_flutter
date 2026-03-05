@@ -90,6 +90,10 @@ class _TriCuanMaxPascabayarPageState extends State<TriCuanMaxPascabayarPage> {
           return;
         }
         if (!mounted) return;
+        final markupMember =
+            int.tryParse(triProduct['markup_member']?.toString() ?? '0') ?? 0;
+        final adminFee =
+            int.tryParse(triProduct['admin_fee']?.toString() ?? '0') ?? 0;
         await CekTagihanPascabayar.showCekTagihan(
           context: context,
           productName: triProduct['product_name'] ?? 'Tri CuanMax Pascabayar',
@@ -97,6 +101,8 @@ class _TriCuanMaxPascabayarPageState extends State<TriCuanMaxPascabayarPage> {
           buyerSkuCode: triProduct['buyer_sku_code'] ?? '',
           adminUserId: adminUserId,
           cachedCustomerNo: _customerIdController.text,
+          markupMember: markupMember,
+          adminFee: adminFee,
         );
       } else {
         _showSnackbar('Gagal mengambil produk Tri CuanMax.', Colors.red);

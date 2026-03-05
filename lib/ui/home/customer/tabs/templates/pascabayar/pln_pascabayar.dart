@@ -135,6 +135,8 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
 
       // Show bottom sheet cek tagihan
       print('🚀 [PLN] Showing CekTagihan bottom sheet...');
+      print('📝 [PLN] Markup Member: ${_selectedProduct!.markupMember}');
+      print('📝 [PLN] Admin Fee: ${_selectedProduct!.adminFee}');
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -142,6 +144,8 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
       print('📥 [PLN] Bill Data Response: $billData');

@@ -11,6 +11,7 @@ import '../../../../topup/topup_manual.dart';
 import '../../../../topup/topup_otomatis.dart';
 import '../../../../../../features/customer/data/models/transaction_pascabayar_model.dart';
 import '../transaction_pascabayar_detail_page.dart';
+import '../../transaction_history_tab.dart';
 
 /// Widget global untuk cek tagihan pascabayar
 /// Dapat digunakan untuk PLN, BPJS, Telkom, dll
@@ -24,6 +25,8 @@ class CekTagihanPascabayar {
     required int adminUserId,
     String? cachedCustomerNo,
     int? amount,
+    int? markupMember,
+    int? adminFee,
   }) async {
     return await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -36,6 +39,8 @@ class CekTagihanPascabayar {
         adminUserId: adminUserId,
         cachedCustomerNo: cachedCustomerNo,
         amount: amount,
+        markupMember: markupMember,
+        adminFee: adminFee,
       ),
     );
   }
@@ -48,6 +53,8 @@ class _CekTagihanBottomSheet extends StatefulWidget {
   final int adminUserId;
   final String? cachedCustomerNo;
   final int? amount;
+  final int? markupMember;
+  final int? adminFee;
 
   const _CekTagihanBottomSheet({
     required this.productName,
@@ -56,6 +63,8 @@ class _CekTagihanBottomSheet extends StatefulWidget {
     required this.adminUserId,
     this.cachedCustomerNo,
     this.amount,
+    this.markupMember,
+    this.adminFee,
   });
 
   @override
@@ -202,6 +211,23 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           buyerSkuCode: widget.buyerSkuCode,
           token: token,
         );
+      } else if (brandUpper.contains('BPJS') &&
+          brandUpper.contains('KETENAGAKERJAAN')) {
+        print('🔵 [BPJS-TK] Calling BPJS Ketenagakerjaan API...');
+        print('   - adminUserId: ${widget.adminUserId}');
+        print('   - customerNo: ${_customerNoController.text.trim()}');
+        print('   - productName: ${widget.productName}');
+        print('   - brand: ${widget.brand}');
+        print('   - buyerSkuCode: ${widget.buyerSkuCode}');
+        response = await _apiService.checkBpjsKetenagakerjaanBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
+        print('🔵 [BPJS-TK] Response received: ${response.data}');
       } else if (brandUpper.contains('BPJS')) {
         response = await _apiService.checkBpjsBill(
           adminUserId: widget.adminUserId,
@@ -267,6 +293,17 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           buyerSkuCode: widget.buyerSkuCode,
           token: token,
         );
+      } else if (brandUpper.contains('NONTAGLIS')) {
+        // PLN NONTAGLIS uses different endpoint
+        print('🔌 [CekTagihan] Using PLN NONTAGLIS endpoint...');
+        response = await _apiService.checkPlnNontaglisBill(
+          adminUserId: widget.adminUserId,
+          customerNo: _customerNoController.text.trim(),
+          productName: widget.productName,
+          brand: widget.brand,
+          buyerSkuCode: widget.buyerSkuCode,
+          token: token,
+        );
       } else {
         response = await _apiService.checkPascabayarBill(
           adminUserId: widget.adminUserId,
@@ -280,13 +317,93 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
 
       print('📥 [CekTagihan] Response received');
       print('   - Status Code: ${response.statusCode}');
+      print('   - Response Data Type: ${response.data.runtimeType}');
       print('   - Response Data: ${response.data}');
+
+      // Debug PLN NONTAGLIS specific
+      if (brandUpper.contains('NONTAGLIS')) {
+        print('🔌 [PLN NONTAGLIS] Processing PLN NONTAGLIS response...');
+        print('   - price: ${response.data['price']}');
+        print('   - selling_price: ${response.data['selling_price']}');
+        print('   - admin: ${response.data['admin']}');
+        print('   - status: ${response.data['status']}');
+        print('   - transaksi_type: ${response.data['transaksi_type']}');
+      }
 
       if (response.statusCode == 200) {
         final responseData = response.data;
 
+        // PATCH: Logic sukses untuk PLN NONTAGLIS (different response format)
+        if (brandUpper.contains('NONTAGLIS')) {
+          final hasStatus = responseData.containsKey('status');
+          final isStatusSuccess =
+              hasStatus && responseData['status'] == 'success';
+
+          if (isStatusSuccess) {
+            print('✅ [PLN NONTAGLIS] Status is success, building bill data...');
+
+            // PLN NONTAGLIS uses different field names:
+            // - price -> tagihan (base amount)
+            // - admin -> admin
+            // - total_tagihan = price + admin (NOT selling_price)
+            // Display will add markupMember on top
+            final price = responseData['price'] ?? 0;
+            final admin = responseData['admin'] ?? 0;
+            final totalTagihan =
+                price + admin; // Calculate total = price + admin
+
+            print('📋 [PLN NONTAGLIS] price: $price');
+            print('📋 [PLN NONTAGLIS] admin: $admin');
+            print(
+              '📋 [PLN NONTAGLIS] totalTagihan (price + admin): $totalTagihan',
+            );
+
+            final billData = {
+              'customer_name': responseData['customer_name'],
+              'customer_no': responseData['customer_no'],
+              'periode':
+                  responseData['tgl_registrasi'], // Use tgl_registrasi as periode
+              'tagihan': price, // Map price to tagihan
+              'admin': admin,
+              'denda': 0, // No denda for NONTAGLIS
+              'total_tagihan': totalTagihan, // price + admin
+              'lembar_tagihan': responseData['lembar_tagihan'] ?? 1,
+              'ref_id': responseData['ref_id'],
+              'product_name': responseData['product_name'],
+              'buyer_sku_code': responseData['buyer_sku_code'],
+              'brand': responseData['brand'],
+              'biaya_lain': null,
+              'alamat': null,
+              'jumlah_peserta': null,
+              // Additional NONTAGLIS fields
+              'transaksi_type': responseData['transaksi_type'],
+              'no_registrasi': responseData['no_registrasi'],
+              'tgl_registrasi': responseData['tgl_registrasi'],
+              'sn': responseData['sn'],
+            };
+
+            print('📋 [PLN NONTAGLIS] Bill Data created: $billData');
+
+            await _cacheCustomerNo(_customerNoController.text.trim());
+
+            if (mounted) {
+              setState(() {
+                _billData = billData;
+                _isLoading = false;
+              });
+
+              print('✅ [PLN NONTAGLIS] Bill data set in state');
+              _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+            }
+          } else {
+            print('❌ [PLN NONTAGLIS] Status is not success');
+            throw Exception(
+              responseData['message'] ?? 'Gagal mengambil tagihan',
+            );
+          }
+        }
         // PATCH: Logic sukses untuk E-Money
-        if (brandUpper.contains('E-MONEY')) {
+        else if (brandUpper.contains('E-MONEY')) {
           // Parsing sesuai hasil Postman
           final billData = {
             'customer_name': responseData['customer_name'],
@@ -316,12 +433,17 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
           }
         } else {
-          // PATCH: Logic sukses untuk HP Pascabayar dan Multifinance
+          // PATCH: Logic sukses untuk HP Pascabayar, Multifinance, Internet Pascabayar, dan BPJS Ketenagakerjaan
           final hasStatus = responseData.containsKey('status');
           final isStatusSuccess =
               hasStatus && responseData['status'] == 'success';
           final isHpPascabayar = brandUpper.contains('HP');
           final isMultifinance = brandUpper.contains('MULTIFINANCE');
+          final isInternetPascabayar = brandUpper.contains('INTERNET');
+          final isBpjsKetenagakerjaan =
+              brandUpper.contains('BPJS') &&
+              brandUpper.contains('KETENAGAKERJAAN');
+          final isPLNNontaglis = brandUpper.contains('NONTAGLIS');
           final isHpSuccess =
               isHpPascabayar &&
               !hasStatus &&
@@ -332,10 +454,38 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               !hasStatus &&
               responseData['tagihan'] != null &&
               responseData['total_tagihan'] != null;
+          final isInternetSuccess =
+              isInternetPascabayar &&
+              !hasStatus &&
+              responseData['tagihan'] != null &&
+              responseData['total_tagihan'] != null;
+          final isBpjsKetenagakerjaanSuccess =
+              isBpjsKetenagakerjaan &&
+              !hasStatus &&
+              responseData['tagihan'] != null &&
+              responseData['total_tagihan'] != null;
 
-          if (isStatusSuccess || isHpSuccess || isMultifinanceSuccess) {
+          // Debug validation flags
+          print('🔍 [CekTagihan] Validation flags:');
+          print('   - hasStatus: $hasStatus');
+          print('   - isStatusSuccess: $isStatusSuccess');
+          print('   - isPLNNontaglis: $isPLNNontaglis');
+          print('   - isHpPascabayar: $isHpPascabayar');
+          print('   - isMultifinance: $isMultifinance');
+          print('   - isInternetPascabayar: $isInternetPascabayar');
+          print('   - isInternetSuccess: $isInternetSuccess');
+          print('   - isBpjsKetenagakerjaan: $isBpjsKetenagakerjaan');
+          print(
+            '   - isBpjsKetenagakerjaanSuccess: $isBpjsKetenagakerjaanSuccess',
+          );
+
+          if (isStatusSuccess ||
+              isHpSuccess ||
+              isMultifinanceSuccess ||
+              isInternetSuccess ||
+              isBpjsKetenagakerjaanSuccess) {
             print(
-              '✅ [CekTagihan] Status is success (status field/HP/Multifinance logic), building bill data...',
+              '✅ [CekTagihan] Status is success (status field/HP/Multifinance/Internet/BPJSKetenagakerjaan logic), building bill data...',
             );
 
             final billData = {
@@ -368,10 +518,14 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               });
 
               print('✅ [CekTagihan] Bill data set in state');
+              print('✅ [CekTagihan] _billData is null: ${_billData == null}');
+              print('✅ [CekTagihan] _isLoading: $_isLoading');
+              print('✅ [CekTagihan] UI should now display bill details');
               _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
             }
           } else {
             print('❌ [CekTagihan] Status is not success');
+            print('❌ [CekTagihan] responseData: $responseData');
             throw Exception(
               responseData['message'] ?? 'Gagal mengambil tagihan',
             );
@@ -473,7 +627,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
   Future<void> _processPayment() async {
     if (_billData == null) return;
 
-    // Cek saldo cukup atau tidak
+    // Cek saldo cukup atau tidak (gunakan total asli, markup hanya untuk tampilan)
     final totalTagihan = _billData?['total_tagihan'] ?? 0;
     if (_saldo < totalTagihan) {
       _showSnackbar('Saldo tidak mencukupi', Colors.red);
@@ -611,12 +765,16 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
       print('🚀 [Payment] Processing transaction...');
       print('   - PIN: ${pin.substring(0, 2)}****');
       print(
-        '   - Total: Rp ${_formatCurrency(_billData?['total_tagihan'] ?? 0)}',
+        '   - Total Tagihan (display): Rp ${_formatCurrency((_billData?['total_tagihan'] ?? 0) + (widget.markupMember ?? 0))}',
+      );
+      print(
+        '   - Total Tagihan (potong saldo): Rp ${_formatCurrency(_billData?['total_tagihan'] ?? 0)}',
       );
       print('   - Ref ID: ${_billData?['ref_id'] ?? '-'}');
       print('   - Admin User ID: ${widget.adminUserId}');
       print('   - Customer No: ${_billData?['customer_no'] ?? '-'}');
       print('   - Brand: ${_billData?['brand'] ?? '-'}');
+      print('   - Markup Member (keuntungan): ${widget.markupMember ?? 0}');
 
       print('📤 [Payment] Sending API request...');
       final response = await _apiService.processPascabayarTransaction(
@@ -633,6 +791,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
         productName: _billData?['product_name'] ?? '',
         buyerSkuCode: _billData?['buyer_sku_code'] ?? '',
         token: token,
+        markupMember: widget.markupMember,
       );
 
       print('📥 [Payment] Response received!');
@@ -662,7 +821,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 children: [
                   Icon(Icons.check_circle, color: Colors.green, size: 28),
                   SizedBox(width: 12),
-                  Text('Transaksi Berhasil'),
+                  Flexible(child: Text('Transaksi Berhasil')),
                 ],
               ),
               content: Column(
@@ -693,6 +852,10 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               actions: [
                 TextButton(
                   onPressed: () {
+                    // Trigger refresh di transaction history
+                    TransactionHistoryTab.clearPascabayarCache();
+                    TransactionHistoryTab.triggerRefresh();
+
                     Navigator.pop(ctx); // Close success dialog
                     Navigator.pop(
                       context,
@@ -703,6 +866,10 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
+                    // Trigger refresh di transaction history
+                    TransactionHistoryTab.clearPascabayarCache();
+                    TransactionHistoryTab.triggerRefresh();
+
                     Navigator.pop(ctx); // Close success dialog
                     Navigator.pop(context); // Close bottom sheet
 
@@ -717,9 +884,14 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                       customerNo: _billData?['customer_no'] ?? '',
                       customerName: _billData?['customer_name'] ?? '',
                       nilaiTagihan: _billData?['tagihan']?.toString() ?? '0',
-                      admin: _billData?['admin']?.toString() ?? '0',
+                      admin:
+                          ((_billData?['admin'] ?? 0) +
+                                  (widget.markupMember ?? 0))
+                              .toString(),
                       totalPembayaranUser:
-                          _billData?['total_tagihan']?.toString() ?? '0',
+                          ((_billData?['total_tagihan'] ?? 0) +
+                                  (widget.markupMember ?? 0))
+                              .toString(),
                       periode: (_billData?['periode'] ?? '').toString(),
                       denda: _billData?['denda']?.toString() ?? '0',
                       status: responseData['status'] ?? 'Sukses',
@@ -1071,6 +1243,13 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
   }
 
   Widget _buildBillDetails(Color primaryColor) {
+    print('🎨 [UI] _buildBillDetails called');
+    print('🎨 [UI] _billData: $_billData');
+    print('🎨 [UI] tagihan: ${_billData?['tagihan']}');
+    print('🎨 [UI] total_tagihan: ${_billData?['total_tagihan']}');
+    print('🎨 [UI] admin: ${_billData?['admin']}');
+    print('🎨 [UI] markupMember: ${widget.markupMember}');
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1214,9 +1393,22 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   amount: _billData?['tagihan'] ?? 0,
                 ),
                 const SizedBox(height: 8),
+                // Debug print for Admin calculation
+                Builder(
+                  builder: (context) {
+                    final adminFromApi = _billData?['admin'] ?? 0;
+                    final markupMember = widget.markupMember ?? 0;
+                    final adminTotal = adminFromApi + markupMember;
+                    print('💰 [Admin Calc] adminFromApi: $adminFromApi');
+                    print('💰 [Admin Calc] markupMember: $markupMember');
+                    print('💰 [Admin Calc] adminTotal: $adminTotal');
+                    return const SizedBox.shrink();
+                  },
+                ),
                 _buildCompactAmountRow(
                   label: 'Admin',
-                  amount: _billData?['admin'] ?? 0,
+                  amount:
+                      (_billData?['admin'] ?? 0) + (widget.markupMember ?? 0),
                 ),
                 const SizedBox(height: 8),
                 _buildCompactAmountRow(
@@ -1258,7 +1450,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                         ),
                       ),
                       Text(
-                        'Rp ${_formatCurrency(_billData?['total_tagihan'] ?? 0)}',
+                        'Rp ${_formatCurrency((_billData?['total_tagihan'] ?? 0) + (widget.markupMember ?? 0))}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1342,8 +1534,10 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
   }
 
   Widget _buildConfirmButton(Color primaryColor) {
-    final totalTagihan = _billData?['total_tagihan'] ?? 0;
-    final isSaldoCukup = _saldo >= totalTagihan;
+    // Cek saldo: gunakan total asli (yang dipotong dari saldo)
+    // Markup member hanya untuk tampilan, tidak dipotong dari saldo
+    final totalTagihanPotong = _billData?['total_tagihan'] ?? 0;
+    final isSaldoCukup = _saldo >= totalTagihanPotong;
 
     return Column(
       children: [

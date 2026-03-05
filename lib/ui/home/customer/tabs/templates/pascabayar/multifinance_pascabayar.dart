@@ -639,6 +639,8 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
       print('📥 [MULTIFINANCE] Bill Data Response: $billData');
@@ -982,7 +984,8 @@ class _BarcodeScannerScreen extends StatefulWidget {
   State<_BarcodeScannerScreen> createState() => _BarcodeScannerScreenState();
 }
 
-class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> with SingleTickerProviderStateMixin {
+class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen>
+    with SingleTickerProviderStateMixin {
   MobileScannerController cameraController = MobileScannerController();
   bool _isProcessing = false;
   late AnimationController _animationController;
@@ -1062,8 +1065,8 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> with Singl
         builder: (context, constraints) {
           final double scanAreaSize =
               constraints.maxWidth < constraints.maxHeight
-                  ? constraints.maxWidth * 0.7
-                  : constraints.maxHeight * 0.4;
+              ? constraints.maxWidth * 0.7
+              : constraints.maxHeight * 0.4;
           final double scanAreaLeft = (constraints.maxWidth - scanAreaSize) / 2;
           final double scanAreaTop = (constraints.maxHeight - scanAreaSize) / 2;
 
@@ -1080,7 +1083,11 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> with Singl
               // Dark overlay with transparent center
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _ScannerOverlayPainter(scanAreaLeft, scanAreaTop, scanAreaSize),
+                  painter: _ScannerOverlayPainter(
+                    scanAreaLeft,
+                    scanAreaTop,
+                    scanAreaSize,
+                  ),
                 ),
               ),
 
@@ -1308,4 +1315,3 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

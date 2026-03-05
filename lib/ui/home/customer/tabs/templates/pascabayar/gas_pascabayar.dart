@@ -669,6 +669,8 @@ class _GasPascabayarState extends State<GasPascabayar> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
       if (billData != null) {
         // Success, do nothing (handled in bottom sheet)
@@ -945,6 +947,4 @@ class _GasPascabayarState extends State<GasPascabayar> {
       ),
     );
   }
-
- 
 }

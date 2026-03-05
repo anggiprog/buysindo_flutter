@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:share_plus/share_plus.dart';
@@ -33,6 +34,10 @@ class _TransactionPascabayarDetailPageState
   bool _isLoading = true;
   final GlobalKey _receiptKey = GlobalKey();
 
+  // Auto-refresh timer for pending status
+  Timer? _statusRefreshTimer;
+  bool _isRefreshingStatus = false;
+
   // Editable admin fee
   late TextEditingController _adminController;
   bool _isEditingAdmin = false;
@@ -46,31 +51,166 @@ class _TransactionPascabayarDetailPageState
     _apiService = ApiService(Dio());
     _transaction = widget.transaction;
 
-    // Calculate markup admin (adminfee)
-    final nilaiTagihan =
-        int.tryParse(_transaction.nilaiTagihan.toString()) ?? 0;
+    // Get base values
     final adminBase = int.tryParse(_transaction.admin.toString()) ?? 0;
-    final denda = int.tryParse(_transaction.denda.toString()) ?? 0;
     final totalPembayaran =
         int.tryParse(_transaction.totalPembayaranUser.toString()) ?? 0;
+    final markupMember = _transaction.markupMember;
+    final totalPembayaranAdmin = _transaction.totalPembayaranAdmin;
 
-    // adminfee (markup) = totalPembayaranUser - (nilaiTagihan + admin + denda)
-    final markupAdmin = totalPembayaran - (nilaiTagihan + adminBase + denda);
+    // Debug logging
+    debugPrint('📊 [PascabayarDetail] adminBase: $adminBase');
+    debugPrint('📊 [PascabayarDetail] totalPembayaran: $totalPembayaran');
+    debugPrint('📊 [PascabayarDetail] markupMember: $markupMember');
+    debugPrint(
+      '📊 [PascabayarDetail] totalPembayaranAdmin: $totalPembayaranAdmin',
+    );
 
-    // Admin field shows: admin + adminfee (markup)
-    _currentAdminFee = adminBase + markupAdmin;
+    // Admin field shows: admin + markupMember + totalPembayaranAdmin
+    _currentAdminFee = adminBase + markupMember + totalPembayaranAdmin;
     _adminController = TextEditingController(text: _currentAdminFee.toString());
 
-    // Use totalPembayaranUser from transaction
-    _currentTotal = totalPembayaran;
+    // Total shows: totalPembayaran + markupMember
+    // Note: totalPembayaranAdmin sudah termasuk dalam totalPembayaran
+    _currentTotal = totalPembayaran + markupMember;
+
+    debugPrint('📊 [PascabayarDetail] _currentAdminFee: $_currentAdminFee');
+    debugPrint('📊 [PascabayarDetail] _currentTotal: $_currentTotal');
 
     _loadStoreInfo();
+    _startStatusRefreshTimer();
   }
 
   @override
   void dispose() {
+    _stopStatusRefreshTimer();
     _adminController.dispose();
     super.dispose();
+  }
+
+  // Auto-refresh timer methods for pending status
+  void _startStatusRefreshTimer() {
+    // Only start timer if status is pending
+    final status = _transaction.status.toLowerCase();
+    if (status == 'pending') {
+      debugPrint(
+        '🔄 [StatusRefresh] Starting auto-refresh timer (every 3 seconds)',
+      );
+      _statusRefreshTimer = Timer.periodic(
+        const Duration(seconds: 3),
+        (_) => _refreshTransactionStatus(),
+      );
+    } else {
+      debugPrint(
+        '✅ [StatusRefresh] Status is "$status", no auto-refresh needed',
+      );
+    }
+  }
+
+  void _stopStatusRefreshTimer() {
+    if (_statusRefreshTimer != null) {
+      debugPrint('🛑 [StatusRefresh] Stopping auto-refresh timer');
+      _statusRefreshTimer?.cancel();
+      _statusRefreshTimer = null;
+    }
+  }
+
+  Future<void> _refreshTransactionStatus() async {
+    if (_isRefreshingStatus || !mounted) return;
+
+    _isRefreshingStatus = true;
+    debugPrint(
+      '🔄 [StatusRefresh] Refreshing transaction status for ref_id: ${_transaction.refId}',
+    );
+
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        debugPrint('⚠️ [StatusRefresh] Token not found');
+        _isRefreshingStatus = false;
+        return;
+      }
+
+      final response = await _apiService.getTransactionDetailPascabayar(token);
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        List<dynamic> transactions = [];
+
+        if (data is Map && data['data'] != null) {
+          transactions = data['data'] as List<dynamic>;
+        } else if (data is List) {
+          transactions = data;
+        }
+
+        // Find transaction by ref_id
+        final matchingTrx = transactions.firstWhere(
+          (trx) => trx['ref_id'] == _transaction.refId,
+          orElse: () => null,
+        );
+
+        if (matchingTrx != null) {
+          final newStatus = matchingTrx['status']?.toString() ?? '';
+          final oldStatus = _transaction.status;
+
+          debugPrint(
+            '🔄 [StatusRefresh] Old status: $oldStatus, New status: $newStatus',
+          );
+
+          if (newStatus.toLowerCase() != oldStatus.toLowerCase()) {
+            debugPrint('✅ [StatusRefresh] Status changed! Updating UI...');
+
+            // Update transaction with new status
+            final updatedTransaction = TransactionPascabayar.fromJson(
+              matchingTrx,
+            );
+
+            if (mounted) {
+              setState(() {
+                _transaction = TransactionPascabayar(
+                  id: updatedTransaction.id,
+                  userId: updatedTransaction.userId,
+                  refId: updatedTransaction.refId,
+                  brand: updatedTransaction.brand,
+                  buyerSkuCode: updatedTransaction.buyerSkuCode,
+                  customerNo: updatedTransaction.customerNo,
+                  customerName: updatedTransaction.customerName,
+                  nilaiTagihan: updatedTransaction.nilaiTagihan,
+                  admin: updatedTransaction.admin,
+                  totalPembayaranUser: updatedTransaction.totalPembayaranUser,
+                  periode: updatedTransaction.periode,
+                  denda: updatedTransaction.denda,
+                  status: updatedTransaction.status,
+                  daya: updatedTransaction.daya,
+                  lembarTagihan: updatedTransaction.lembarTagihan,
+                  meterAwal: updatedTransaction.meterAwal,
+                  meterAkhir: updatedTransaction.meterAkhir,
+                  createdAt: updatedTransaction.createdAt,
+                  sn: updatedTransaction.sn,
+                  productName: updatedTransaction.productName,
+                  namaToko: _transaction.namaToko, // Keep existing store name
+                  markupMember: updatedTransaction.markupMember,
+                );
+              });
+            }
+
+            // Stop timer if status is no longer pending
+            if (newStatus.toLowerCase() != 'pending') {
+              _stopStatusRefreshTimer();
+              debugPrint(
+                '✅ [StatusRefresh] Transaction completed, stopped auto-refresh',
+              );
+            }
+          }
+        } else {
+          debugPrint('⚠️ [StatusRefresh] Transaction not found in response');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ [StatusRefresh] Error: $e');
+    }
+
+    _isRefreshingStatus = false;
   }
 
   void _saveAdminFee() {
@@ -144,6 +284,7 @@ class _TransactionPascabayarDetailPageState
               sn: _transaction.sn,
               productName: _transaction.productName,
               namaToko: storeName,
+              markupMember: _transaction.markupMember,
             );
             _isLoading = false;
           });
@@ -1061,13 +1202,13 @@ class _BluetoothDeviceDiscoveryPageState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Cari Printer Bluetooth'),
-        backgroundColor: appConfig.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         elevation: 4,
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: appConfig.primaryColor,
-          statusBarBrightness: Brightness.dark,
-          statusBarIconBrightness: Brightness.light,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.white,
+          statusBarBrightness: Brightness.light,
+          statusBarIconBrightness: Brightness.dark,
         ),
       ),
       body: _isScanning

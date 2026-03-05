@@ -73,10 +73,6 @@ class _TransactionMutasiDetailPageState
             // Saldo Info Card
             _buildSaldoCard(),
             const SizedBox(height: 20),
-
-            // Fee Details Card
-            _buildFeeCard(),
-            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -238,48 +234,6 @@ class _TransactionMutasiDetailPageState
     );
   }
 
-  Widget _buildFeeCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Detail Biaya',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildFeeRow('Markup Admin', transaction.formattedMarkupAdmin),
-          const SizedBox(height: 12),
-          _buildFeeRow('Admin Fee', transaction.formattedAdminFee),
-          const SizedBox(height: 12),
-          Container(height: 1, color: Colors.grey[200]),
-          const SizedBox(height: 12),
-          _buildFeeRow(
-            'Total Biaya',
-            'Rp ${(transaction.markupAdmin + transaction.adminFee).toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}',
-            isBold: true,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildDetailRow(String label, String value, {bool isMono = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -324,30 +278,6 @@ class _TransactionMutasiDetailPageState
             color: color,
             fontSize: 14,
             fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeeRow(String label, String value, {bool isBold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.grey[700],
-            fontSize: 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.grey[800],
-            fontSize: 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
           ),
         ),
       ],

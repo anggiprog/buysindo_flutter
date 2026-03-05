@@ -534,6 +534,8 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
       print('📥 [InternetPascabayar] Bill Data Response: $billData');

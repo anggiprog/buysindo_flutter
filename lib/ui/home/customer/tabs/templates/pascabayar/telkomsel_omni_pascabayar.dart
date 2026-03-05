@@ -91,6 +91,16 @@ class _TelkomselOmniPascabayarPageState
           return;
         }
         if (!mounted) return;
+        final markupMember =
+            int.tryParse(
+              telkomselOmniProduct['markup_member']?.toString() ?? '0',
+            ) ??
+            0;
+        final adminFee =
+            int.tryParse(
+              telkomselOmniProduct['admin_fee']?.toString() ?? '0',
+            ) ??
+            0;
         await CekTagihanPascabayar.showCekTagihan(
           context: context,
           productName:
@@ -100,6 +110,8 @@ class _TelkomselOmniPascabayarPageState
           buyerSkuCode: telkomselOmniProduct['buyer_sku_code'] ?? '',
           adminUserId: adminUserId,
           cachedCustomerNo: _customerIdController.text,
+          markupMember: markupMember,
+          adminFee: adminFee,
         );
       } else {
         _showSnackbar('Gagal mengambil produk Telkomsel Omni.', Colors.red);

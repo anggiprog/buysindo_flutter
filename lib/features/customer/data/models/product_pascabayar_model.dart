@@ -61,6 +61,8 @@ class ProductPascabayar {
   final String markupAdmin;
   final String produkDiskon;
   final String totalHarga;
+  final int markupMember;
+  final int hargaJualMember;
   final bool buyerProductStatus;
   final bool sellerProductStatus;
   final String desc;
@@ -78,6 +80,8 @@ class ProductPascabayar {
     required this.markupAdmin,
     required this.produkDiskon,
     required this.totalHarga,
+    required this.markupMember,
+    required this.hargaJualMember,
     required this.buyerProductStatus,
     required this.sellerProductStatus,
     required this.desc,
@@ -97,6 +101,12 @@ class ProductPascabayar {
       markupAdmin: json['markup_admin']?.toString() ?? '0',
       produkDiskon: json['produk_diskon']?.toString() ?? '0',
       totalHarga: json['total_harga']?.toString() ?? '0',
+      markupMember: (json['markup_member'] is int)
+          ? json['markup_member']
+          : int.tryParse(json['markup_member']?.toString() ?? '0') ?? 0,
+      hargaJualMember: (json['harga_jual_member'] is int)
+          ? json['harga_jual_member']
+          : int.tryParse(json['harga_jual_member']?.toString() ?? '0') ?? 0,
       buyerProductStatus: json['buyer_product_status'] ?? false,
       sellerProductStatus: json['seller_product_status'] ?? false,
       desc: json['desc'] ?? '',
@@ -117,6 +127,8 @@ class ProductPascabayar {
       'markup_admin': markupAdmin,
       'produk_diskon': produkDiskon,
       'total_harga': totalHarga,
+      'markup_member': markupMember,
+      'harga_jual_member': hargaJualMember,
       'buyer_product_status': buyerProductStatus,
       'seller_product_status': sellerProductStatus,
       'desc': desc,

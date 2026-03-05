@@ -90,6 +90,17 @@ class _ByuPascabayarPageState extends State<ByuPascabayarPage> {
           );
           return;
         }
+
+        // Extract markup_member and admin_fee
+        final markupMember = (byuProduct['markup_member'] is int)
+            ? byuProduct['markup_member']
+            : int.tryParse(byuProduct['markup_member']?.toString() ?? '0') ?? 0;
+        final adminFee =
+            int.tryParse(byuProduct['admin_fee']?.toString() ?? '0') ?? 0;
+
+        print('📝 [BYU] Markup Member: $markupMember');
+        print('📝 [BYU] Admin Fee: $adminFee');
+
         if (!mounted) return;
         await CekTagihanPascabayar.showCekTagihan(
           context: context,
@@ -98,6 +109,8 @@ class _ByuPascabayarPageState extends State<ByuPascabayarPage> {
           buyerSkuCode: byuProduct['buyer_sku_code'] ?? 'byu',
           adminUserId: adminUserId,
           cachedCustomerNo: _customerIdController.text,
+          markupMember: markupMember,
+          adminFee: adminFee,
         );
       } else {
         _showSnackbar('Gagal mengambil produk by.U.', Colors.red);

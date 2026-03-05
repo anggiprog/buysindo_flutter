@@ -18,6 +18,45 @@ class TransactionHistoryTab extends StatefulWidget {
 
   const TransactionHistoryTab({super.key, this.initialSubTab});
 
+  // Global notifier untuk trigger refresh dari manapun
+  static final ValueNotifier<int> refreshNotifier = ValueNotifier<int>(0);
+
+  /// Call this static method after successful transaction to trigger refresh
+  static void triggerRefresh() {
+    refreshNotifier.value++;
+    debugPrint(
+      '🔄 [TransactionHistoryTab] Refresh triggered: ${refreshNotifier.value}',
+    );
+  }
+
+  /// Clear cache for prabayar transactions
+  static Future<void> clearPrabayarCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('transaction_history_cache');
+    await prefs.remove('transaction_history_timestamp');
+    debugPrint('🗑️ [TransactionHistoryTab] Prabayar cache cleared');
+  }
+
+  /// Clear cache for pascabayar transactions
+  static Future<void> clearPascabayarCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('transaction_pascabayar_cache');
+    await prefs.remove('transaction_pascabayar_timestamp');
+    debugPrint('🗑️ [TransactionHistoryTab] Pascabayar cache cleared');
+  }
+
+  /// Clear all transaction caches
+  static Future<void> clearAllCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('transaction_history_cache');
+    await prefs.remove('transaction_history_timestamp');
+    await prefs.remove('transaction_pascabayar_cache');
+    await prefs.remove('transaction_pascabayar_timestamp');
+    await prefs.remove('transaction_mutasi_cache');
+    await prefs.remove('transaction_mutasi_timestamp');
+    debugPrint('🗑️ [TransactionHistoryTab] All caches cleared');
+  }
+
   @override
   State<TransactionHistoryTab> createState() => _TransactionHistoryTabState();
 }
@@ -85,6 +124,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         }
       }
     });
+
+    // Listen for refresh events from successful transactions
+    TransactionHistoryTab.refreshNotifier.addListener(_onRefreshTriggered);
+
     // Load initial data based on tab
     if (initialIndex == 0) {
       _loadTransactionHistory();
@@ -95,8 +138,23 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
     }
   }
 
+  void _onRefreshTriggered() {
+    debugPrint(
+      '🔄 [TransactionHistoryTab] Refresh received, reloading current tab...',
+    );
+    // Force refresh based on current tab
+    if (_tabController.index == 0) {
+      _loadTransactionHistory(forceRefresh: true);
+    } else if (_tabController.index == 1) {
+      _loadPascabayarHistory(forceRefresh: true);
+    } else if (_tabController.index == 2) {
+      _loadMutasiHistory(forceRefresh: true);
+    }
+  }
+
   @override
   void dispose() {
+    TransactionHistoryTab.refreshNotifier.removeListener(_onRefreshTriggered);
     _tabController.dispose();
     super.dispose();
   }
@@ -1307,7 +1365,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        item.formattedTotal,
+                        item.formattedTotalWithMarkup,
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

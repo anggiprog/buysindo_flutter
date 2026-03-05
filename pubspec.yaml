@@ -46,6 +46,7 @@ dependencies:
   webview_flutter: ^4.0.7
   equatable: ^2.0.8
   audio_session: ^0.1.6
+  fl_chart: ^0.70.2
 
 dev_dependencies:
   flutter_test:

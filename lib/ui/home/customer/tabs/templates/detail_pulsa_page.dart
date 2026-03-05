@@ -11,6 +11,7 @@ import '../../../topup/topup_manual.dart';
 import '../../../topup/topup_otomatis.dart';
 import '../../../../../../ui/widgets/pin_validation_dialog.dart';
 import 'transaction_success_page.dart';
+import '../transaction_history_tab.dart';
 
 class DetailPulsaPage extends StatefulWidget {
   final ProductPrabayar product;
@@ -228,6 +229,10 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         final transaction = TransactionResponse.fromJson(response.data);
 
         if (transaction.status) {
+          // Trigger refresh di transaction history
+          TransactionHistoryTab.clearPrabayarCache();
+          TransactionHistoryTab.triggerRefresh();
+
           if (mounted) {
             Navigator.push(
               context,

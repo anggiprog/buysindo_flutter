@@ -494,6 +494,27 @@ class _DaftarHargaPageState extends State<DaftarHargaPage>
             ],
           ),
         ),
+        // Button Markup Per Kategori
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          color: Colors.grey[100],
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showBulkMarkupDialog(primaryColor),
+              icon: const Icon(Icons.category, size: 18),
+              label: const Text('Markup Semua Produk Per Kategori'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ),
         // Search & Filter
         _buildSearchAndFilter(primaryColor, kategoriList),
         // Content
@@ -1264,6 +1285,232 @@ class _DaftarHargaPageState extends State<DaftarHargaPage>
         );
       }
     } catch (e) {
+      _showSnackBar('Error: $e', isError: true);
+    }
+  }
+
+  /// Get unique category list based on current ubah harga tipe
+  List<String> _getUniqueCategories() {
+    final products = _ubahHargaTipe == 'prabayar'
+        ? _allPrabayar
+        : _allPascabayar;
+    final categories = products
+        .map((p) => p.kategori)
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList();
+    categories.sort();
+    return categories;
+  }
+
+  /// Show dialog to bulk set markup for all products in a category
+  void _showBulkMarkupDialog(Color primaryColor) {
+    final categories = _getUniqueCategories();
+    if (categories.isEmpty) {
+      _showSnackBar('Tidak ada kategori tersedia', isError: true);
+      return;
+    }
+
+    String? selectedCategory = categories.first;
+    final markupController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.category, color: primaryColor),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Markup Per Kategori',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tipe: ${_ubahHargaTipe == 'prabayar' ? 'Prabayar' : 'Pascabayar'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Category dropdown
+                    const Text(
+                      'Pilih Kategori:',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: selectedCategory,
+                          isExpanded: true,
+                          items: categories.map((category) {
+                            // Count products in this category
+                            final products = _ubahHargaTipe == 'prabayar'
+                                ? _allPrabayar
+                                : _allPascabayar;
+                            final count = products
+                                .where((p) => p.kategori == category)
+                                .length;
+                            return DropdownMenuItem(
+                              value: category,
+                              child: Text('$category ($count produk)'),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              selectedCategory = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Markup input
+                    const Text(
+                      'Markup (Rp):',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: markupController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan nilai markup',
+                        prefixText: 'Rp ',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange[700],
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Semua produk dalam kategori "$selectedCategory" akan diupdate dengan markup yang sama.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange[800],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (selectedCategory == null) {
+                      _showSnackBar(
+                        'Pilih kategori terlebih dahulu',
+                        isError: true,
+                      );
+                      return;
+                    }
+                    final markup = int.tryParse(markupController.text) ?? 0;
+                    Navigator.pop(context);
+                    await _saveBulkMarkupByCategory(selectedCategory!, markup);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                  ),
+                  child: const Text(
+                    'Terapkan',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Save bulk markup for all products in a category
+  Future<void> _saveBulkMarkupByCategory(String category, int markup) async {
+    try {
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        _showSnackBar('Token tidak ditemukan', isError: true);
+        return;
+      }
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final response = await ApiService.instance.simpanMarkupMemberByCategory(
+        token: token,
+        category: category,
+        markup: markup,
+        tipe: _ubahHargaTipe,
+      );
+
+      // Hide loading
+      if (mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final count = data?['data']?['products_count'] ?? 0;
+        _showSnackBar('Markup berhasil diterapkan ke $count produk!');
+        await _fetchAllData(); // Refresh both prabayar & pascabayar
+      } else {
+        _showSnackBar(
+          response.data?['message'] ?? 'Gagal menyimpan markup',
+          isError: true,
+        );
+      }
+    } catch (e) {
+      // Hide loading if still showing
+      if (mounted) Navigator.of(context, rootNavigator: true).pop();
       _showSnackBar('Error: $e', isError: true);
     }
   }

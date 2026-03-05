@@ -30,6 +30,7 @@ import '../../tabs/templates/prabayar/streaming.dart';
 import '../../tabs/templates/pascabayar/pln_pascabayar.dart';
 import '../../tabs/templates/pascabayar/pdam_pascabayar.dart';
 import '../../tabs/templates/pascabayar/bpjs_kesehatan.dart';
+import '../../tabs/templates/pascabayar/bpjs_ketenagakerjaan.dart';
 import '../../tabs/templates/pascabayar/hp_pascabayar.dart';
 import '../../tabs/templates/pascabayar/internet_pascabayar.dart';
 import '../../tabs/templates/pascabayar/multifinance_pascabayar.dart';
@@ -704,9 +705,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 4,
-                  mainAxisSpacing: 0,
+                  mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
-                  mainAxisExtent: 82,
+                  mainAxisExtent: 105,
                 ),
                 itemCount: _showAllMenus
                     ? _menuList.length
@@ -1007,6 +1008,14 @@ class _PpobTemplateState extends State<PpobTemplate> {
                           context,
                           MaterialPageRoute(
                             builder: (context) => const PdamPascabayar(),
+                          ),
+                        );
+                      } else if (brand.contains('bpjs ketenagakerjaan') ||
+                          brand.contains('bpjsketenagakerjaan')) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const BpjsKetenagakerjaan(),
                           ),
                         );
                       } else if (brand.contains('bpjs')) {

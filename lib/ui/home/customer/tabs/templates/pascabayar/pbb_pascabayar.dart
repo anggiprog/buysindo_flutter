@@ -653,6 +653,8 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
       print('📥 [PBB] Bill Data Response: $billData');

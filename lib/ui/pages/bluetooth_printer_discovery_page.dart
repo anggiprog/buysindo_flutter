@@ -102,13 +102,15 @@ class _BluetoothPrinterDiscoveryPageState
     final Color primaryColor = appConfig.primaryColor;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
           'Cari Printer Bluetooth',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.black87),
         ),
-        backgroundColor: primaryColor,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 2,
       ),
       body: _isScanning
           ? _buildScanningState(primaryColor)

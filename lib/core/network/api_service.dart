@@ -443,6 +443,87 @@ class ApiService {
     );
   }
 
+  /// Check BPJS Ketenagakerjaan bill
+  Future<Response> checkBpjsKetenagakerjaanBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/bpjs-ketenagakerjaan/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  // ===========================================================================
+  // LAPORAN LABA RUGI (KEUNTUNGAN TOKO)
+  // ===========================================================================
+
+  /// Get profit summary
+  Future<Response> getLaporanLabaSummary({
+    required String token,
+    String periode = 'month',
+    String? startDate,
+    String? endDate,
+  }) {
+    final queryParams = <String, dynamic>{'periode': periode};
+    if (startDate != null) queryParams['start_date'] = startDate;
+    if (endDate != null) queryParams['end_date'] = endDate;
+
+    return _dio.get(
+      'api/user/laporan-laba/summary',
+      queryParameters: queryParams,
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Get profit chart data
+  Future<Response> getLaporanLabaChart({
+    required String token,
+    String periode = 'month',
+    String groupBy = 'day',
+  }) {
+    return _dio.get(
+      'api/user/laporan-laba/chart',
+      queryParameters: {'periode': periode, 'group_by': groupBy},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Get profit by category
+  Future<Response> getLaporanLabaCategory({
+    required String token,
+    String periode = 'month',
+  }) {
+    return _dio.get(
+      'api/user/laporan-laba/category',
+      queryParameters: {'periode': periode},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Get recent profit transactions
+  Future<Response> getLaporanLabaRecent({
+    required String token,
+    int limit = 10,
+  }) {
+    return _dio.get(
+      'api/user/laporan-laba/recent',
+      queryParameters: {'limit': limit},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   /// Ganti password user sesuai endpoint user/change-password
   Future<bool> changeUserPassword({
     required String token,
@@ -947,7 +1028,11 @@ class ApiService {
     return _dio.get(
       'api/pin/validate',
       queryParameters: {'pin': pin},
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+      options: Options(
+        headers: {'Authorization': 'Bearer $token'},
+        receiveTimeout: const Duration(seconds: 60), // Increased timeout
+        sendTimeout: const Duration(seconds: 30),
+      ),
     );
   }
 
@@ -1090,6 +1175,21 @@ class ApiService {
     return _dio.post(
       'api/produk-prabayar/update-harga',
       data: {'buyer_sku_code': buyerSkuCode, 'markup': markup},
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
+  /// Bulk simpan/update markup member untuk semua produk berdasarkan category
+  /// Formula: harga_jual_member = total_harga + markup
+  Future<Response> simpanMarkupMemberByCategory({
+    required String token,
+    required String category,
+    required int markup,
+    String tipe = 'prabayar',
+  }) {
+    return _dio.post(
+      'api/produk-prabayar/update-harga-category',
+      data: {'category': category, 'markup': markup, 'tipe': tipe},
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
@@ -2008,6 +2108,28 @@ class ApiService {
     );
   }
 
+  /// Check PLN NONTAGLIS bill (different endpoint and response format)
+  Future<Response> checkPlnNontaglisBill({
+    required int adminUserId,
+    required String customerNo,
+    required String productName,
+    required String brand,
+    required String buyerSkuCode,
+    required String token,
+  }) {
+    return _dio.post(
+      'api/v2/pln-nontaglis/cek-tagihan',
+      data: {
+        'admin_user_id': adminUserId.toString(),
+        'customer_no': customerNo,
+        'product_name': productName,
+        'brand': brand,
+        'buyer_sku_code': buyerSkuCode,
+      },
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+  }
+
   /// Check PBB bill (matches Postman)
   Future<Response> checkPbbBill({
     required int adminUserId,
@@ -2089,6 +2211,7 @@ class ApiService {
     required String productName,
     required String buyerSkuCode,
     required String token,
+    int? markupMember,
   }) {
     return _dio.post(
       'api/proses-trx-pascabayar',
@@ -2105,6 +2228,7 @@ class ApiService {
         'total_tagihan': totalTagihan,
         'product_name': productName,
         'buyer_sku_code': buyerSkuCode,
+        if (markupMember != null) 'markup_member': markupMember,
       },
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );

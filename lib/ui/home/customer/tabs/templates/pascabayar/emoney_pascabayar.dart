@@ -523,6 +523,8 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
         amount: int.tryParse(_amountController.text) ?? 0,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
       print('📥 [EMONEY] Bill Data Response: $billData');

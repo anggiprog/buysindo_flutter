@@ -132,6 +132,8 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
       print('📝 [BPJS] Product Name: ${_selectedProduct!.productName}');
       print('📝 [BPJS] Brand: ${_selectedProduct!.brand}');
       print('📝 [BPJS] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      print('📝 [BPJS] Markup Member: ${_selectedProduct!.markupMember}');
+      print('📝 [BPJS] Admin Fee: ${_selectedProduct!.adminFee}');
 
       // Show bottom sheet cek tagihan
       print('🚀 [BPJS] Showing CekTagihan bottom sheet...');
@@ -142,6 +144,8 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
         buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
       print('📥 [BPJS] Bill Data Response: $billData');

@@ -21,13 +21,17 @@ class _PlnNontaglisPascabayarPageState
     extends State<PlnNontaglisPascabayarPage> {
   final TextEditingController _customerIdController = TextEditingController();
   late ApiService _apiService;
-  ProductPascabayar? _nontaglisProduct;
+
+  // Products Data
+  List<ProductPascabayar> _products = [];
+  ProductPascabayar? _selectedProduct;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _apiService = ApiService(Dio());
-    _loadProduct();
+    _loadProducts();
   }
 
   @override
@@ -36,43 +40,124 @@ class _PlnNontaglisPascabayarPageState
     super.dispose();
   }
 
-  Future<void> _loadProduct() async {
+  Future<void> _loadProducts() async {
+    print('🔄 [PLN NONTAGLIS] _loadProducts called');
+
+    setState(() => _isLoading = true);
+
     try {
       final token = await SessionManager.getToken();
-      if (token == null) throw Exception('Token tidak ditemukan');
+      print('🔑 [PLN NONTAGLIS] Token: ${token?.substring(0, 20)}...');
+
+      if (token == null) {
+        throw Exception('Token tidak ditemukan');
+      }
+
+      print('🌐 [PLN NONTAGLIS] Calling getPascabayarProducts...');
       final response = await _apiService.getPascabayarProducts(token);
+
+      print('📥 [PLN NONTAGLIS] Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
         );
-        final nontaglis = productResponse.products.firstWhere(
-          (p) => p.brand.toUpperCase() == 'PLN NONTAGLIS',
-          orElse: () => ProductPascabayar(
-            productName: 'PLN Nontaglis',
-            buyerSkuCode: 'plnnontaglist',
-            admin: '5500',
-            commission: '3775',
-            category: 'Pascabayar',
-            brand: 'PLN NONTAGLIS',
-            sellerName: 'arqiva pos',
-            price: '0',
-            adminFee: '100',
-            markupAdmin: '0',
-            produkDiskon: '0',
-            totalHarga: '100',
-            buyerProductStatus: true,
-            sellerProductStatus: true,
-            desc: '-',
-          ),
+
+        print(
+          '📦 [PLN NONTAGLIS] Total products: ${productResponse.products.length}',
         );
-        setState(() {
-          _nontaglisProduct = nontaglis;
-        });
+
+        // Print semua brand yang tersedia untuk debugging
+        print('📦 [PLN NONTAGLIS] Available brands:');
+        for (var p in productResponse.products) {
+          if (p.brand.toUpperCase().contains('PLN NONTAGLIS')) {
+            print('   - ${p.brand} (${p.buyerSkuCode})');
+          }
+        }
+
+        // Filter hanya produk PLN NONTAGLIS (case insensitive, handle variations)
+        // Match: PLN NONTAGLIS, PLN Nontaglis, plnnontaglis, etc.
+        final nontaglisProducts = productResponse.products.where((p) {
+          final brandUpper = p.brand.toUpperCase().replaceAll(' ', '');
+          final skuUpper = p.buyerSkuCode.toUpperCase();
+          return brandUpper.contains('PLNNONTAGLIS') ||
+              brandUpper.contains('PLN NONTAGLIS') && brandUpper.contains('NONTAGLIS') ||
+              skuUpper.contains('PLNNONTAGLIS');
+        }).toList();
+
+        print(
+          '📦 [PLN NONTAGLIS] Products after filter: ${nontaglisProducts.length}',
+        );
+
+        if (nontaglisProducts.isNotEmpty) {
+          print(
+            '📦 [PLN NONTAGLIS] First product: ${nontaglisProducts.first.productName}',
+          );
+          print(
+            '📦 [PLN NONTAGLIS] First product brand: ${nontaglisProducts.first.brand}',
+          );
+          print(
+            '📦 [PLN NONTAGLIS] buyerSkuCode: ${nontaglisProducts.first.buyerSkuCode}',
+          );
+          print(
+            '📦 [PLN NONTAGLIS] markupMember: ${nontaglisProducts.first.markupMember}',
+          );
+          print(
+            '📦 [PLN NONTAGLIS] adminFee: ${nontaglisProducts.first.adminFee}',
+          );
+        }
+
+        if (mounted) {
+          setState(() {
+            _products = nontaglisProducts;
+            _isLoading = false;
+            // Auto select first product if available
+            if (_products.isNotEmpty) {
+              _selectedProduct = _products.first;
+              print(
+                '✅ [PLN NONTAGLIS] Auto-selected product: ${_selectedProduct!.productName}',
+              );
+            } else {
+              print(
+                '⚠️ [PLN NONTAGLIS] No PLN NONTAGLIS products found in API',
+              );
+              // Fallback: use hardcoded product if API doesn't return PLN NONTAGLIS
+              _selectedProduct = ProductPascabayar(
+                productName: 'PLN Nontaglis',
+                buyerSkuCode: 'plnnontaglist',
+                admin: '0',
+                commission: '0',
+                category: 'Pascabayar',
+                brand: 'PLN NONTAGLIS',
+                sellerName: 'Digiflazz',
+                price: '0',
+                adminFee: '0',
+                markupAdmin: '0',
+                produkDiskon: '0',
+                totalHarga: '0',
+                markupMember: 1500,
+                hargaJualMember: 0,
+                buyerProductStatus: true,
+                sellerProductStatus: true,
+                desc: 'PLN Nontaglis',
+              );
+              print('⚠️ [PLN NONTAGLIS] Using fallback product');
+            }
+          });
+          print('✅ [PLN NONTAGLIS] Products loaded successfully');
+        }
       } else {
-        _showSnackbar('Gagal mengambil data produk', Colors.red);
+        print(
+          '❌ [PLN NONTAGLIS] Response status not 200: ${response.statusCode}',
+        );
+        throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      _showSnackbar('Error: ${e.toString()}', Colors.red);
+      print('❌ [PLN NONTAGLIS] Error loading products: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackbar('Error: ${e.toString()}', Colors.red);
+      }
     }
   }
 
@@ -145,23 +230,38 @@ class _PlnNontaglisPascabayarPageState
   }
 
   Future<void> _checkBill() async {
-    if (_nontaglisProduct == null) {
+    print('🔍 [PLN NONTAGLIS] _checkBill called');
+    print('🔍 [PLN NONTAGLIS] Selected Product: $_selectedProduct');
+    print('🔍 [PLN NONTAGLIS] Customer ID: ${_customerIdController.text}');
+
+    if (_selectedProduct == null) {
+      print('⚠️ [PLN NONTAGLIS] No product selected');
       _showSnackbar('Produk PLN NONTAGLIS tidak ditemukan', Colors.orange);
       return;
     }
     if (_customerIdController.text.isEmpty) {
+      print('⚠️ [PLN NONTAGLIS] Customer ID is empty');
       _showSnackbar('Masukkan ID pelanggan terlebih dahulu', Colors.orange);
       return;
     }
     try {
       final adminUserId = int.parse(appConfig.adminId);
+
+      print('🚀 [PLN NONTAGLIS] Showing CekTagihan bottom sheet...');
+      print(
+        '📝 [PLN NONTAGLIS] Markup Member: ${_selectedProduct!.markupMember}',
+      );
+      print('📝 [PLN NONTAGLIS] Admin Fee: ${_selectedProduct!.adminFee}');
+
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
-        productName: _nontaglisProduct!.productName,
-        brand: _nontaglisProduct!.brand,
-        buyerSkuCode: _nontaglisProduct!.buyerSkuCode,
+        productName: _selectedProduct!.productName,
+        brand: _selectedProduct!.brand,
+        buyerSkuCode: _selectedProduct!.buyerSkuCode,
         adminUserId: adminUserId,
         cachedCustomerNo: _customerIdController.text,
+        markupMember: _selectedProduct!.markupMember,
+        adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
       if (billData != null) {
         // Success
@@ -196,14 +296,20 @@ class _PlnNontaglisPascabayarPageState
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildHeaderCard(primaryColor),
-            _buildCustomerIdInput(primaryColor),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+              ),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildHeaderCard(primaryColor),
+                  _buildCustomerIdInput(primaryColor),
+                ],
+              ),
+            ),
     );
   }
 

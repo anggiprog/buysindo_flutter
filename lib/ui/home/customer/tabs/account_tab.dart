@@ -19,6 +19,7 @@ import '../../akun/ganti_password.dart';
 import '../../pin.dart';
 import '../../tentang_kami.dart';
 import '../../referral/referral.dart';
+import 'templates/laporan_laba_rugi.dart';
 
 class AccountTab extends StatefulWidget {
   const AccountTab({super.key});
@@ -456,6 +457,17 @@ class _AccountTabState extends State<AccountTab> {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const DaftarHargaPage()),
+            );
+          },
+        ),
+        AnimatedListTile(
+          icon: Icons.price_change_outlined,
+          title: "Laporan Penjualan",
+          color: themeColor,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const LaporanLabaRugi()),
             );
           },
         ),

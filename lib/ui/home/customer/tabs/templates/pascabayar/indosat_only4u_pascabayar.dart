@@ -91,6 +91,11 @@ class _IndosatOnly4uPascabayarPageState
           return;
         }
         if (!mounted) return;
+        final markupMember =
+            int.tryParse(indosatProduct['markup_member']?.toString() ?? '0') ??
+            0;
+        final adminFee =
+            int.tryParse(indosatProduct['admin_fee']?.toString() ?? '0') ?? 0;
         await CekTagihanPascabayar.showCekTagihan(
           context: context,
           productName:
@@ -99,6 +104,8 @@ class _IndosatOnly4uPascabayarPageState
           buyerSkuCode: indosatProduct['buyer_sku_code'] ?? '',
           adminUserId: adminUserId,
           cachedCustomerNo: _customerIdController.text,
+          markupMember: markupMember,
+          adminFee: adminFee,
         );
       } else {
         _showSnackbar('Gagal mengambil produk Indosat Only4u.', Colors.red);

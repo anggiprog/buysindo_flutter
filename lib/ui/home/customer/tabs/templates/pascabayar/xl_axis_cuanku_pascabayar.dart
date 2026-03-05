@@ -91,6 +91,10 @@ class _XlAxisCuankuPascabayarPageState
           return;
         }
         if (!mounted) return;
+        final markupMember =
+            int.tryParse(xlProduct['markup_member']?.toString() ?? '0') ?? 0;
+        final adminFee =
+            int.tryParse(xlProduct['admin_fee']?.toString() ?? '0') ?? 0;
         await CekTagihanPascabayar.showCekTagihan(
           context: context,
           productName: xlProduct['product_name'] ?? 'XL Axis Cuanku Pascabayar',
@@ -98,6 +102,8 @@ class _XlAxisCuankuPascabayarPageState
           buyerSkuCode: xlProduct['buyer_sku_code'] ?? '',
           adminUserId: adminUserId,
           cachedCustomerNo: _customerIdController.text,
+          markupMember: markupMember,
+          adminFee: adminFee,
         );
       } else {
         _showSnackbar('Gagal mengambil produk XL Axis Cuanku.', Colors.red);

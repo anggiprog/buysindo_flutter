@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class TransactionPascabayarResponse {
   final bool status;
   final List<TransactionPascabayar> data;
@@ -39,6 +41,8 @@ class TransactionPascabayar {
   final String sn;
   final String productName;
   final String namaToko;
+  final int markupMember;
+  final int totalPembayaranAdmin;
 
   TransactionPascabayar({
     required this.id,
@@ -62,9 +66,22 @@ class TransactionPascabayar {
     required this.sn,
     required this.productName,
     required this.namaToko,
+    this.markupMember = 0,
+    this.totalPembayaranAdmin = 0,
   });
 
   factory TransactionPascabayar.fromJson(Map<String, dynamic> json) {
+    final markupMemberRaw = json['markup_member'];
+    final totalPembayaranAdminRaw = json['total_pembayaran_admin'];
+
+    debugPrint('📋 [TransactionPascabayar.fromJson] id: ${json['id']}');
+    debugPrint(
+      '📋 [TransactionPascabayar.fromJson] markup_member raw: $markupMemberRaw (${markupMemberRaw.runtimeType})',
+    );
+    debugPrint(
+      '📋 [TransactionPascabayar.fromJson] total_pembayaran_admin raw: $totalPembayaranAdminRaw (${totalPembayaranAdminRaw.runtimeType})',
+    );
+
     return TransactionPascabayar(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
@@ -87,7 +104,31 @@ class TransactionPascabayar {
       sn: json['sn'] ?? '',
       productName: json['product_name'] ?? '',
       namaToko: json['nama_toko'] ?? '',
+      markupMember: _parseIntSafe(markupMemberRaw),
+      totalPembayaranAdmin: _parseIntSafe(totalPembayaranAdminRaw),
     );
+  }
+
+  // Helper to safely parse int from dynamic value
+  static int _parseIntSafe(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  // Get admin with markup_member and total_pembayaran_admin for display
+  int get adminWithMarkup {
+    final adminValue = int.tryParse(admin) ?? 0;
+    return adminValue + markupMember + totalPembayaranAdmin;
+  }
+
+  // Get total with markup for display
+  // Note: total_pembayaran_admin sudah termasuk dalam total_pembayaran_user
+  int get totalWithMarkup {
+    final totalValue = int.tryParse(totalPembayaranUser) ?? 0;
+    return totalValue + markupMember;
   }
 
   // Format price dengan separator
@@ -98,6 +139,18 @@ class TransactionPascabayar {
     } catch (e) {
       return 'Rp $totalPembayaranUser';
     }
+  }
+
+  // Format total with markup for display
+  String get formattedTotalWithMarkup {
+    final price = totalWithMarkup;
+    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
+  }
+
+  // Format admin with markup for display
+  String get formattedAdminWithMarkup {
+    final price = adminWithMarkup;
+    return 'Rp ${price.toString().replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.')}';
   }
 
   String get formattedNilaiTagihan {
