@@ -32,24 +32,35 @@ class WebHelper {
 
     // Untuk web, gunakan host origin langsung
     final host = WebHelperImpl.getHost();
+    debugPrint('🔍 [WebHelper.getBaseUrl] Host detected: $host');
+
     if (host != null && host.isNotEmpty) {
-      debugPrint('[WebHelper] Using host as baseUrl: $host/');
+      debugPrint('✅ [WebHelper.getBaseUrl] Using host as baseUrl: $host/');
       return '$host/';
     }
 
+    debugPrint(
+      '⚠️ [WebHelper.getBaseUrl] No host detected, trying subdomain...',
+    );
+
     final subdomain = getSubdomain();
+    debugPrint('🔍 [WebHelper.getBaseUrl] Subdomain detected: $subdomain');
+
     if (subdomain != null && subdomain.isNotEmpty) {
       // Detect production vs local berdasarkan hostname
       final isProduction = WebHelperImpl.isProduction();
       if (isProduction) {
-        debugPrint('[WebHelper] Production mode: bukatoko.online');
-        return 'https://$subdomain.bukatoko.online/';
+        final url = 'https://$subdomain.bukatoko.online/';
+        debugPrint('✅ [WebHelper.getBaseUrl] Production mode: $url');
+        return url;
       }
       // Development lokal
-      debugPrint('[WebHelper] Local mode: bukatoko.local');
-      return 'http://$subdomain.bukatoko.local/';
+      final url = 'http://$subdomain.bukatoko.local/';
+      debugPrint('✅ [WebHelper.getBaseUrl] Local mode: $url');
+      return url;
     }
 
+    debugPrint('❌ [WebHelper.getBaseUrl] Fallback to default: $defaultUrl');
     return defaultUrl;
   }
 

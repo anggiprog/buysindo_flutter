@@ -68,9 +68,31 @@ class WebHelperImpl {
   static bool isProduction() {
     try {
       final hostname = html.window.location.hostname ?? '';
-      return hostname.contains('bukatoko.online');
+      debugPrint('[WebHelper] Checking if production: $hostname');
+      final isProd = hostname.contains('bukatoko.online');
+      debugPrint('[WebHelper] isProduction result: $isProd');
+      return isProd;
     } catch (e) {
+      debugPrint('[WebHelper] Error checking production: $e');
       return false;
+    }
+  }
+
+  /// Detailed logging untuk debugging
+  static void logDebugInfo() {
+    try {
+      final origin = html.window.location.origin;
+      final hostname = html.window.location.hostname;
+      final protocol = html.window.location.protocol;
+      final href = html.window.location.href;
+
+      debugPrint('🌐 [WebHelper] Window Location Debug:');
+      debugPrint('   Origin: $origin');
+      debugPrint('   Hostname: $hostname');
+      debugPrint('   Protocol: $protocol');
+      debugPrint('   Full URL: $href');
+    } catch (e) {
+      debugPrint('[WebHelper] Error logging debug info: $e');
     }
   }
 }

@@ -35,11 +35,17 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint('🎬 [SplashScreen] initState started');
+    
     // Load cached splash first so UI can show it immediately
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      debugPrint('🎬 [SplashScreen] Post frame callback started');
+      
       await _loadCachedSplash();
+      
       // If we already have cached bytes, show immediately and remove native splash
       if (_remoteLogoBytes != null) {
+        debugPrint('✅ [SplashScreen] Cached logo found, showing immediately');
         try {
           FlutterNativeSplash.remove();
         } catch (_) {}
@@ -48,6 +54,8 @@ class _SplashScreenState extends State<SplashScreen> {
         // Short delay so user sees splash before navigating
         Future.delayed(const Duration(milliseconds: 800), () async {
           if (!mounted) return;
+          debugPrint('🎬 [SplashScreen] Checking token after 800ms delay...');
+
           final token = await SessionManager.getToken();
           if (!mounted) return;
           // Check for pending OTP first

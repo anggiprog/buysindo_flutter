@@ -281,7 +281,25 @@ class ApiService {
     return null;
   }
 
-  static final ApiService instance = ApiService(Dio());
+  static ApiService? _instanceCache;
+
+  /// Get or create singleton ApiService instance with auto-detected base URL
+  static ApiService get instance {
+    if (_instanceCache == null) {
+      debugPrint(
+        '🔧 [ApiService] Creating ApiService singleton with auto-detection...',
+      );
+      _instanceCache = ApiService.auto(Dio());
+      debugPrint('✅ [ApiService] ApiService singleton created');
+    }
+    return _instanceCache!;
+  }
+
+  /// Reset singleton cache (useful for testing or URL changes)
+  static void resetInstance() {
+    _instanceCache = null;
+    debugPrint('🔧 [ApiService] Singleton cache cleared');
+  }
 
   /// Check Telkomsel Omni Pascabayar bill
   Future<Response> checkTelkomselOmniBill({
@@ -642,15 +660,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-           baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-       // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);

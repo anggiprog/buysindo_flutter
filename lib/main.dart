@@ -288,15 +288,27 @@ Future<void> _fetchConfigAsync() async {
     dio.options.connectTimeout = const Duration(seconds: 10);
     dio.options.receiveTimeout = const Duration(seconds: 10);
 
+    debugPrint('🚀 [_fetchConfigAsync] Starting API configuration fetch...');
+
     final apiService = ApiService(dio);
     await appConfig
         .initializeApp(apiService)
         .timeout(
           const Duration(seconds: 15),
-          onTimeout: () => throw TimeoutException('API config timeout'),
+          onTimeout: () {
+            final msg = 'API config timeout after 15 seconds';
+            debugPrint('⏱️ [_fetchConfigAsync] $msg');
+            throw TimeoutException(msg);
+          },
         );
+    debugPrint('✅ [_fetchConfigAsync] Successfully initialized AppConfig');
+  } on TimeoutException catch (e) {
+    debugPrint('❌ [_fetchConfigAsync] TimeoutException: $e');
+    print('ERROR: Config timeout - $e'); // Print to console for visibility
   } catch (e) {
-    // API config failed, app will use cached config
+    debugPrint('❌ [_fetchConfigAsync] Exception: $e');
+    print('ERROR: Config failed - $e'); // Print to console for visibility
+    debugPrint('📋 Stack trace: ${StackTrace.current}');
   }
 }
 
