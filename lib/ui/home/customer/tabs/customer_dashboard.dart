@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/app_config.dart';
@@ -11,6 +10,7 @@ import 'templates/ppob_template.dart';
 import 'templates/ojek_online_template.dart';
 import 'templates/toko_online_template.dart';
 import 'templates/app_custom_template.dart';
+import 'templates/GameTopupScreen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -153,6 +153,9 @@ class _CustomerDashboardState extends State<CustomerDashboard>
           case 'app_custom':
             content = const AppCustomTemplate();
             break;
+          case 'games_topup':
+            content = GameTopupScreen();
+            break;
           default:
             content = const PpobTemplate();
         }
@@ -165,12 +168,27 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                   title: Row(
                     children: [
                       ClipOval(
-                        child: Image.asset(
-                          'assets/images/logo.png',
-                          height: 40,
-                          width: 40,
-                          fit: BoxFit.cover,
-                        ),
+                        child:
+                            appConfig.logoUrl != null &&
+                                appConfig.logoUrl!.isNotEmpty
+                            ? Image.network(
+                                appConfig.logoUrl!,
+                                height: 40,
+                                width: 40,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Image.asset(
+                                  'assets/images/logo.png',
+                                  height: 40,
+                                  width: 40,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : Image.asset(
+                                'assets/images/logo.png',
+                                height: 40,
+                                width: 40,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                       const SizedBox(width: 12),
                       Text(

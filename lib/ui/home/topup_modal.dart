@@ -53,22 +53,42 @@ class _TopupModalState extends State<TopupModal> {
 
     try {
       final token = await SessionManager.getToken();
-      if (token == null) throw Exception('Token not found');
+      if (token == null) {
+        // Default to manual if no token
+        if (mounted) {
+          setState(() {
+            _selectedMethod = 'manual';
+            _isLoading = false;
+          });
+        }
+        return;
+      }
 
       // Fetch minimal topup
       final minimalResponse = await widget.apiService.getMinimalTopup(
         null,
         token,
       );
-      _minimalTopup = minimalResponse.minimalTopup;
+      _minimalTopup = minimalResponse.minimalTopup ?? 50000;
 
-      // Fetch rekening status
-      final rekeningResponse = await widget.apiService.getRekeningStatus(token);
-      _rekeningStatus = rekeningResponse.data?.status;
+      // Try to fetch rekening and payment status, but don't fail if they error
+      try {
+        final rekeningResponse = await widget.apiService.getRekeningStatus(
+          token,
+        );
+        _rekeningStatus = rekeningResponse.data?.status;
+      } catch (e) {
+        debugPrint('Error fetching rekening status: $e');
+        _rekeningStatus = 'active'; // Default to active
+      }
 
-      // Fetch payment status
-      final paymentResponse = await widget.apiService.getStatusPayment(token);
-      _paymentStatus = paymentResponse.status;
+      try {
+        final paymentResponse = await widget.apiService.getStatusPayment(token);
+        _paymentStatus = paymentResponse.status;
+      } catch (e) {
+        debugPrint('Error fetching payment status: $e');
+        _paymentStatus = 1; // Default to 1
+      }
 
       // Set default selected method based on available options
       if (_rekeningStatus == 'active') {
@@ -81,11 +101,12 @@ class _TopupModalState extends State<TopupModal> {
         setState(() => _isLoading = false);
       }
     } catch (e) {
+      debugPrint('Error in _fetchTopupData: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading topup data: $e')));
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _selectedMethod = 'manual'; // Default to manual on error
+        });
       }
     }
   }
@@ -350,7 +371,9 @@ class _TopupModalState extends State<TopupModal> {
               const SizedBox(height: 16),
 
               // Select metode pembayaran dengan radio button
-              if (_rekeningStatus == 'active' || _paymentStatus == 1) ...[
+              if (_selectedMethod != null ||
+                  _rekeningStatus == 'active' ||
+                  _paymentStatus == 1) ...[
                 const Text(
                   'Metode Pembayaran',
                   style: TextStyle(
@@ -360,7 +383,7 @@ class _TopupModalState extends State<TopupModal> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (_rekeningStatus == 'active')
+                if (_rekeningStatus == 'active' || _selectedMethod == 'manual')
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey[300]!),
@@ -395,9 +418,10 @@ class _TopupModalState extends State<TopupModal> {
                       ),
                     ),
                   ),
-                if (_rekeningStatus == 'active' && _paymentStatus == 1)
+                if ((_rekeningStatus == 'active' && _paymentStatus == 1) ||
+                    (_selectedMethod == 'manual' && _paymentStatus == 1))
                   const SizedBox(height: 12),
-                if (_paymentStatus == 1)
+                if (_paymentStatus == 1 || _selectedMethod == 'auto')
                   Container(
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.grey[300]!),
@@ -414,9 +438,9 @@ class _TopupModalState extends State<TopupModal> {
                           setState(() => _selectedMethod = v);
                         }
                       },
-                      title: Text(
+                      title: const Text(
                         'Pembayaran Otomatis',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w600,
                           color: Colors.black87,
                         ),

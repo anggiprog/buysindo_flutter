@@ -410,6 +410,44 @@ class _SplashScreenState extends State<SplashScreen> {
                           ),
                         );
                       },
+                      errorBuilder: (_, __, ___) =>
+                          appConfig.logoUrl != null &&
+                              appConfig.logoUrl!.isNotEmpty
+                          ? Image.network(
+                              appConfig.logoUrl!,
+                              width: imageSize,
+                              height: imageSize,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => Image.asset(
+                                'assets/images/logo.png',
+                                width: imageSize,
+                                height: imageSize,
+                              ),
+                            )
+                          : Image.asset(
+                              'assets/images/logo.png',
+                              width: imageSize,
+                              height: imageSize,
+                            ),
+                    );
+                  // Try appConfig.logoUrl first, then fallback to asset
+                  if (appConfig.logoUrl != null &&
+                      appConfig.logoUrl!.isNotEmpty)
+                    return Image.network(
+                      appConfig.logoUrl!,
+                      width: imageSize,
+                      height: imageSize,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return SizedBox(
+                          width: imageSize,
+                          height: imageSize,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      },
                       errorBuilder: (_, __, ___) => Image.asset(
                         'assets/images/logo.png',
                         width: imageSize,

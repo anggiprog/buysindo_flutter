@@ -23,6 +23,88 @@ void _debugTokenLog(String? token, {String source = ''}) {
 }
 
 class ApiService {
+  /// Hitung ongkir berdasarkan kecamatan origin, destination, berat, dan kurir
+  Future<Map<String, dynamic>?> hitungOngkir({
+    required String origin,
+    required String destination,
+    required int weight,
+    required String courier,
+    required String token,
+  }) async {
+    try {
+      final response = await _dio.post(
+        'api/rajaongkir/ongkir',
+        data: {
+          'origin': origin,
+          'destination': destination,
+          'weight': weight,
+          'courier': courier,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return response.data['data'];
+      }
+    } catch (e) {
+      debugPrint('[ApiService] hitungOngkir ERROR: $e');
+    }
+    return null;
+  }
+
+  /// Ambil daftar provinsi dari backend (dengan token)
+  Future<List<Map<String, dynamic>>> getProvinsi(String token) async {
+    try {
+      final response = await _dio.get(
+        'api/rajaongkir/provinsi',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getProvinsi ERROR: $e');
+    }
+    return [];
+  }
+
+  /// Ambil daftar kota dari backend berdasarkan provinsiId (dengan token)
+  Future<List<Map<String, dynamic>>> getKota(
+    String provinsiId,
+    String token,
+  ) async {
+    try {
+      final response = await _dio.get(
+        'api/rajaongkir/kota/$provinsiId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getKota ERROR: $e');
+    }
+    return [];
+  }
+
+  /// Ambil daftar kecamatan dari backend berdasarkan kotaId (dengan token)
+  Future<List<Map<String, dynamic>>> getKecamatan(
+    String kotaId,
+    String token,
+  ) async {
+    try {
+      final response = await _dio.get(
+        'api/rajaongkir/kecamatan/$kotaId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      if (response.statusCode == 200 && response.data['data'] != null) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+    } catch (e) {
+      debugPrint('[ApiService] getKecamatan ERROR: $e');
+    }
+    return [];
+  }
+
   /// Ambil halaman custom HTML
   Future<String?> getCustomHtmlPage({
     required String token,
@@ -560,15 +642,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
+     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.100.7/');
+           baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+       // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -597,6 +679,10 @@ class ApiService {
   String get imageBannerBaseUrl => '${baseUrl}storage/images/prabayar/';
   // Di dalam class ApiService
   String get imagePascabayarUrl => '${baseUrl}storage/images/pascabayar/';
+  // URL untuk gambar produk toko online
+  String get imageProductUrl => '${baseUrl}storage/';
+  // URL untuk icon kategori/menu
+  String get imageMenuIconUrl => '${baseUrl}storage/kategori/gambar_kategori/';
 
   // ===========================================================================
   // ENDPOINTS CONFIG & BANNER
@@ -618,6 +704,63 @@ class ApiService {
       'api/user/popup',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
+  }
+
+  // ===========================================================================
+  // ENDPOINTS TOKO ONLINE (Menu & Product)
+  // ===========================================================================
+
+  /// Mengambil daftar menu/kategori untuk toko online
+  /// GET /api/toko-online/menus?admin_user_id=xxx
+  Future<Response> getTokoOnlineMenus(String adminUserId) {
+    return _dio.get(
+      'api/toko-online/menus',
+      queryParameters: {'admin_user_id': adminUserId},
+    );
+  }
+
+  /// Mengambil daftar produk berdasarkan menu ID
+  /// GET /api/toko-online/products?admin_user_id=xxx&menu_id=xxx
+  Future<Response> getTokoOnlineProducts({
+    required String adminUserId,
+    int? menuId,
+    int page = 1,
+    int perPage = 20,
+  }) {
+    final Map<String, dynamic> params = {
+      'admin_user_id': adminUserId,
+      'page': page,
+      'per_page': perPage,
+    };
+    if (menuId != null) {
+      params['menu_id'] = menuId;
+    }
+    return _dio.get('api/toko-online/products', queryParameters: params);
+  }
+
+  /// Mengambil detail produk berdasarkan ID
+  /// GET /api/toko-online/product/{id}
+  Future<Response> getTokoOnlineProductDetail(int productId) {
+    return _dio.get('api/toko-online/product/$productId');
+  }
+
+  /// Mencari produk
+  /// GET /api/toko-online/search?admin_user_id=xxx&q=xxx
+  Future<Response> searchTokoOnlineProducts({
+    required String adminUserId,
+    required String query,
+    int? menuId,
+    int perPage = 20,
+  }) {
+    final Map<String, dynamic> params = {
+      'admin_user_id': adminUserId,
+      'q': query,
+      'per_page': perPage,
+    };
+    if (menuId != null) {
+      params['menu_id'] = menuId;
+    }
+    return _dio.get('api/toko-online/search', queryParameters: params);
   }
 
   // ===========================================================================
