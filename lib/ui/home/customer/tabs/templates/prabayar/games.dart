@@ -216,9 +216,9 @@ class _GamesPageState extends State<GamesPage> with TickerProviderStateMixin {
       return;
     }
 
-    // Gabungkan player ID dan zone ID jika diperlukan
+    // Gabungkan player ID dan zone ID jika diperlukan (tanpa separator)
     final fullPlayerId = _requiresZoneId
-        ? '${_playerIdController.text}|${_zoneIdController.text}'
+        ? '${_playerIdController.text}${_zoneIdController.text}'
         : _playerIdController.text;
 
     Navigator.push(

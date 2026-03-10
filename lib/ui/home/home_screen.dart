@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
-      debugPrint('[HomeScreen] Gagal cek paket: $e');
+      // debugPrint('[HomeScreen] Gagal cek paket: $e');
     }
   }
 

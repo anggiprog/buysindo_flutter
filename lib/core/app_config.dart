@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../features/customer/data/models/customer_config_model.dart';
 import 'network/api_service.dart';
 
@@ -17,6 +18,7 @@ class AppConfig with ChangeNotifier {
   static const String _keyTampilan = 'cfg_tampilan';
   static const String _keyLogoUrl = 'cfg_logo_url';
   static const String _keySubdomain = 'cfg_subdomain';
+  static const String _keyAdminUserId = 'cfg_admin_user_id';
 
   static const String _adminId = String.fromEnvironment(
     'ADMIN_ID',
@@ -42,12 +44,15 @@ class AppConfig with ChangeNotifier {
   String _status = "active";
   String? _logoUrl;
   String _subdomain = "";
+  String _adminUserId = "1050"; // Default fallback
 
   Color _primaryColor = const Color(0xFF0D6EFD);
   Color _textColor = Colors.white;
 
   // --- GETTERS ---
   String get adminId => _adminId;
+  String get adminUserId =>
+      _adminUserId; // ID dari API response (per subdomain)
   String get appName => _appName;
   String get appType => _appType;
   String get tampilan => _tampilan;
@@ -66,6 +71,7 @@ class AppConfig with ChangeNotifier {
     _tampilan = prefs.getString(_keyTampilan) ?? _tampilan;
     _logoUrl = prefs.getString(_keyLogoUrl);
     _subdomain = prefs.getString(_keySubdomain) ?? "";
+    _adminUserId = prefs.getString(_keyAdminUserId) ?? _adminUserId;
 
     final hexPrimary = prefs.getString(_keyPrimaryColor);
     if (hexPrimary != null) _primaryColor = _parseColor(hexPrimary);
@@ -77,7 +83,7 @@ class AppConfig with ChangeNotifier {
   }
 
   // --- SIMPAN KE SHARED PREFERENCES ---
-  Future<void> _saveToLocal(AppConfigModel model) async {
+  Future<void> _saveToLocal(AppConfigModel model, {String? adminUserId}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyAppName, model.appName);
     await prefs.setString(_keyPrimaryColor, model.primaryColor);
@@ -85,6 +91,9 @@ class AppConfig with ChangeNotifier {
     await prefs.setString(_keyTemplate, model.template);
     await prefs.setString(_keyTampilan, model.tampilan);
     await prefs.setString(_keySubdomain, model.subdomain);
+    if (adminUserId != null) {
+      await prefs.setString(_keyAdminUserId, adminUserId);
+    }
     if (model.logoUrl != null) {
       await prefs.setString(_keyLogoUrl, model.logoUrl!);
     }
@@ -93,46 +102,108 @@ class AppConfig with ChangeNotifier {
   // --- API INITIALIZATION ---
   Future<void> initializeApp(ApiService apiService) async {
     try {
-      debugPrint('🔵 AppConfig.initializeApp START');
-      debugPrint('  Admin ID: $_adminId');
-      debugPrint('  App Type: $_appType');
+      // debugPrint('🔵 AppConfig.initializeApp START');
 
-      // 1. Ambil data dari API dengan timeout
-      debugPrint('🌐 Calling API: getPublicConfig($_adminId, $_appType)');
-      final response = await apiService
-          .getPublicConfig(_adminId, _appType)
-          .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw TimeoutException('API call timeout setelah 15 detik');
-            },
-          );
+      // 1. Cek subdomain dari window (Web)
+      String subdomainFromWindow = '';
+      if (kIsWeb) {
+        subdomainFromWindow = _getSubdomainFromWindow();
+        if (subdomainFromWindow.isNotEmpty) {
+          // debugPrint('📍 SUBDOMAIN FROM WINDOW: $subdomainFromWindow');
+        }
+      }
 
-      debugPrint('📨 API Response Status: ${response.statusCode}');
-      // debugPrint('📨 API Response Body: ${response.data}'); // Sembunyikan untuk keamanan log
+      // 2. Prioritas: Use subdomain endpoint jika ada subdomain
+      dynamic responseData;
+      String? apiAdminUserId;
 
-      if (response.statusCode == 200 && response.data['data'] != null) {
-        debugPrint('✅ API response valid, parsing data...');
-        final model = AppConfigModel.fromApi(response.data['data']);
+      if (subdomainFromWindow.isNotEmpty) {
+        // Use subdomain-based endpoint
+        // debugPrint(
+        //   '🌐 Calling API: getConfigBySubdomain($subdomainFromWindow)',
+        // );
+        try {
+          final response = await apiService
+              .getConfigBySubdomain(subdomainFromWindow)
+              .timeout(
+                const Duration(seconds: 15),
+                onTimeout: () {
+                  throw TimeoutException('API call timeout setelah 15 detik');
+                },
+              );
 
-        // 2. Update State & Notify UI
-        debugPrint('🔄 Updating AppConfig from model...');
+          // debugPrint('📨 API Response Status: ${response.statusCode}');
+
+          if (response.statusCode == 200 && response.data['data'] != null) {
+            responseData = response.data['data'];
+            // Extract admin_user_id dari response
+            if (responseData is Map) {
+              if (responseData.containsKey('admin_user_id')) {
+                apiAdminUserId = responseData['admin_user_id'].toString();
+                // debugPrint(
+                //   '✅ Admin User ID from subdomain endpoint: $apiAdminUserId',
+                // );
+              }
+            }
+          }
+        } catch (e) {
+          // debugPrint('⚠️ Subdomain endpoint failed: $e, trying fallback...');
+          responseData = null;
+        }
+      }
+
+      // 3. Fallback: Gunakan admin ID dari environment atau default
+      if (responseData == null) {
+        // debugPrint('🔄 Using fallback getPublicConfig endpoint');
+        // debugPrint('  Admin ID (Default): $_adminId');
+        // debugPrint('  App Type: $_appType');
+
+        final response = await apiService
+            .getPublicConfig(_adminId, _appType)
+            .timeout(
+              const Duration(seconds: 15),
+              onTimeout: () {
+                throw TimeoutException('API call timeout setelah 15 detik');
+              },
+            );
+
+        // debugPrint('📨 API Response Status: ${response.statusCode}');
+
+        if (response.statusCode == 200 && response.data['data'] != null) {
+          responseData = response.data['data'];
+        }
+      }
+
+      // 4. Parse response dan update config
+      if (responseData != null) {
+        // debugPrint('✅ API response valid, parsing data...');
+        final model = AppConfigModel.fromApi(responseData);
+
+        // Update admin_user_id jika didapat dari API
+        if (apiAdminUserId != null) {
+          _adminUserId = apiAdminUserId;
+        } else {
+          // Fallback ke ID dari model jika ada
+          _adminUserId = model.id.toString();
+        }
+
+        // debugPrint('🔄 Updating AppConfig from model...');
         updateFromModel(model);
 
-        // 3. Simpan ke Local untuk penggunaan berikutnya (Offline/Fast Load)
-        debugPrint('💾 Saving config to SharedPreferences...');
-        await _saveToLocal(model);
-        debugPrint('✅ AppConfig.initializeApp COMPLETE');
+        // 5. Simpan ke Local
+        // debugPrint('📋 Saving config to SharedPreferences...');
+        await _saveToLocal(model, adminUserId: _adminUserId);
+        // debugPrint(
+        //   '✅ AppConfig.initializeApp COMPLETE (adminUserId: $_adminUserId)',
+        // );
       } else {
-        debugPrint(
-          '❌ API response invalid: statusCode=${response.statusCode}, data=${response.data}',
-        );
+        // debugPrint('❌ Failed to fetch config from all endpoints');
       }
     } on TimeoutException catch (e) {
-      debugPrint('⏱️ AppConfig Initialize Timeout: $e');
+      // debugPrint('⏱️ AppConfig Initialize Timeout: $e');
     } catch (e) {
-      debugPrint('❌ AppConfig Initialize Error: $e');
-      debugPrint('📋 Stack trace: ${StackTrace.current}');
+      // debugPrint('❌ AppConfig Initialize Error: $e');
+      // debugPrint('📋 Stack trace: ${StackTrace.current}');
     }
   }
 
@@ -152,16 +223,16 @@ class AppConfig with ChangeNotifier {
       _showNavbar = model.showNavbar;
 
       // DEBUG: Log tampilan value
-      debugPrint('✅ AppConfig Updated:');
-      debugPrint('  - App Name: $_appName');
-      debugPrint('  - Tampilan: $_tampilan (raw: "${model.tampilan}")');
-      debugPrint('  - Template: ${model.template}');
-      debugPrint('  - showAppbar: $_showAppbar');
-      debugPrint('  - showNavbar: $_showNavbar');
+      // debugPrint('✅ AppConfig Updated:');
+      // debugPrint('  - App Name: $_appName');
+      // debugPrint('  - Tampilan: $_tampilan (raw: "${model.tampilan}")');
+      // debugPrint('  - Template: ${model.template}');
+      // debugPrint('  - showAppbar: $_showAppbar');
+      // debugPrint('  - showNavbar: $_showNavbar');
 
       notifyListeners();
     } catch (e) {
-      debugPrint('Update Model Failed: $e');
+      // debugPrint('Update Model Failed: $e');
     }
   }
 
@@ -170,7 +241,7 @@ class AppConfig with ChangeNotifier {
     try {
       // Handle empty or null hex
       if (hex.isEmpty) {
-        debugPrint('⚠️ Empty hex color, using default blue');
+        // debugPrint('⚠️ Empty hex color, using default blue');
         return const Color(0xFF0D6EFD);
       }
 
@@ -183,14 +254,51 @@ class AppConfig with ChangeNotifier {
 
       // Check if color is completely transparent or black
       if (parsedColor.value == 0 || parsedColor.alpha == 0) {
-        debugPrint('⚠️ Invalid color (transparent/black), using default blue');
+        // debugPrint('⚠️ Invalid color (transparent/black), using default blue');
         return const Color(0xFF0D6EFD);
       }
 
       return parsedColor;
     } catch (e) {
-      debugPrint('⚠️ Failed to parse color "$hex": $e, using default blue');
+      // debugPrint('⚠️ Failed to parse color "$hex": $e, using default blue');
       return const Color(0xFF0D6EFD); // Default Blue
+    }
+  }
+
+  /// Membaca subdomain dari hostname
+  /// Contoh: demo.bukatoko.local --> "demo"
+  /// Contoh: jastipku.bukatoko.local --> "jastipku"
+  /// Hanya bekerja di web platform
+  String _getSubdomainFromWindow() {
+    try {
+      if (!kIsWeb) {
+        return '';
+      }
+
+      // Extract subdomain dari URL hostname
+      final Uri currentUri = Uri.base; // Gets current page URL
+      final hostname = currentUri.host;
+      // debugPrint('📍 Current hostname (from Uri.base): $hostname');
+
+      if (hostname.isNotEmpty && !hostname.startsWith('localhost')) {
+        // Split by dots
+        final parts = hostname.split('.');
+        if (parts.length >= 2 && parts[0].isNotEmpty) {
+          final subdomain = parts.first;
+          // Validasi: subdomain harus alphanumeric dan tidak "www"
+          if (subdomain != 'www' &&
+              RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(subdomain)) {
+            // debugPrint('✅ Subdomain extracted from hostname: $subdomain');
+            return subdomain;
+          }
+        }
+      }
+
+      // debugPrint('⚠️ No subdomain found - using default adminId');
+      return '';
+    } catch (e) {
+      // debugPrint('❌ Error in _getSubdomainFromWindow: $e');
+      return '';
     }
   }
 }

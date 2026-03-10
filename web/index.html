@@ -17,11 +17,17 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <meta name="theme-color" content="#ffffff">
+  
+  <!-- Critical viewport for mobile -->
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="buysindo_app">
+  <meta name="apple-itunes-app" content="app-id=your-app-id">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
@@ -30,44 +36,87 @@
   <title>buysindo_app</title>
   <link rel="manifest" href="manifest.json">
   
-  
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
-  
-  
-  
-  
-  
-  
   <style id="splash-screen-style">
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #f5f5f5;
+    }
+
     html {
-      height: 100%
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
     }
 
     body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #1DB954;
-      background-size: 100% 100%;
-      /* Mobile-like container */
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
+      align-items: center;
+      /* Apply safe area insets */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
     }
 
-    /* Mobile frame container */
+    /* Mobile frame container - Full viewport with safe area padding */
     #flutter-app-container {
       width: 100%;
-      max-width: 450px;
-      min-height: 100vh;
-      position: relative;
+      height: 100%;
+      max-width: none;
+      position: absolute;
+      top: env(safe-area-inset-top);
+      left: env(safe-area-inset-left);
+      right: env(safe-area-inset-right);
+      bottom: env(safe-area-inset-bottom);
       background-color: #fff;
-      box-shadow: 0 0 20px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: none;
     }
 
-    /* Make flutter view fit container */
+    /* Make flutter view fit container perfectly */
     flt-glass-pane {
       width: 100% !important;
-      max-width: 450px !important;
+      height: 100% !important;
+      flex: 1;
+      overflow: hidden !important;
+    }
+
+    flt-platform-view {
+      width: 100% !important;
+      height: 100% !important;
+      flex: 1;
+    }
+
+    flt-semantics {
+      width: 100% !important;
+      height: 100% !important;
     }
 
     .center {
@@ -75,24 +124,26 @@
       position: absolute;
       top: 50%;
       left: 50%;
-      -ms-transform: translate(-50%, -50%);
       transform: translate(-50%, -50%);
     }
 
     .contain {
-      display:block;
-      width:100%; height:100%;
+      display: block;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
     }
 
     .stretch {
-      display:block;
-      width:100%; height:100%;
+      display: block;
+      width: 100%;
+      height: 100%;
     }
 
     .cover {
-      display:block;
-      width:100%; height:100%;
+      display: block;
+      width: 100%;
+      height: 100%;
       object-fit: cover;
     }
 
@@ -100,7 +151,6 @@
       position: absolute;
       bottom: 0;
       left: 50%;
-      -ms-transform: translate(-50%, 0);
       transform: translate(-50%, 0);
     }
 
@@ -115,20 +165,163 @@
       bottom: 0;
       right: 0;
     }
+
+    /* Handle viewport for all device sizes */
+    @media (max-width: 600px) {
+      body {
+        align-items: flex-start;
+      }
+
+      #flutter-app-container {
+        max-width: 100%;
+        top: env(safe-area-inset-top);
+        left: env(safe-area-inset-left);
+        right: env(safe-area-inset-right);
+        bottom: env(safe-area-inset-bottom);
+      }
+    }
+
+    /* Landscape mode */
+    @media (max-height: 500px) {
+      body {
+        align-items: center;
+      }
+    }
+
+    /* Hide splash when app is ready */
+    #splash {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 1000 !important;
+    }
+
+    #splash img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    /* Critical: Ensure content fills entire viewport minus safe areas */
+    @supports (bottom: env(safe-area-inset-bottom)) {
+      body {
+        padding-top: env(safe-area-inset-top, 0);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        padding-left: env(safe-area-inset-left, 0);
+        padding-right: env(safe-area-inset-right, 0);
+      }
+
+      #flutter-app-container {
+        top: env(safe-area-inset-top, 0);
+        left: env(safe-area-inset-left, 0);
+        right: env(safe-area-inset-right, 0);
+        bottom: env(safe-area-inset-bottom, 0);
+        height: auto;
+        max-width: none;
+      }
+    }
+
+    /* Fallback for browsers that don't support env() */
+    @supports not (bottom: env(safe-area-inset-bottom)) {
+      body {
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+
+      #flutter-app-container {
+        top: 0;
+        bottom: 0;
+      }
+    }
+
+    /* Ensure Flutter can expand to available space */
+    flt-glass-pane,
+    flt-platform-view,
+    flt-semantics {
+      width: 100% !important;
+      height: 100% !important;
+      overflow: hidden !important;
+    }
+
+    /* Landscape adjustments */
+    @media (orientation: landscape) {
+      body {
+        align-items: center;
+        padding-top: env(safe-area-inset-top, 0);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+      }
+
+      #flutter-app-container {
+        height: auto;
+        max-height: 100vh;
+        max-height: 100dvh;
+      }
+    }
   </style>
   <script id="splash-screen-script">
+    // Prevent pinch zoom and scrolling
+    document.addEventListener('touchmove', function(e) {
+      if (e.touches.length > 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // Prevent scrolling on body
+    document.body.style.overflow = 'hidden';
+
+    // Fix viewport on mobile
+    function fixViewport() {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 
+          'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+      }
+      
+      // Update safe area on resize
+      updateSafeArea();
+    }
+
+    function updateSafeArea() {
+      const container = document.getElementById('flutter-app-container');
+      if (container) {
+        const top = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || 
+                   getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)') || '0px';
+        const bottom = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || 
+                      getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)') || '0px';
+        
+        console.log('Safe areas - Top:', top, 'Bottom:', bottom);
+      }
+    }
+
     function removeSplashFromWeb() {
       document.getElementById("splash")?.remove();
       document.getElementById("splash-branding")?.remove();
       document.body.style.background = "transparent";
     }
+
+    // Fix viewport on load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fixViewport);
+    } else {
+      fixViewport();
+    }
+
+    // Handle viewport changes
+    window.addEventListener('orientationchange', fixViewport);
+    window.addEventListener('resize', updateSafeArea);
   </script>
 </head>
 <body>
-  <picture id="splash">
+  <div id="flutter-app-container"></div>
+  
+  <picture id="splash" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000;">
       <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
+      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="" style="width: 100%; height: 100%; object-fit: contain;">
   </picture>
   
   <script src="flutter_bootstrap.js" async=""></script>

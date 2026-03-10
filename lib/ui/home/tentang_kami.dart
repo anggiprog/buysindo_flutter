@@ -34,7 +34,7 @@ class _TentangKamiPageState extends State<TentangKamiPage> {
         throw Exception("Gagal memuat data");
       }
     } catch (e) {
-      debugPrint("Error Fetch Tentang Kami: $e");
+      // debugPrint("Error Fetch Tentang Kami: $e");
       rethrow;
     }
   }

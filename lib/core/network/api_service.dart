@@ -706,9 +706,15 @@ class ApiService {
   // ENDPOINTS CONFIG & BANNER
   // ===========================================================================
 
-  /// Mengambil konfigurasi publik aplikasi
+  /// Mengambil konfigurasi publik aplikasi (Legacy: by admin_id)
   Future<Response> getPublicConfig(String adminId, String appType) {
     return _dio.get('api/app/config/$adminId/$appType');
+  }
+
+  /// Mengambil konfigurasi publik aplikasi berdasarkan subdomain
+  /// Endpoint: GET /api/app/config-by-subdomain/{subdomain}
+  Future<Response> getConfigBySubdomain(String subdomain) {
+    return _dio.get('api/app/config-by-subdomain/$subdomain');
   }
 
   /// Mengambil data banner berdasarkan admin ID
@@ -1222,20 +1228,30 @@ class ApiService {
     required int markupMember,
     required int hargaJualMember,
     required String token,
+    required String userId,
+    String? zoneId,
   }) {
+    final data = {
+      'pin': pin,
+      'category': category,
+      'sku': sku,
+      'nama_produk': productName,
+      'no_handphone': phoneNumber,
+      'diskon': discount,
+      'total': total,
+      'markup_member': markupMember,
+      'harga_jual_member': hargaJualMember,
+      'user_id': userId,
+    };
+
+    // Add zone_id only if provided
+    if (zoneId != null && zoneId.isNotEmpty) {
+      data['zone_id'] = zoneId;
+    }
+
     return _dio.post(
       'api/proses-trx-prabayar',
-      data: {
-        'pin': pin,
-        'category': category,
-        'sku': sku,
-        'nama_produk': productName,
-        'no_handphone': phoneNumber,
-        'diskon': discount,
-        'total': total,
-        'markup_member': markupMember,
-        'harga_jual_member': hargaJualMember,
-      },
+      data: data,
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }

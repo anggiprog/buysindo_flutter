@@ -30,11 +30,11 @@ class SessionManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_adminUserIdKey, adminUserId);
 
-    print('═══════════════════════════════════════════════════');
-    print('✅ ADMIN USER ID DISIMPAN');
-    print('Admin User ID: $adminUserId');
-    print('Waktu: ${DateTime.now()}');
-    print('═══════════════════════════════════════════════════');
+    // print('═══════════════════════════════════════════════════');
+    //  print('✅ ADMIN USER ID DISIMPAN');
+    // print('Admin User ID: $adminUserId');
+    //  print('Waktu: ${DateTime.now()}');
+    // print('═══════════════════════════════════════════════════');
   }
 
   // Mengambil admin_user_id
@@ -43,16 +43,16 @@ class SessionManager {
     final adminUserId = prefs.getInt(_adminUserIdKey);
 
     if (adminUserId != null) {
-      print('═══════════════════════════════════════════════════');
-      print('🔑 ADMIN USER ID DIAMBIL');
-      print('Admin User ID: $adminUserId');
-      print('Status: ✅ Ada');
-      print('═══════════════════════════════════════════════════');
+      // print('═══════════════════════════════════════════════════');
+      // print('🔑 ADMIN USER ID DIAMBIL');
+      // print('Admin User ID: $adminUserId');
+      // print('Status: ✅ Ada');
+      // print('═══════════════════════════════════════════════════');
     } else {
-      print('═══════════════════════════════════════════════════');
-      print('❌ ADMIN USER ID TIDAK DITEMUKAN');
-      print('Status: Tidak tersimpan');
-      print('═══════════════════════════════════════════════════');
+      // print('═══════════════════════════════════════════════════');
+      // print('❌ ADMIN USER ID TIDAK DITEMUKAN');
+      // print('Status: Tidak tersimpan');
+      // print('═══════════════════════════════════════════════════');
     }
 
     return adminUserId;
@@ -68,10 +68,10 @@ class SessionManager {
     if (token != null && token.isNotEmpty) {
       ////  print('═══════════════════════════════════════════════════');
       //// print('🔑 TOKEN DIAMBIL');
-      print('Token: $token');
-      // print('Panjang Token: ${token.length}');
-      // print('Status: ✅ Ada');
-      // print('═══════════════════════════════════════════════════');
+      // //// print('Token: $token');
+      // //// print('Panjang Token: ${token.length}');
+      // //// print('Status: ✅ Ada');
+      // //// print('═══════════════════════════════════════════════════');
     } else {
       // print('═══════════════════════════════════════════════════');
       // print('❌ TOKEN TIDAK DITEMUKAN');
@@ -174,15 +174,15 @@ class SessionManager {
         await prefs.remove(k);
       }
 
-      print('🧹 SharedPreferences cleared except token');
+      // print('🧹 SharedPreferences cleared except token');
       if (token != null && token.isNotEmpty) {
-        print('🔑 Token tetap disimpan (panjang ${token.length})');
+        // print('🔑 Token tetap disimpan (panjang ${token.length})');
       }
 
       // Delete cached files (splash) if exist in application documents
       await SessionFileHelper.deleteCachedSplash();
     } catch (e) {
-      print('⚠️ Failed to clear cache except token: $e');
+      // print('⚠️ Failed to clear cache except token: $e');
     }
   }
 }

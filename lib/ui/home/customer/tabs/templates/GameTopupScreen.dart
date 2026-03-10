@@ -5,7 +5,6 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:intl/intl.dart';
 import '../../../../../core/app_config.dart';
 import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/session_manager.dart';
@@ -19,6 +18,7 @@ import '../../../topup_modal.dart';
 import '../../../../../features/topup/screens/topup_history_screen.dart';
 import '../../poin/poin.dart';
 import 'detail_pulsa_page.dart';
+import '../../../../../../ui/widgets/user_id_zone_dialog.dart';
 
 class GameTopupScreen extends StatefulWidget {
   const GameTopupScreen({Key? key}) : super(key: key);
@@ -143,7 +143,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
         if (mounted) setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
-      debugPrint('Error fetching banners: $e');
+      // debugPrint('Error fetching banners: $e');
       if (mounted) setState(() => _isLoadingBanners = false);
     }
   }
@@ -277,7 +277,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingProducts = false);
-      debugPrint('Error loading games: $e');
+      // debugPrint('Error loading games: $e');
     }
   }
 
@@ -296,7 +296,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
         setState(() => _isLoadingProducts = true);
       }
     } catch (e) {
-      debugPrint('Error loading games from cache: $e');
+      // debugPrint('Error loading games from cache: $e');
       setState(() => _isLoadingProducts = true);
     }
   }
@@ -340,7 +340,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
       final productsJson = jsonEncode(products.map((p) => p.toJson()).toList());
       await _prefs.setString('cached_games_products', productsJson);
     } catch (e) {
-      debugPrint('Error caching games products: $e');
+      // debugPrint('Error caching games products: $e');
     }
   }
 
@@ -364,6 +364,65 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
         }
       });
     }
+  }
+
+  bool _productNeedsZoneId(String brand) {
+    final brandUpperCase = brand.toUpperCase();
+    const gamesNeedingZoneId = [
+      'FREE FIRE',
+      'FF',
+      'MOBILE LEGENDS',
+      'ML',
+      'PUBG',
+    ];
+
+    return gamesNeedingZoneId.any((game) => brandUpperCase.contains(game));
+  }
+
+  void _showUserIdZoneDialogBeforeCheckout(ProductPrabayar product) {
+    // debugPrint(
+    //   'GameTopupScreen - Dialog akan ditampilkan untuk: ${product.productName}',
+    // );
+    // debugPrint('  Brand: ${product.brand}');
+    // debugPrint('  needsZoneId: ${_productNeedsZoneId(product.brand)}');
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => UserIdZoneDialog(
+        productName: product.productName,
+        productBrand: product.brand,
+        needsZoneId: _productNeedsZoneId(product.brand),
+        onSubmit: (userId, zoneId) {
+          debugPrint('GameTopupScreen - Dialog onSubmit:');
+          debugPrint('  userId: $userId');
+          debugPrint('  zoneId: $zoneId');
+
+          // Gabungkan userId dan zoneId tanpa separator (087800001233)
+          final fullPlayerId = zoneId != null && zoneId.isNotEmpty
+              ? '$userId$zoneId'
+              : userId;
+
+          debugPrint('  fullPlayerId: $fullPlayerId');
+
+          // Navigate to DetailPulsaPage dengan phone parameter (backward compatible)
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetailPulsaPage(
+                product: product,
+                phone: fullPlayerId,
+                userId: userId,
+                zoneId: zoneId,
+              ),
+            ),
+          );
+        },
+        onCancel: () {
+          // User cancelled, stay on current page
+        },
+      ),
+    );
   }
 
   @override
@@ -984,12 +1043,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
   Widget _buildProductCard(ProductPrabayar product) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailPulsaPage(product: product, phone: ''),
-          ),
-        );
+        _showUserIdZoneDialogBeforeCheckout(product);
       },
       child: Container(
         decoration: BoxDecoration(

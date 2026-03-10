@@ -39,12 +39,12 @@ class _BluetoothPrinterDiscoveryPageState
     });
 
     try {
-      debugPrint('🔍 Starting Bluetooth device discovery...');
-      debugPrint('🔧 BluetoothPrinterService: $_printerService');
+      // debugPrint('🔍 Starting Bluetooth device discovery...');
+      // debugPrint('🔧 BluetoothPrinterService: $_printerService');
 
       // Request permissions if needed
       final hasPermission = await _printerService.requestPermissions();
-      debugPrint('✅ Permissions granted: $hasPermission');
+      // debugPrint('✅ Permissions granted: $hasPermission');
 
       if (!hasPermission) {
         if (mounted) {
@@ -57,10 +57,10 @@ class _BluetoothPrinterDiscoveryPageState
       }
 
       // Get paired devices
-      debugPrint('📱 Fetching paired devices...');
+      // debugPrint('📱 Fetching paired devices...');
       final devices = await _printerService.getPairedDevices();
 
-      debugPrint('📊 Devices retrieved: ${devices.length} device(s)');
+      // debugPrint('📊 Devices retrieved: ${devices.length} device(s)');
       for (int i = 0; i < devices.length; i++) {
         debugPrint('  Device $i: $devices[$i]');
       }

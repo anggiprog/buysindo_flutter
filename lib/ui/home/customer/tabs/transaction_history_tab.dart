@@ -34,7 +34,7 @@ class TransactionHistoryTab extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('transaction_history_cache');
     await prefs.remove('transaction_history_timestamp');
-    debugPrint('🗑️ [TransactionHistoryTab] Prabayar cache cleared');
+    // debugPrint('🗑️ [TransactionHistoryTab] Prabayar cache cleared');
   }
 
   /// Clear cache for pascabayar transactions
@@ -42,7 +42,7 @@ class TransactionHistoryTab extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('transaction_pascabayar_cache');
     await prefs.remove('transaction_pascabayar_timestamp');
-    debugPrint('🗑️ [TransactionHistoryTab] Pascabayar cache cleared');
+    // debugPrint('🗑️ [TransactionHistoryTab] Pascabayar cache cleared');
   }
 
   /// Clear all transaction caches
@@ -54,7 +54,7 @@ class TransactionHistoryTab extends StatefulWidget {
     await prefs.remove('transaction_pascabayar_timestamp');
     await prefs.remove('transaction_mutasi_cache');
     await prefs.remove('transaction_mutasi_timestamp');
-    debugPrint('🗑️ [TransactionHistoryTab] All caches cleared');
+    // debugPrint('🗑️ [TransactionHistoryTab] All caches cleared');
   }
 
   @override
@@ -139,9 +139,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   }
 
   void _onRefreshTriggered() {
-    debugPrint(
-      '🔄 [TransactionHistoryTab] Refresh received, reloading current tab...',
-    );
+    // debugPrint(
+    //   '🔄 [TransactionHistoryTab] Refresh received, reloading current tab...',
+    // );
     // Force refresh based on current tab
     if (_tabController.index == 0) {
       _loadTransactionHistory(forceRefresh: true);
@@ -413,8 +413,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
       // 3. Fetch from API
       final response = await _apiService.getTransactionDetailPrabayar(token);
 
-      debugPrint('🔍 API Response Status Code: ${response.statusCode}');
-      debugPrint('🔍 API Response Data: ${response.data}');
+      // debugPrint('🔍 API Response Status Code: ${response.statusCode}');
+      // debugPrint('🔍 API Response Data: ${response.data}');
 
       if (response.statusCode == 200) {
         final data = response.data;

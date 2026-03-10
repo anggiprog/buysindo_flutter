@@ -16,11 +16,15 @@ import '../transaction_history_tab.dart';
 class DetailPulsaPage extends StatefulWidget {
   final ProductPrabayar product;
   final String phone;
+  final String? userId;
+  final String? zoneId;
 
   const DetailPulsaPage({
     super.key,
     required this.product,
     required this.phone,
+    this.userId,
+    this.zoneId,
   });
 
   @override
@@ -34,10 +38,36 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
   bool _isProcessing = false;
   bool _isSaldoCukup = false;
 
+  // User ID and Zone ID state
+  String? _inputUserId;
+  String? _inputZoneId;
+
   @override
   void initState() {
     super.initState();
     _apiService = ApiService(Dio());
+
+    // Priority 1: Use separate userId/zoneId parameters (from GameTopupScreen)
+    if ((widget.userId != null && widget.userId!.isNotEmpty) ||
+        (widget.zoneId != null && widget.zoneId!.isNotEmpty)) {
+      _inputUserId = widget.userId;
+      _inputZoneId = widget.zoneId;
+    }
+    // Priority 2: Parse phone parameter (from old games.dart or GameTopupScreen: combined format)
+    else if (widget.phone.isNotEmpty && _isGameProduct()) {
+      _inputUserId = widget.phone;
+      _inputZoneId = null;
+    }
+
+    // debugPrint('DetailPulsaPage initState:');
+    // debugPrint('  widget.userId: ${widget.userId}');
+    // debugPrint('  widget.zoneId: ${widget.zoneId}');
+    // debugPrint('  widget.phone: ${widget.phone}');
+    // debugPrint('  _inputUserId: $_inputUserId');
+    // debugPrint('  _inputZoneId: $_inputZoneId');
+    // debugPrint('  product.category: ${widget.product.category}');
+    // debugPrint('  isGameProduct: ${_isGameProduct()}');
+
     _loadSaldo();
   }
 
@@ -70,9 +100,31 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         }
       }
     } catch (e) {
-      debugPrint('Error loading saldo: $e');
+      // debugPrint('Error loading saldo: $e');
       if (mounted) setState(() => _isLoadingSaldo = false);
     }
+  }
+
+  bool _isGameProduct() {
+    return widget.product.category.toUpperCase().contains('GAMES');
+  }
+
+  String _getDestinationInfo() {
+    if (_isGameProduct()) {
+      // Untuk game, gabungkan User ID + Zone ID
+      if (_inputZoneId != null && _inputZoneId!.isNotEmpty) {
+        return '${_inputUserId ?? '-'} + ${_inputZoneId}';
+      } else {
+        return _inputUserId ?? '-';
+      }
+    } else {
+      // Untuk pulsa, gunakan nomor telepon
+      return widget.phone.isEmpty ? '-' : widget.phone;
+    }
+  }
+
+  String _getDestinationLabel() {
+    return _isGameProduct() ? 'User ID' : 'Nomor Tujuan';
   }
 
   void _showTopupModal() async {
@@ -223,6 +275,8 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         markupMember: widget.product.markupMember,
         hargaJualMember: widget.product.hargaJualMember,
         token: token,
+        userId: _inputUserId ?? '',
+        zoneId: _inputZoneId,
       );
 
       if (response.statusCode == 200) {
@@ -292,10 +346,16 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                _buildSection("Informasi Nomor", [
-                  _rowInfo("Nomor Tujuan", widget.phone),
-                  _rowInfo("Operator", widget.product.brand),
-                ]),
+                _buildSection(
+                  _isGameProduct() ? "Informasi Akun" : "Informasi Nomor",
+                  [
+                    _rowInfo(_getDestinationLabel(), _getDestinationInfo()),
+                    _rowInfo(
+                      _isGameProduct() ? "Game" : "Operator",
+                      widget.product.brand,
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 _buildSection("Detail Produk", [
                   _rowInfo("Nama Produk", widget.product.productName),
@@ -348,9 +408,11 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.red.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [

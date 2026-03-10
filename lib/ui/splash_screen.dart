@@ -35,17 +35,17 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('🎬 [SplashScreen] initState started');
-    
+    // debugPrint('🌦 [SplashScreen] initState started');
+
     // Load cached splash first so UI can show it immediately
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      debugPrint('🎬 [SplashScreen] Post frame callback started');
-      
+      // debugPrint('🌦 [SplashScreen] Post frame callback started');
+
       await _loadCachedSplash();
-      
+
       // If we already have cached bytes, show immediately and remove native splash
       if (_remoteLogoBytes != null) {
-        debugPrint('✅ [SplashScreen] Cached logo found, showing immediately');
+        // debugPrint('✅ [SplashScreen] Cached logo found, showing immediately');
         try {
           FlutterNativeSplash.remove();
         } catch (_) {}
@@ -54,21 +54,30 @@ class _SplashScreenState extends State<SplashScreen> {
         // Short delay so user sees splash before navigating
         Future.delayed(const Duration(milliseconds: 800), () async {
           if (!mounted) return;
-          debugPrint('🎬 [SplashScreen] Checking token after 800ms delay...');
+          // debugPrint('🌦 [SplashScreen] Checking token after 800ms delay...');
 
           final token = await SessionManager.getToken();
+          debugPrint(
+            '🔑 [SplashScreen] Token retrieved: ${token != null && token.isNotEmpty ? "YES" : "NO"} (length=${token?.length ?? 0})',
+          );
           if (!mounted) return;
           // Check for pending OTP first
           final pendingOtp = await SessionManager.getPendingOtpEmail();
+          // debugPrint('📧 [SplashScreen] Pending OTP: ${pendingOtp ?? "none"}');
           if (pendingOtp != null && pendingOtp.isNotEmpty) {
+            // debugPrint('🎯 [SplashScreen] Navigating to /login (pending OTP)');
             Navigator.pushReplacementNamed(context, '/login');
             return;
           }
           final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
+          debugPrint(
+            '🎯 [SplashScreen] Navigating to: $next (token=${token != null && token.isNotEmpty ? "present" : "absent"})',
+          );
           Navigator.pushReplacementNamed(context, next);
         });
       } else {
         // No cached image -- perform fetch and navigate when completed
+        debugPrint('⏳ [SplashScreen] No cached logo, fetching from API...');
         _fetchRemoteSplashAndPrecache();
       }
     });
@@ -119,7 +128,7 @@ class _SplashScreenState extends State<SplashScreen> {
         _isLoadingImage = true;
       });
     } catch (e) {
-      debugPrint('⚠️ Failed to load cached splash: $e');
+      // debugPrint('⚠️ Failed to load cached splash: $e');
       setState(() {
         _isLoadingImage = true;
       });
@@ -134,16 +143,16 @@ class _SplashScreenState extends State<SplashScreen> {
   ) async {
     // Skip file caching untuk web platform
     if (kIsWeb) {
-      debugPrint(
-        'ℹ️ Web platform: skipping file cache, using SharedPreferences only',
-      );
+     // debugPrint(
+     //   'ℹ️ Web platform: skipping file cache, using SharedPreferences only',
+     // );
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_kSplashUrlKey, url);
         await prefs.setString(_kSplashTaglineKey, tagline ?? '');
         await prefs.setString(_kSplashUpdatedAtKey, updatedAt ?? '');
       } catch (e) {
-        debugPrint('⚠️ Failed to cache splash prefs: $e');
+        // debugPrint('⚠️ Failed to cache splash prefs: $e');
       }
       return;
     }
@@ -158,9 +167,9 @@ class _SplashScreenState extends State<SplashScreen> {
       await prefs.setString(_kSplashUrlKey, url);
       await prefs.setString(_kSplashTaglineKey, tagline ?? '');
       await prefs.setString(_kSplashUpdatedAtKey, updatedAt ?? '');
-      debugPrint('✅ Splash cached to filesystem: $filePath');
+      // debugPrint('✅ Splash cached to filesystem: $filePath');
     } catch (e) {
-      debugPrint('⚠️ Failed to cache splash: $e');
+      // debugPrint('⚠️ Failed to cache splash: $e');
     }
   }
 
@@ -171,10 +180,10 @@ class _SplashScreenState extends State<SplashScreen> {
     String? remoteUpdatedAt;
 
     try {
-      final adminId = appConfig.adminId;
+      final adminUserId = appConfig.adminUserId;
       final api = ApiService(Dio());
-      final data = await api.getSplashScreen(adminId);
-      debugPrint('🌊 Splash API response: $data');
+      final data = await api.getSplashScreen(adminUserId);
+      // debugPrint('🌊 Splash API response: $data');
 
       if (data == null) {
         shouldShowSplash = true; // no remote config, show default splash
@@ -191,29 +200,40 @@ class _SplashScreenState extends State<SplashScreen> {
           if (candidate != null && candidate.isNotEmpty) {
             logoToUse = candidate;
             taglineToUse = candidateTag;
-            debugPrint('ℹ️ Using remote logo: $logoToUse');
+            // debugPrint('ℹ️ Using remote logo: $logoToUse');
           }
         }
       }
     } catch (e) {
-      debugPrint('❌ Splash fetch failed: $e');
+      // debugPrint('❌ Splash fetch failed: $e');
     }
 
     // If remote config said inactive -> navigate immediately (skip showing remote splash)
     if (!shouldShowSplash) {
+      // debugPrint('⏩ [SplashScreen] Splash inactive, skipping splash display');
       try {
         FlutterNativeSplash.remove();
       } catch (_) {}
       if (!mounted) return;
       final token = await SessionManager.getToken();
+      // debugPrint(
+      //   '🔑 [SplashScreen.skipSplash] Token: ${token != null && token.isNotEmpty ? "YES" : "NO"}',
+      // );
       if (!mounted) return;
       // Check for pending OTP first
       final pendingOtp = await SessionManager.getPendingOtpEmail();
+      // debugPrint(
+      //   '📧 [SplashScreen.skipSplash] Pending OTP: ${pendingOtp ?? "none"}',
+      // );
       if (pendingOtp != null && pendingOtp.isNotEmpty) {
+       // debugPrint(
+       //   '🎯 [SplashScreen.skipSplash] Navigating to /login (pending OTP)',
+       // );
         Navigator.pushReplacementNamed(context, '/login');
         return;
       }
       final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
+     // debugPrint('🎯 [SplashScreen.skipSplash] Navigating to: $next');
       Navigator.pushReplacementNamed(context, next);
       return;
     }
@@ -231,7 +251,7 @@ class _SplashScreenState extends State<SplashScreen> {
       );
       if (!needsUpdate) {
         // nothing to do: we already have cached bytes and up-to-date
-        debugPrint('ℹ️ Cached splash is up-to-date, skipping re-download');
+        // debugPrint('ℹ️ Cached splash is up-to-date, skipping re-download');
       } else {
         if (mounted) {
           setState(() {
@@ -283,7 +303,7 @@ class _SplashScreenState extends State<SplashScreen> {
             );
           }
         } catch (e) {
-          debugPrint('⚠️ Fetching remote splash bytes failed: $e');
+          // debugPrint('⚠️ Fetching remote splash bytes failed: $e');
         }
       }
     }
@@ -298,14 +318,24 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final token = await SessionManager.getToken();
+    debugPrint(
+      '🔑 [SplashScreen._fetchRemote] Token: ${token != null && token.isNotEmpty ? "YES" : "NO"}',
+    );
     if (!mounted) return;
     // Check for pending OTP first
     final pendingOtp = await SessionManager.getPendingOtpEmail();
+    debugPrint(
+      '📧 [SplashScreen._fetchRemote] Pending OTP: ${pendingOtp ?? "none"}',
+    );
     if (pendingOtp != null && pendingOtp.isNotEmpty) {
+      debugPrint(
+        '🎯 [SplashScreen._fetchRemote] Navigating to /login (pending OTP)',
+      );
       Navigator.pushReplacementNamed(context, '/login');
       return;
     }
     final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
+    debugPrint('🎯 [SplashScreen._fetchRemote] Navigating to: $next');
     Navigator.pushReplacementNamed(context, next);
   }
 
@@ -313,10 +343,10 @@ class _SplashScreenState extends State<SplashScreen> {
   /// Does NOT perform navigation or remove native splash.
   Future<void> _backgroundUpdateSplash() async {
     try {
-      final adminId = appConfig.adminId;
+      final adminUserId = appConfig.adminUserId;
       final api = ApiService(Dio());
-      final data = await api.getSplashScreen(adminId);
-      debugPrint('🌊 (background) Splash API response: $data');
+      final data = await api.getSplashScreen(adminUserId);
+      // debugPrint('🌊 (background) Splash API response: $data');
       if (data == null) return;
       final status = (data['status'] as String?)?.toLowerCase();
       if (status != null && status != 'active') return; // no update if inactive
@@ -333,7 +363,7 @@ class _SplashScreenState extends State<SplashScreen> {
           (_remoteLogoUrl == null || _remoteLogoUrl != candidate) ||
           _remoteLogoBytes == null;
       if (!needsUpdate) {
-        debugPrint('🌊 (background) Splash cache up to date');
+        // debugPrint('🌊 (background) Splash cache up to date');
         return;
       }
 
@@ -366,19 +396,20 @@ class _SplashScreenState extends State<SplashScreen> {
                 _cachedUpdatedAt = remoteUpdatedAt;
                 _isLoadingImage = false;
               });
-            debugPrint('🌊 (background) Updated cached splash successfully');
+            // debugPrint('🌊 (background) Updated cached splash successfully');
           }
         }
       } catch (e) {
-        debugPrint('⚠️ (background) Failed to update splash bytes: $e');
+        // debugPrint('⚠️ (background) Failed to update splash bytes: $e');
       }
     } catch (e) {
-      debugPrint('⚠️ (background) Splash update failed: $e');
+      // debugPrint('⚠️ (background) Splash update failed: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    print('📱 [SplashScreen.build] Building splash screen UI');
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(

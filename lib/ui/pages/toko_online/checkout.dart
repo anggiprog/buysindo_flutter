@@ -79,7 +79,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           selectedAddress = Map<String, String>.from(decoded);
         });
       } catch (e) {
-        debugPrint('Error parsing address: $e');
+        // debugPrint('Error parsing address: $e');
       }
     }
   }

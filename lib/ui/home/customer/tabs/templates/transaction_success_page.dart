@@ -211,7 +211,7 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(50),
             ),
             child: Center(
@@ -314,7 +314,7 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
+            color: Colors.red.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(50),
           ),
           child: Icon(Icons.error_outline, color: Colors.red, size: 50),
@@ -372,9 +372,13 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
               const SizedBox(height: 12),
               OutlinedButton(
                 onPressed: () {
+                  // Pop back to games/pulsa main screen safely
+                  // Pop TransactionSuccessPage (1st pop)
                   Navigator.pop(context);
-                  Navigator.pop(context);
-                  Navigator.pop(context);
+                  // Pop DetailPulsaPage (2nd pop)
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  }
                 },
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 45),
@@ -402,13 +406,13 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: isSuccess
-                ? Colors.green.withOpacity(0.05)
-                : Colors.red.withOpacity(0.05),
+                ? Colors.green.withValues(alpha: 0.05)
+                : Colors.red.withValues(alpha: 0.05),
             border: Border(
               bottom: BorderSide(
                 color: isSuccess
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
               ),
             ),
           ),
@@ -419,8 +423,8 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
                 height: 70,
                 decoration: BoxDecoration(
                   color: isSuccess
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(50),
                 ),
                 child: Icon(
@@ -465,7 +469,7 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
                   border: Border.all(color: Colors.grey[200]!),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -527,9 +531,13 @@ class _TransactionSuccessPageState extends State<TransactionSuccessPage> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () {
+                        // Pop back to games/pulsa main screen safely
+                        // Pop TransactionSuccessPage (1st pop)
                         Navigator.pop(context);
-                        Navigator.pop(context);
-                        Navigator.pop(context);
+                        // Pop DetailPulsaPage (2nd pop)
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
                       },
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(45),
