@@ -442,15 +442,25 @@ class _TransactionPascabayarDetailPageState
       final printed = await _printerService.printReceipt(
         refId: _transaction.refId,
         productName: _transaction.productName,
+        brand: _transaction.brand,
         nomorHp: _transaction.customerNo,
+        customerName: _transaction.customerName,
+        namaToko: _transaction.namaToko.isNotEmpty
+            ? _transaction.namaToko
+            : null,
+        periode: _transaction.periode,
+        nilaiTagihan: 'Rp ${_formatCurrency(_transaction.nilaiTagihan)}',
+        admin: 'Rp ${_formatCurrency(_currentAdminFee)}',
+        denda: 'Rp ${_formatCurrency(_transaction.denda)}',
         price: 'Rp ${_formatCurrency(_currentTotal)}',
         totalPrice: 'Rp ${_formatCurrency(_currentTotal)}',
         status: _transaction.status,
         tanggalTransaksi: _transaction.createdAt,
         serialNumber: _transaction.sn.isNotEmpty ? _transaction.sn : null,
-        namaToko: _transaction.namaToko.isNotEmpty
-            ? _transaction.namaToko
-            : null,
+        daya: _transaction.daya != null ? '${_transaction.daya} VA' : null,
+        lembarTagihan: _transaction.lembarTagihan?.toString(),
+        meterAwal: _transaction.meterAwal,
+        meterAkhir: _transaction.meterAkhir,
       );
 
       if (mounted) {
@@ -578,7 +588,32 @@ class _TransactionPascabayarDetailPageState
   Future<void> _shareViaWhatsApp(String imagePath) async {
     try {
       final message =
-          'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: Rp ${_formatCurrency(_currentTotal)}';
+          '''Struk Transaksi Pascabayar
+
+🏪 ${_transaction.namaToko}
+
+📋 Informasi Transaksi
+Ref ID: ${_transaction.refId}
+Pelanggan: ${_transaction.customerName}
+No. Pelanggan: ${_transaction.customerNo}
+
+📦 Produk
+Produk: ${_transaction.productName}
+Brand: ${_transaction.brand}
+${_transaction.daya != null ? 'Daya: ${_transaction.daya} VA' : ''}
+
+📅 Detail Tagihan
+Periode: ${_transaction.formattedPeriode}
+Nilai Tagihan: Rp ${_formatCurrency(_transaction.nilaiTagihan)}
+Biaya Admin: Rp ${_formatCurrency(_currentAdminFee)}
+Denda: Rp ${_formatCurrency(_transaction.denda)}
+
+💰 Ringkasan Pembayaran
+Total Pembayaran: Rp ${_formatCurrency(_currentTotal)}
+Status: ${_transaction.status.toUpperCase()}
+Tanggal: ${_transaction.createdAt}
+
+Terima kasih telah bertransaksi dengan kami!''';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ WhatsApp share error: $e');
@@ -589,7 +624,32 @@ class _TransactionPascabayarDetailPageState
   Future<void> _shareViaTelegram(String imagePath) async {
     try {
       final message =
-          'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: Rp ${_formatCurrency(_currentTotal)}';
+          '''Struk Transaksi Pascabayar
+
+🏪 ${_transaction.namaToko}
+
+📋 Informasi Transaksi
+Ref ID: ${_transaction.refId}
+Pelanggan: ${_transaction.customerName}
+No. Pelanggan: ${_transaction.customerNo}
+
+📦 Produk
+Produk: ${_transaction.productName}
+Brand: ${_transaction.brand}
+${_transaction.daya != null ? 'Daya: ${_transaction.daya} VA' : ''}
+
+📅 Detail Tagihan
+Periode: ${_transaction.formattedPeriode}
+Nilai Tagihan: Rp ${_formatCurrency(_transaction.nilaiTagihan)}
+Biaya Admin: Rp ${_formatCurrency(_currentAdminFee)}
+Denda: Rp ${_formatCurrency(_transaction.denda)}
+
+💰 Ringkasan Pembayaran
+Total Pembayaran: Rp ${_formatCurrency(_currentTotal)}
+Status: ${_transaction.status.toUpperCase()}
+Tanggal: ${_transaction.createdAt}
+
+Terima kasih telah bertransaksi dengan kami!''';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ Telegram share error: $e');
@@ -599,11 +659,34 @@ class _TransactionPascabayarDetailPageState
 
   Future<void> _shareViaDefault(String imagePath) async {
     try {
-      await Share.shareXFiles(
-        [XFile(imagePath)],
-        text:
-            'Struk Transaksi Pascabayar\nRef ID: ${_transaction.refId}\nStatus: ${_transaction.status}\nTotal: Rp ${_formatCurrency(_currentTotal)}',
-      );
+      final message =
+          '''Struk Transaksi Pascabayar
+
+🏪 ${_transaction.namaToko}
+
+📋 Informasi Transaksi
+Ref ID: ${_transaction.refId}
+Pelanggan: ${_transaction.customerName}
+No. Pelanggan: ${_transaction.customerNo}
+
+📦 Produk
+Produk: ${_transaction.productName}
+Brand: ${_transaction.brand}
+${_transaction.daya != null ? 'Daya: ${_transaction.daya} VA' : ''}
+
+📅 Detail Tagihan
+Periode: ${_transaction.formattedPeriode}
+Nilai Tagihan: Rp ${_formatCurrency(_transaction.nilaiTagihan)}
+Biaya Admin: Rp ${_formatCurrency(_currentAdminFee)}
+Denda: Rp ${_formatCurrency(_transaction.denda)}
+
+💰 Ringkasan Pembayaran
+Total Pembayaran: Rp ${_formatCurrency(_currentTotal)}
+Status: ${_transaction.status.toUpperCase()}
+Tanggal: ${_transaction.createdAt}
+
+Terima kasih telah bertransaksi dengan kami!''';
+      await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
       debugPrint('❌ Default share error: $e');
       _showError('Gagal membagikan');
@@ -816,6 +899,18 @@ class _TransactionPascabayarDetailPageState
                         'Rp ${_formatCurrency(_transaction.denda)}',
                         color: Colors.red,
                       ),
+                      if (_transaction.meterAwal != null &&
+                          _transaction.meterAwal!.isNotEmpty)
+                        _receiptRow(
+                          'Meter Awal',
+                          _transaction.meterAwal ?? '-',
+                        ),
+                      if (_transaction.meterAkhir != null &&
+                          _transaction.meterAkhir!.isNotEmpty)
+                        _receiptRow(
+                          'Meter Akhir',
+                          _transaction.meterAkhir ?? '-',
+                        ),
                     ]),
                     _receiptSection('PEMBAYARAN', [
                       const Padding(
@@ -956,15 +1051,41 @@ class _TransactionPascabayarDetailPageState
   }
 
   Widget _buildEditableAdminRow() {
+    final isZero = _currentAdminFee == 0;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Admin',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          Row(
+            children: [
+              Text(
+                'Admin',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+              if (isZero)
+                Container(
+                  margin: const EdgeInsets.only(left: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[100],
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    'GRATIS',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber[800],
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -1006,13 +1127,28 @@ class _TransactionPascabayarDetailPageState
                   Expanded(
                     child: GestureDetector(
                       onTap: () => setState(() => _isEditingAdmin = true),
-                      child: Text(
-                        'Rp ${_formatCurrency(_currentAdminFee)}',
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isZero ? Colors.amber[50] : null,
+                          borderRadius: BorderRadius.circular(4),
+                          border: isZero
+                              ? Border.all(color: Colors.amber[200]!, width: 1)
+                              : null,
+                        ),
+                        child: Text(
+                          isZero
+                              ? 'Rp 0'
+                              : 'Rp ${_formatCurrency(_currentAdminFee)}',
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isZero ? Colors.amber[700] : Colors.orange,
+                          ),
                         ),
                       ),
                     ),

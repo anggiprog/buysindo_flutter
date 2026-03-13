@@ -142,6 +142,16 @@ class BluetoothPrinterService {
     required String status,
     String? serialNumber,
     String? namaToko,
+    String? customerName,
+    String? brand,
+    String? periode,
+    String? nilaiTagihan,
+    String? admin,
+    String? denda,
+    String? daya,
+    String? lembarTagihan,
+    String? meterAwal,
+    String? meterAkhir,
   }) async {
     try {
       final connected = await isConnected();
@@ -163,6 +173,16 @@ class BluetoothPrinterService {
         status: status,
         serialNumber: serialNumber,
         namaToko: namaToko,
+        customerName: customerName,
+        brand: brand,
+        periode: periode,
+        nilaiTagihan: nilaiTagihan,
+        admin: admin,
+        denda: denda,
+        daya: daya,
+        lembarTagihan: lembarTagihan,
+        meterAwal: meterAwal,
+        meterAkhir: meterAkhir,
       );
 
       final bool result =
@@ -195,40 +215,112 @@ class BluetoothPrinterService {
     required String status,
     String? serialNumber,
     String? namaToko,
+    String? customerName,
+    String? brand,
+    String? periode,
+    String? nilaiTagihan,
+    String? admin,
+    String? denda,
+    String? daya,
+    String? lembarTagihan,
+    String? meterAwal,
+    String? meterAkhir,
   }) {
-    final statusText = status.toUpperCase() == 'SUKSES' ? 'BERHASIL' : 'GAGAL';
+    final statusText = status.toUpperCase() == 'SUKSES'
+        ? 'BERHASIL'
+        : status.toUpperCase();
     final divider = '================================';
-    final snLine = serialNumber != null && serialNumber.isNotEmpty
-        ? '\nSN: $serialNumber'
-        : '';
     final storeName = namaToko != null && namaToko.isNotEmpty
         ? namaToko
         : 'BUYSINDO';
 
-    return '''
+    // Build detailed receipt
+    final buffer = StringBuffer();
 
-$storeName
-$divider
-TRANSAKSI $statusText
-$tanggalTransaksi
+    buffer.writeln();
+    buffer.writeln(storeName);
+    buffer.writeln(divider);
+    buffer.writeln('TRANSAKSI PASCABAYAR - $statusText');
+    buffer.writeln(tanggalTransaksi);
+    buffer.writeln();
 
-$divider
-INFORMASI
-Ref ID: $refId$snLine
+    // Informasi Toko
+    buffer.writeln(divider);
+    buffer.writeln('INFORMASI TOKO');
+    buffer.writeln('Nama Toko: $storeName');
+    buffer.writeln();
 
-DETAIL PRODUK
-Produk: $productName
-Nomor: $nomorHp
+    // Informasi Transaksi
+    buffer.writeln(divider);
+    buffer.writeln('INFORMASI TRANSAKSI');
+    buffer.writeln('Ref ID: $refId');
+    if (customerName != null && customerName.isNotEmpty) {
+      buffer.writeln('Pelanggan: $customerName');
+    }
+    if (nomorHp.isNotEmpty) {
+      buffer.writeln('No. Pelanggan: $nomorHp');
+    }
+    buffer.writeln();
 
-PEMBAYARAN
-Harga: $price
-Total: $totalPrice
+    // Detail Produk
+    buffer.writeln(divider);
+    buffer.writeln('DETAIL PRODUK');
+    buffer.writeln('Produk: $productName');
+    if (brand != null && brand.isNotEmpty) {
+      buffer.writeln('Brand: $brand');
+    }
+    if (daya != null && daya.isNotEmpty) {
+      buffer.writeln('Daya: $daya');
+    }
+    if (lembarTagihan != null && lembarTagihan.isNotEmpty) {
+      buffer.writeln('Lembar Tagihan: $lembarTagihan');
+    }
+    buffer.writeln();
 
-$divider
-Terima kasih telah bertransaksi
+    // Tagihan
+    buffer.writeln(divider);
+    buffer.writeln('DETAIL TAGIHAN');
+    if (periode != null && periode.isNotEmpty) {
+      buffer.writeln('Periode: $periode');
+    }
+    if (nilaiTagihan != null && nilaiTagihan.isNotEmpty) {
+      buffer.writeln('Nilai Tagihan: $nilaiTagihan');
+    }
+    if (admin != null && admin.isNotEmpty) {
+      buffer.writeln('Biaya Admin: $admin');
+    }
+    if (denda != null && denda.isNotEmpty) {
+      buffer.writeln('Denda: $denda');
+    }
+    if (meterAwal != null && meterAwal.isNotEmpty) {
+      buffer.writeln('Meter Awal: $meterAwal');
+    }
+    if (meterAkhir != null && meterAkhir.isNotEmpty) {
+      buffer.writeln('Meter Akhir: $meterAkhir');
+    }
+    buffer.writeln();
 
+    // Pembayaran
+    buffer.writeln(divider);
+    buffer.writeln('RINGKASAN PEMBAYARAN');
+    buffer.writeln('Harga: $price');
+    buffer.writeln('Total Pembayaran: $totalPrice');
+    buffer.writeln();
 
-''';
+    // Serial Number
+    if (serialNumber != null && serialNumber.isNotEmpty) {
+      buffer.writeln(divider);
+      buffer.writeln('STRUK');
+      buffer.writeln('Serial Number: $serialNumber');
+      buffer.writeln();
+    }
+
+    buffer.writeln(divider);
+    buffer.writeln('Terima kasih telah bertransaksi');
+    buffer.writeln('dengan kami!');
+    buffer.writeln();
+
+    return buffer.toString();
   }
 
   /// Print Mutasi (Saldo Balance Log) receipt

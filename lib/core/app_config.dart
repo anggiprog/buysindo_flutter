@@ -199,10 +199,10 @@ class AppConfig with ChangeNotifier {
       } else {
         // debugPrint('❌ Failed to fetch config from all endpoints');
       }
-    } on TimeoutException catch (e) {
-      // debugPrint('⏱️ AppConfig Initialize Timeout: $e');
-    } catch (e) {
-      // debugPrint('❌ AppConfig Initialize Error: $e');
+    } on TimeoutException catch (_) {
+      // debugPrint('⏱️ AppConfig Initialize Timeout: $_');
+    } catch (_) {
+      // debugPrint('❌ AppConfig Initialize Error: $_');
       // debugPrint('📋 Stack trace: ${StackTrace.current}');
     }
   }
