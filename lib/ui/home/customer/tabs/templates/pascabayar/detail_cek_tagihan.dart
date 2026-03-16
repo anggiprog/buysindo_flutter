@@ -318,26 +318,56 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
       print('📥 [CekTagihan] Response received');
       print('   - Status Code: ${response.statusCode}');
       print('   - Response Data Type: ${response.data.runtimeType}');
+      print('📥 [CekTagihan] RAW RESPONSE DATA: ${response.data}');
       print('   - Response Data: ${response.data}');
+
+      // NEW: Extract data from nested "data" object (Digiflazz format)
+      final responseData = response.data;
+      dynamic billResponseData = responseData;
+
+      // Check if response has nested "data" structure (Digiflazz format)
+      if (responseData is Map && responseData.containsKey('data')) {
+        billResponseData = responseData['data'];
+        print('📥 [CekTagihan] Extracted data from nested "data" object');
+      }
+
+      // DEBUG: Show extracted response structure
+      print(
+        '📥 [CekTagihan] billResponseData keys: ${(billResponseData is Map) ? billResponseData.keys.toList() : 'N/A'}',
+      );
+      if (billResponseData is Map) {
+        print('   - Has desc: ${billResponseData.containsKey('desc')}');
+        print('   - desc type: ${billResponseData['desc'].runtimeType}');
+        if (billResponseData['desc'] is Map) {
+          final desc = billResponseData['desc'] as Map;
+          print('   - desc keys: ${desc.keys.toList()}');
+          print('   - Has detail: ${desc.containsKey('detail')}');
+          if (desc.containsKey('detail')) {
+            print('   - detail type: ${desc['detail'].runtimeType}');
+            print('   - detail is List: ${desc['detail'] is List}');
+            if (desc['detail'] is List) {
+              print('   - detail length: ${(desc['detail'] as List).length}');
+            }
+          }
+        }
+      }
 
       // Debug PLN NONTAGLIS specific
       if (brandUpper.contains('NONTAGLIS')) {
         print('🔌 [PLN NONTAGLIS] Processing PLN NONTAGLIS response...');
-        print('   - price: ${response.data['price']}');
-        print('   - selling_price: ${response.data['selling_price']}');
-        print('   - admin: ${response.data['admin']}');
-        print('   - status: ${response.data['status']}');
-        print('   - transaksi_type: ${response.data['transaksi_type']}');
+        print('   - price: ${billResponseData['price']}');
+        print('   - selling_price: ${billResponseData['selling_price']}');
+        print('   - admin: ${billResponseData['admin']}');
+        print('   - status: ${billResponseData['status']}');
+        print('   - transaksi_type: ${billResponseData['transaksi_type']}');
       }
 
       if (response.statusCode == 200) {
-        final responseData = response.data;
-
         // PATCH: Logic sukses untuk PLN NONTAGLIS (different response format)
         if (brandUpper.contains('NONTAGLIS')) {
-          final hasStatus = responseData.containsKey('status');
+          final hasStatus = billResponseData.containsKey('status');
           final isStatusSuccess =
-              hasStatus && responseData['status'] == 'success';
+              hasStatus && billResponseData['status'] == 'success';
 
           if (isStatusSuccess) {
             print('✅ [PLN NONTAGLIS] Status is success, building bill data...');
@@ -347,8 +377,8 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             // - admin -> admin
             // - total_tagihan = price + admin (NOT selling_price)
             // Display will add markupMember on top
-            final price = responseData['price'] ?? 0;
-            final admin = responseData['admin'] ?? 0;
+            final price = billResponseData['price'] ?? 0;
+            final admin = billResponseData['admin'] ?? 0;
             final totalTagihan =
                 price + admin; // Calculate total = price + admin
 
@@ -359,27 +389,27 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             );
 
             final billData = {
-              'customer_name': responseData['customer_name'],
-              'customer_no': responseData['customer_no'],
+              'customer_name': billResponseData['customer_name'],
+              'customer_no': billResponseData['customer_no'],
               'periode':
-                  responseData['tgl_registrasi'], // Use tgl_registrasi as periode
+                  billResponseData['tgl_registrasi'], // Use tgl_registrasi as periode
               'tagihan': price, // Map price to tagihan
               'admin': admin,
               'denda': 0, // No denda for NONTAGLIS
               'total_tagihan': totalTagihan, // price + admin
-              'lembar_tagihan': responseData['lembar_tagihan'] ?? 1,
-              'ref_id': responseData['ref_id'],
-              'product_name': responseData['product_name'],
-              'buyer_sku_code': responseData['buyer_sku_code'],
-              'brand': responseData['brand'],
+              'lembar_tagihan': billResponseData['lembar_tagihan'] ?? 1,
+              'ref_id': billResponseData['ref_id'],
+              'product_name': billResponseData['product_name'],
+              'buyer_sku_code': billResponseData['buyer_sku_code'],
+              'brand': billResponseData['brand'],
               'biaya_lain': null,
               'alamat': null,
               'jumlah_peserta': null,
               // Additional NONTAGLIS fields
-              'transaksi_type': responseData['transaksi_type'],
-              'no_registrasi': responseData['no_registrasi'],
-              'tgl_registrasi': responseData['tgl_registrasi'],
-              'sn': responseData['sn'],
+              'transaksi_type': billResponseData['transaksi_type'],
+              'no_registrasi': billResponseData['no_registrasi'],
+              'tgl_registrasi': billResponseData['tgl_registrasi'],
+              'sn': billResponseData['sn'],
             };
 
             print('📋 [PLN NONTAGLIS] Bill Data created: $billData');
@@ -398,7 +428,7 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           } else {
             print('❌ [PLN NONTAGLIS] Status is not success');
             throw Exception(
-              responseData['message'] ?? 'Gagal mengambil tagihan',
+              billResponseData['message'] ?? 'Gagal mengambil tagihan',
             );
           }
         }
@@ -406,21 +436,21 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
         else if (brandUpper.contains('E-MONEY')) {
           // Parsing sesuai hasil Postman
           final billData = {
-            'customer_name': responseData['customer_name'],
-            'customer_no': responseData['customer_no'],
-            'periode': responseData['periode'],
-            'tagihan': responseData['tagihan'],
-            'admin': responseData['admin'],
-            'denda': responseData['denda'] ?? 0,
-            'total_tagihan': responseData['total_tagihan'],
-            'lembar_tagihan': responseData['lembar_tagihan'] ?? 1,
-            'ref_id': responseData['ref_id'],
-            'product_name': responseData['product_name'],
-            'buyer_sku_code': responseData['buyer_sku_code'],
-            'brand': responseData['brand'],
-            'biaya_lain': responseData['biaya_lain'],
-            'alamat': responseData['alamat'],
-            'jumlah_peserta': responseData['jumlah_peserta'],
+            'customer_name': billResponseData['customer_name'],
+            'customer_no': billResponseData['customer_no'],
+            'periode': billResponseData['periode'],
+            'tagihan': billResponseData['tagihan'],
+            'admin': billResponseData['admin'],
+            'denda': billResponseData['denda'] ?? 0,
+            'total_tagihan': billResponseData['total_tagihan'],
+            'lembar_tagihan': billResponseData['lembar_tagihan'] ?? 1,
+            'ref_id': billResponseData['ref_id'],
+            'product_name': billResponseData['product_name'],
+            'buyer_sku_code': billResponseData['buyer_sku_code'],
+            'brand': billResponseData['brand'],
+            'biaya_lain': billResponseData['biaya_lain'],
+            'alamat': billResponseData['alamat'],
+            'jumlah_peserta': billResponseData['jumlah_peserta'],
           };
           print('📋 [CekTagihan] Bill Data created: $billData');
           await _cacheCustomerNo(_customerNoController.text.trim());
@@ -433,43 +463,92 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
           }
         } else {
-          // PATCH: Logic sukses untuk HP Pascabayar, Multifinance, Internet Pascabayar, dan BPJS Ketenagakerjaan
-          final hasStatus = responseData.containsKey('status');
+          // PATCH: Logic sukses untuk HP Pascabayar, Multifinance, Internet Pascabayar, BPJS, dan PLN Pascabayar (Digiflazz format)
+          final hasStatus = billResponseData.containsKey('status');
           final isStatusSuccess =
-              hasStatus && responseData['status'] == 'success';
+              hasStatus && billResponseData['status'] == 'Sukses';
           final isHpPascabayar = brandUpper.contains('HP');
           final isMultifinance = brandUpper.contains('MULTIFINANCE');
           final isInternetPascabayar = brandUpper.contains('INTERNET');
           final isBpjsKetenagakerjaan =
               brandUpper.contains('BPJS') &&
               brandUpper.contains('KETENAGAKERJAAN');
-          final isPLNNontaglis = brandUpper.contains('NONTAGLIS');
+          final isBpjsKesehatan =
+              brandUpper.contains('BPJS') &&
+              !brandUpper.contains('KETENAGAKERJAAN');
+          final isPLNPascabayar =
+              brandUpper.contains('PLN') && !brandUpper.contains('NONTAGLIS');
+          final isPdam = brandUpper.contains('PDAM');
           final isHpSuccess =
               isHpPascabayar &&
-              !hasStatus &&
-              responseData['tagihan'] != null &&
-              responseData['total_tagihan'] != null;
+              isStatusSuccess &&
+              billResponseData['desc'] is Map;
           final isMultifinanceSuccess =
               isMultifinance &&
-              !hasStatus &&
-              responseData['tagihan'] != null &&
-              responseData['total_tagihan'] != null;
+              isStatusSuccess &&
+              billResponseData['desc'] is Map;
           final isInternetSuccess =
               isInternetPascabayar &&
-              !hasStatus &&
-              responseData['tagihan'] != null &&
-              responseData['total_tagihan'] != null;
+              isStatusSuccess &&
+              billResponseData['desc'] is Map &&
+              (billResponseData['desc'] as Map).containsKey('detail') &&
+              billResponseData['desc']['detail'] is List &&
+              (billResponseData['desc']['detail'] as List).isNotEmpty;
           final isBpjsKetenagakerjaanSuccess =
               isBpjsKetenagakerjaan &&
               !hasStatus &&
-              responseData['tagihan'] != null &&
-              responseData['total_tagihan'] != null;
+              billResponseData['tagihan'] != null &&
+              billResponseData['total_tagihan'] != null;
+
+          // NEW: Check for PLN Pascabayar with Digiflazz format (nested desc.detail)
+          final isPlnPascabayarSuccess =
+              isPLNPascabayar &&
+              isStatusSuccess &&
+              billResponseData['desc'] is Map &&
+              (billResponseData['desc'] as Map).containsKey('detail') &&
+              billResponseData['desc']['detail'] is List &&
+              (billResponseData['desc']['detail'] as List).isNotEmpty;
+
+          // NEW: Check for Internet Pascabayar with Digiflazz format (same as PLN)
+          final isInternetPascabayarSuccess = isInternetSuccess;
+
+          // NEW: Check for PDAM with Digiflazz format (has desc.detail like PLN & Internet)
+          final isPdamSuccess =
+              isPdam &&
+              isStatusSuccess &&
+              billResponseData['desc'] is Map &&
+              (billResponseData['desc'] as Map).containsKey('detail') &&
+              billResponseData['desc']['detail'] is List &&
+              (billResponseData['desc']['detail'] as List).isNotEmpty;
+
+          // DEBUG: PDAM validation checks
+          if (isPdam) {
+            print('🔍 [PDAM Validation] isPdam: true');
+            print('   - isStatusSuccess: $isStatusSuccess');
+            print(
+              '   - billResponseData[desc] is Map: ${billResponseData['desc'] is Map}',
+            );
+            if (billResponseData['desc'] is Map) {
+              final desc = billResponseData['desc'] as Map;
+              print(
+                '   - desc.containsKey(detail): ${desc.containsKey('detail')}',
+              );
+              print('   - desc[detail] is List: ${desc['detail'] is List}');
+              if (desc['detail'] is List) {
+                print(
+                  '   - desc[detail].isNotEmpty: ${(desc['detail'] as List).isNotEmpty}',
+                );
+              }
+            }
+            print('   - isPdamSuccess FINAL: $isPdamSuccess');
+          }
 
           // Debug validation flags
           print('🔍 [CekTagihan] Validation flags:');
           print('   - hasStatus: $hasStatus');
           print('   - isStatusSuccess: $isStatusSuccess');
-          print('   - isPLNNontaglis: $isPLNNontaglis');
+          print('   - isPLNPascabayar: $isPLNPascabayar');
+          print('   - isPlnPascabayarSuccess: $isPlnPascabayarSuccess');
           print('   - isHpPascabayar: $isHpPascabayar');
           print('   - isMultifinance: $isMultifinance');
           print('   - isInternetPascabayar: $isInternetPascabayar');
@@ -478,56 +557,497 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           print(
             '   - isBpjsKetenagakerjaanSuccess: $isBpjsKetenagakerjaanSuccess',
           );
+          print('   - isPdam: $isPdam');
+          print('   - isPdamSuccess: $isPdamSuccess');
+
+          // DEBUG: Check Internet response structure
+          if (isInternetPascabayar) {
+            print('🔍 [DEBUG Internet] Response analysis:');
+            print('   - desc exists: ${billResponseData.containsKey('desc')}');
+            print(
+              '   - desc value type: ${billResponseData['desc'].runtimeType}',
+            );
+            if (billResponseData['desc'] != null) {
+              final desc = billResponseData['desc'];
+              print('   - desc has detail: ${desc.containsKey('detail')}');
+              print('   - detail type: ${desc['detail'].runtimeType}');
+              print(
+                '   - detail length: ${(desc['detail'] as List?)?.length ?? 0}',
+              );
+            }
+          }
 
           if (isStatusSuccess ||
               isHpSuccess ||
               isMultifinanceSuccess ||
               isInternetSuccess ||
-              isBpjsKetenagakerjaanSuccess) {
+              isBpjsKetenagakerjaanSuccess ||
+              isPlnPascabayarSuccess ||
+              isPdamSuccess) {
             print(
-              '✅ [CekTagihan] Status is success (status field/HP/Multifinance/Internet/BPJSKetenagakerjaan logic), building bill data...',
+              '✅ [CekTagihan] Status is success (Digiflazz format), building bill data...',
             );
 
-            final billData = {
-              'customer_name': responseData['customer_name'],
-              'customer_no': responseData['customer_no'],
-              'periode': responseData['periode'],
-              'tagihan': responseData['tagihan'],
-              'admin': responseData['admin'],
-              'denda': responseData['denda'] ?? 0,
-              'total_tagihan': responseData['total_tagihan'],
-              'lembar_tagihan': responseData['lembar_tagihan'] ?? 1,
-              'ref_id': responseData['ref_id'],
-              'product_name': responseData['product_name'],
-              'buyer_sku_code': responseData['buyer_sku_code'],
-              'brand': responseData['brand'],
-              'biaya_lain': responseData['biaya_lain'],
-              'alamat': responseData['alamat'],
-              'jumlah_peserta': responseData['jumlah_peserta'],
-            };
+            // NEW: Handle PLN Pascabayar with multiple periods in detail array
+            if (isPlnPascabayarSuccess) {
+              print('📋 [PLN Pascabayar] Processing multiple periods...');
 
-            print('📋 [CekTagihan] Bill Data created: $billData');
+              final descData = billResponseData['desc'];
+              final details = descData['detail'] as List<dynamic>? ?? [];
 
-            // Cache customer number
-            await _cacheCustomerNo(_customerNoController.text.trim());
+              print('📋 [PLN Pascabayar] Total periods: ${details.length}');
 
-            if (mounted) {
-              setState(() {
-                _billData = billData;
-                _isLoading = false;
-              });
+              if (details.isNotEmpty) {
+                // SUM all periods' nilai_tagihan and denda
+                int totalNilaiTagihan = 0;
+                int totalDenda = 0;
 
-              print('✅ [CekTagihan] Bill data set in state');
-              print('✅ [CekTagihan] _billData is null: ${_billData == null}');
-              print('✅ [CekTagihan] _isLoading: $_isLoading');
-              print('✅ [CekTagihan] UI should now display bill details');
-              _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+                for (var detail in details) {
+                  final nilai =
+                      int.tryParse(detail['nilai_tagihan'].toString()) ?? 0;
+                  final dnd = int.tryParse(detail['denda'].toString()) ?? 0;
+                  totalNilaiTagihan += nilai;
+                  totalDenda += dnd;
+                  print(
+                    '   [Period ${detail['periode']}] nilai: $nilai, denda: $dnd',
+                  );
+                }
+
+                // Get admin from top-level response (already includes all periods)
+                final adminFromApi = billResponseData['admin'] ?? 0;
+
+                print('📋 [PLN Pascabayar] Totals:');
+                print('   - Sum nilai_tagihan: $totalNilaiTagihan');
+                print('   - Sum denda: $totalDenda');
+                print('   - Admin from API: $adminFromApi');
+
+                // Calculate total_tagihan = sum of all values + admin
+                final totalTagihan =
+                    totalNilaiTagihan + adminFromApi + totalDenda;
+                print('   - Total Tagihan: $totalTagihan');
+
+                final billData = {
+                  'customer_name': billResponseData['customer_name'],
+                  'customer_no': billResponseData['customer_no'],
+                  'periode': details.isNotEmpty ? details[0]['periode'] : '',
+                  'tagihan': totalNilaiTagihan,
+                  'admin': adminFromApi,
+                  'denda': totalDenda,
+                  'total_tagihan': totalTagihan,
+                  'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                  'ref_id': billResponseData['ref_id'],
+                  'product_name': billResponseData['buyer_sku_code'],
+                  'buyer_sku_code': billResponseData['buyer_sku_code'],
+                  'brand': billResponseData['buyer_sku_code'],
+                  'biaya_lain': null,
+                  'alamat': null,
+                  'jumlah_peserta': null,
+                  // NEW: Add detail for all periods
+                  'details': details,
+                  'tarif': descData['tarif'],
+                  'daya': descData['daya'],
+                };
+
+                print(
+                  '📋 [PLN Pascabayar] Bill Data created with ${details.length} periods',
+                );
+
+                await _cacheCustomerNo(_customerNoController.text.trim());
+
+                if (mounted) {
+                  setState(() {
+                    _billData = billData;
+                    _isLoading = false;
+                  });
+
+                  print('✅ [PLN Pascabayar] Bill data set in state');
+                  _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+                }
+              } else {
+                throw Exception('Detail tagihan tidak ditemukan');
+              }
+            } else if (isInternetPascabayarSuccess) {
+              // NEW: Handle Internet Pascabayar with Digiflazz format (same as PLN)
+              print('📋 [Internet Pascabayar] Processing multiple periods...');
+
+              final descData = billResponseData['desc'];
+              final details = descData['detail'] as List<dynamic>? ?? [];
+
+              print(
+                '📋 [Internet Pascabayar] Total periods: ${details.length}',
+              );
+
+              if (details.isNotEmpty) {
+                // SUM all periods' nilai_tagihan and denda
+                int totalNilaiTagihan = 0;
+                int totalDenda = 0;
+
+                for (var detail in details) {
+                  final nilai =
+                      int.tryParse(detail['nilai_tagihan'].toString()) ?? 0;
+                  final dnd = int.tryParse(detail['denda'].toString()) ?? 0;
+                  totalNilaiTagihan += nilai;
+                  totalDenda += dnd;
+                  print(
+                    '   [Period ${detail['periode']}] nilai: $nilai, denda: $dnd',
+                  );
+                }
+
+                // Get admin from top-level response
+                final adminFromApi = billResponseData['admin'] ?? 0;
+
+                print('📋 [Internet Pascabayar] Totals:');
+                print('   - Sum nilai_tagihan: $totalNilaiTagihan');
+                print('   - Sum denda: $totalDenda');
+                print('   - Admin from API: $adminFromApi');
+
+                // Calculate total_tagihan = sum of all values + admin
+                final totalTagihan =
+                    totalNilaiTagihan + adminFromApi + totalDenda;
+                print('   - Total Tagihan: $totalTagihan');
+
+                final billData = {
+                  'customer_name': billResponseData['customer_name'],
+                  'customer_no': billResponseData['customer_no'],
+                  'periode': details.isNotEmpty ? details[0]['periode'] : '',
+                  'tagihan': totalNilaiTagihan,
+                  'admin': adminFromApi,
+                  'denda': totalDenda,
+                  'total_tagihan': totalTagihan,
+                  'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                  'ref_id': billResponseData['ref_id'],
+                  'product_name': billResponseData['buyer_sku_code'],
+                  'buyer_sku_code': billResponseData['buyer_sku_code'],
+                  'brand': billResponseData['buyer_sku_code'],
+                  'biaya_lain': null,
+                  'alamat': null,
+                  'jumlah_peserta': null,
+                  // Add detail for all periods
+                  'details': details,
+                };
+
+                print(
+                  '📋 [Internet Pascabayar] Bill Data created with ${details.length} periods',
+                );
+
+                await _cacheCustomerNo(_customerNoController.text.trim());
+
+                if (mounted) {
+                  setState(() {
+                    _billData = billData;
+                    _isLoading = false;
+                  });
+
+                  print('✅ [Internet Pascabayar] Bill data set in state');
+                  _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+                }
+              } else {
+                throw Exception('Detail tagihan tidak ditemukan');
+              }
+            } else if (isPdamSuccess) {
+              // NEW: Handle PDAM with Digiflazz format (same as PLN & Internet)
+              print('📋 [PDAM] Processing bill details...');
+              print('📋 [PDAM] ===== FULL RESPONSE DEBUG =====');
+              print('📋 [PDAM] Full billResponseData: $billResponseData');
+
+              final descData = billResponseData['desc'];
+              final details = descData['detail'] as List<dynamic>? ?? [];
+
+              print('📋 [PDAM] Total periods: ${details.length}');
+              print('📋 [PDAM] descData keys: ${descData.keys.toList()}');
+              print('📋 [PDAM] descData: $descData');
+
+              // DEBUG: Print detail array structure
+              print(
+                '📋 [PDAM] Detail array keys from first item: ${details.isNotEmpty ? (details[0] as Map).keys.toList() : 'EMPTY'}',
+              );
+              print('📋 [PDAM] Full details list: $details');
+
+              // DEBUG: Print detail array structure
+              print(
+                '📋 [PDAM] Detail array keys from first item: ${details.isNotEmpty ? (details[0] as Map).keys.toList() : 'EMPTY'}',
+              );
+              print('📋 [PDAM] Full details list: $details');
+
+              if (details.isNotEmpty) {
+                // SUM all periods' nilai_tagihan, denda, and biaya_lain
+                int totalNilaiTagihan = 0;
+                int totalDenda = 0;
+                int totalBiayaLain = 0;
+
+                for (var detail in details) {
+                  final nilai =
+                      int.tryParse(detail['nilai_tagihan'].toString()) ?? 0;
+                  final dnd = int.tryParse(detail['denda'].toString()) ?? 0;
+                  final biaya =
+                      int.tryParse(detail['biaya_lain'].toString()) ?? 0;
+                  totalNilaiTagihan += nilai;
+                  totalDenda += dnd;
+                  totalBiayaLain += biaya;
+
+                  // DEBUG: Log each detail item processing
+                  print(
+                    '📋 [PDAM] Detail item: ${(detail as Map).keys.toList()}',
+                  );
+                  print(
+                    '   [Period ${detail['periode']}] nilai: $nilai, denda: $dnd, biaya_lain: $biaya (raw: ${detail['biaya_lain']})',
+                  );
+                }
+
+                // Get admin from top-level response
+                final adminFromApi = billResponseData['admin'] ?? 0;
+
+                print('📋 [PDAM] Totals:');
+                print('   - Sum nilai_tagihan: $totalNilaiTagihan');
+                print('   - Sum denda: $totalDenda');
+                print('   - Sum biaya_lain: $totalBiayaLain');
+                print('   - Admin from API: $adminFromApi');
+
+                // Calculate total_tagihan = sum of all values + admin
+                final totalTagihan =
+                    totalNilaiTagihan +
+                    adminFromApi +
+                    totalDenda +
+                    totalBiayaLain;
+                print('   - Total Tagihan: $totalTagihan');
+
+                final billData = {
+                  'customer_name': billResponseData['customer_name'],
+                  'customer_no': billResponseData['customer_no'],
+                  'periode': details.isNotEmpty ? details[0]['periode'] : '',
+                  'tagihan': totalNilaiTagihan,
+                  'admin': adminFromApi,
+                  'denda': totalDenda,
+                  'total_tagihan': totalTagihan,
+                  'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                  'ref_id': billResponseData['ref_id'],
+                  'product_name': billResponseData['buyer_sku_code'],
+                  'buyer_sku_code': billResponseData['buyer_sku_code'],
+                  'brand': billResponseData['buyer_sku_code'],
+                  'biaya_lain': totalBiayaLain,
+                  'alamat': descData['alamat'] ?? null,
+                  'jumlah_peserta': null,
+                  // Add detail for all periods and additional PDAM fields
+                  'details': details,
+                  'tarif': descData['tarif'] ?? null,
+                  'jatuh_tempo': descData['jatuh_tempo'] ?? null,
+                };
+
+                print(
+                  '📋 [PDAM] Bill Data created with ${details.length} periods',
+                );
+                print('📋 [PDAM] Calculated totals:');
+                print('   - totalNilaiTagihan: $totalNilaiTagihan');
+                print('   - totalDenda: $totalDenda');
+                print('   - totalBiayaLain: $totalBiayaLain');
+                print('   - adminFromApi: $adminFromApi');
+                print('   - total_tagihan: ${billData['total_tagihan']}');
+                print('   - biaya_lain in billData: ${billData['biaya_lain']}');
+                print(
+                  '   - jatuh_tempo in billData: ${billData['jatuh_tempo']}',
+                );
+                print('   - details in billData: ${billData['details']}');
+
+                await _cacheCustomerNo(_customerNoController.text.trim());
+
+                if (mounted) {
+                  setState(() {
+                    _billData = billData;
+                    _isLoading = false;
+                  });
+
+                  print('✅ [PDAM] Bill data set in state');
+                  _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+                }
+              } else {
+                throw Exception('Detail tagihan tidak ditemukan');
+              }
+            } else if (isBpjsKesehatan &&
+                billResponseData['desc'] is Map &&
+                (billResponseData['desc'] as Map).containsKey('detail') &&
+                billResponseData['desc']['detail'] is List &&
+                (billResponseData['desc']['detail'] as List).isNotEmpty) {
+              // NEW: Handle BPJS Kesehatan with Digiflazz format
+              print('🔍 [BpjsKesehatan] Processing response');
+
+              final descData = billResponseData['desc'] as Map;
+              final detailArray = descData['detail'] as List;
+              final periode = detailArray.isNotEmpty
+                  ? detailArray[0]['periode'] ?? ''
+                  : '';
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': periode,
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan':
+                    billResponseData['price'] +
+                    billResponseData['admin'], // price + admin
+                'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': descData['alamat'] ?? null,
+                'jumlah_peserta': descData['jumlah_peserta'] ?? null,
+                'details': detailArray,
+              };
+
+              print('📋 [BpjsKesehatan] Bill Data created:');
+              print('   - periode: $periode');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+              print('   - alamat: ${billData['alamat']}');
+              print('   - jumlah_peserta: ${billData['jumlah_peserta']}');
+              print('   - lembar_tagihan: ${billData['lembar_tagihan']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [BpjsKesehatan] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
+            } else if (isHpSuccess) {
+              // NEW: Handle HP Pascabayar with Digiflazz format
+              print('🔍 [HP Pascabayar] Processing response');
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': '1',
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan':
+                    billResponseData['price'] +
+                    billResponseData['admin'], // price + admin
+                'lembar_tagihan':
+                    billResponseData['desc']['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': null,
+                'jumlah_peserta': null,
+              };
+
+              print('📋 [HP Pascabayar] Bill Data created:');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [HP Pascabayar] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
+            } else if (isMultifinanceSuccess) {
+              // NEW: Handle Multifinance with Digiflazz format
+              print('🔍 [Multifinance] Processing response');
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': '1',
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan':
+                    billResponseData['price'] +
+                    billResponseData['admin'], // price + admin
+                'lembar_tagihan':
+                    billResponseData['desc']['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': null,
+                'jumlah_peserta': null,
+              };
+
+              print('📋 [Multifinance] Bill Data created:');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [Multifinance] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
+            } else {
+              // OLD: Handle non-PLN/Internet/PDAM/HP/Multifinance Pascabayar responses (flat structure)
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': billResponseData['periode'],
+                'tagihan': billResponseData['tagihan'],
+                'admin': billResponseData['admin'],
+                'denda': billResponseData['denda'] ?? 0,
+                'total_tagihan': billResponseData['total_tagihan'],
+                'lembar_tagihan': billResponseData['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['product_name'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['brand'],
+                'biaya_lain': billResponseData['biaya_lain'],
+                'alamat': billResponseData['alamat'],
+                'jumlah_peserta': billResponseData['jumlah_peserta'],
+              };
+
+              print('📋 [CekTagihan] Bill Data created: $billData');
+
+              // Cache customer number
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [CekTagihan] Bill data set in state');
+                print('✅ [CekTagihan] _billData is null: ${_billData == null}');
+                print('✅ [CekTagihan] _isLoading: $_isLoading');
+                print('✅ [CekTagihan] UI should now display bill details');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
             }
           } else {
             print('❌ [CekTagihan] Status is not success');
-            print('❌ [CekTagihan] responseData: $responseData');
+            print('❌ [CekTagihan] billResponseData: $billResponseData');
             throw Exception(
-              responseData['message'] ?? 'Gagal mengambil tagihan',
+              billResponseData['message'] ?? 'Gagal mengambil tagihan',
             );
           }
         }
@@ -538,20 +1058,82 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
     } catch (e) {
       print('❌ [CekTagihan] Error occurred: $e');
       print('❌ [CekTagihan] Error type: ${e.runtimeType}');
+
       String userMessage = 'Gagal mengambil tagihan. Silakan coba lagi.';
+      String debugMessage = '';
+
       if (e is DioException) {
-        // Jika status code 500, tampilkan pesan user-friendly
+        print('❌ [CekTagihan] DioException Details:');
+        print('   - Type: ${e.type}');
+        print('   - Message: ${e.message}');
+        print('   - Status Code: ${e.response?.statusCode}');
+        print('   - Response Headers: ${e.response?.headers}');
+        print('   - Response Data: ${e.response?.data}');
+        print('   - Request URI: ${e.requestOptions.uri}');
+        print('   - Request Method: ${e.requestOptions.method}');
+
+        debugMessage = 'DioException: ${e.type} - ${e.message}';
+
         final statusCode = e.response?.statusCode;
-        if (statusCode == 500) {
+
+        if (e.type == DioExceptionType.connectionTimeout) {
+          userMessage = 'Koneksi timeout. Silakan coba lagi.';
+        } else if (e.type == DioExceptionType.receiveTimeout) {
+          userMessage = 'Server tidak merespons. Silakan coba lagi.';
+        } else if (e.type == DioExceptionType.sendTimeout) {
+          userMessage = 'Pengiriman data timeout. Silakan coba lagi.';
+        } else if (statusCode == 404) {
+          userMessage = 'Pelanggan tidak ditemukan (404).';
+        } else if (statusCode == 400) {
+          // Try to get detailed message from response
+          if (e.response?.data is Map) {
+            final responseData = e.response!.data as Map<dynamic, dynamic>;
+            if (responseData['message'] != null) {
+              userMessage = responseData['message'].toString();
+            } else if (responseData['error'] != null) {
+              userMessage = responseData['error'].toString();
+            } else {
+              userMessage = 'Bad request (400). Silakan periksa data.';
+            }
+          } else {
+            userMessage = 'Bad request (400). Silakan periksa data.';
+          }
+        } else if (statusCode == 401) {
+          userMessage = 'Token tidak valid. Silakan login kembali.';
+        } else if (statusCode == 403) {
+          userMessage = 'Akses ditolak (403).';
+        } else if (statusCode == 500) {
           userMessage =
               'Server sedang bermasalah (500). Silakan coba beberapa saat lagi.';
-        } else if (e.response?.data is Map &&
-            e.response?.data['message'] != null) {
-          userMessage = e.response?.data['message'];
+        } else if (statusCode == null) {
+          // Network error, no status code
+          userMessage =
+              'Gagal terkoneksi ke server. Silakan cek koneksi internet Anda.';
+        } else {
+          // Try to extract message from response
+          if (e.response?.data is Map) {
+            final responseData = e.response!.data as Map<dynamic, dynamic>;
+            if (responseData['message'] != null) {
+              userMessage = responseData['message'].toString();
+            } else if (responseData['data'] is Map) {
+              final dataMap = responseData['data'] as Map<dynamic, dynamic>;
+              if (dataMap['message'] != null) {
+                userMessage = dataMap['message'].toString();
+              }
+            }
+          }
+          userMessage = 'Error $statusCode: $userMessage';
         }
       } else if (e is Exception) {
+        debugMessage = 'Exception: ${e.toString()}';
         userMessage = e.toString().replaceAll('Exception: ', '');
       }
+
+      print('❌ [CekTagihan] User Message: $userMessage');
+      if (debugMessage.isNotEmpty) {
+        print('❌ [CekTagihan] Debug Message: $debugMessage');
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;

@@ -668,7 +668,7 @@ class ApiService {
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
           baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-       // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+      //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
