@@ -74,7 +74,7 @@ class _CekTagihanBottomSheet extends StatefulWidget {
 class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
     with SingleTickerProviderStateMixin {
   final TextEditingController _customerNoController = TextEditingController();
-  final ApiService _apiService = ApiService(Dio());
+  final ApiService _apiService = ApiService.auto(Dio());
 
   bool _isLoading = false;
   bool _isLoadingSaldo = false;
@@ -363,52 +363,47 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
       }
 
       if (response.statusCode == 200) {
-        // PATCH: Logic sukses untuk PLN NONTAGLIS (different response format)
+        // PATCH: Logic sukses untuk PLN NONTAGLIS (Digiflazz format)
         if (brandUpper.contains('NONTAGLIS')) {
           final hasStatus = billResponseData.containsKey('status');
           final isStatusSuccess =
-              hasStatus && billResponseData['status'] == 'success';
+              hasStatus && billResponseData['status'] == 'Sukses';
 
           if (isStatusSuccess) {
             print('✅ [PLN NONTAGLIS] Status is success, building bill data...');
 
-            // PLN NONTAGLIS uses different field names:
-            // - price -> tagihan (base amount)
-            // - admin -> admin
-            // - total_tagihan = price + admin (NOT selling_price)
-            // Display will add markupMember on top
+            // PLN NONTAGLIS with Digiflazz format
+            final descData = billResponseData['desc'] ?? {};
             final price = billResponseData['price'] ?? 0;
             final admin = billResponseData['admin'] ?? 0;
             final totalTagihan =
-                price + admin; // Calculate total = price + admin
+                billResponseData['selling_price'] ?? (price + admin);
 
             print('📋 [PLN NONTAGLIS] price: $price');
             print('📋 [PLN NONTAGLIS] admin: $admin');
-            print(
-              '📋 [PLN NONTAGLIS] totalTagihan (price + admin): $totalTagihan',
-            );
+            print('📋 [PLN NONTAGLIS] totalTagihan: $totalTagihan');
 
             final billData = {
               'customer_name': billResponseData['customer_name'],
               'customer_no': billResponseData['customer_no'],
               'periode':
-                  billResponseData['tgl_registrasi'], // Use tgl_registrasi as periode
+                  descData['tanggal_registrasi'], // Use tanggal_registrasi as periode
               'tagihan': price, // Map price to tagihan
               'admin': admin,
               'denda': 0, // No denda for NONTAGLIS
-              'total_tagihan': totalTagihan, // price + admin
-              'lembar_tagihan': billResponseData['lembar_tagihan'] ?? 1,
+              'total_tagihan': totalTagihan,
+              'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
               'ref_id': billResponseData['ref_id'],
-              'product_name': billResponseData['product_name'],
+              'product_name': billResponseData['buyer_sku_code'],
               'buyer_sku_code': billResponseData['buyer_sku_code'],
-              'brand': billResponseData['brand'],
+              'brand': billResponseData['buyer_sku_code'],
               'biaya_lain': null,
               'alamat': null,
               'jumlah_peserta': null,
-              // Additional NONTAGLIS fields
-              'transaksi_type': billResponseData['transaksi_type'],
-              'no_registrasi': billResponseData['no_registrasi'],
-              'tgl_registrasi': billResponseData['tgl_registrasi'],
+              // PLN NONTAGLIS specific fields from desc
+              'transaksi_type': descData['transaksi'],
+              'no_registrasi': descData['no_registrasi'],
+              'tgl_registrasi': descData['tanggal_registrasi'],
               'sn': billResponseData['sn'],
             };
 
@@ -427,40 +422,69 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             }
           } else {
             print('❌ [PLN NONTAGLIS] Status is not success');
+            print('❌ [PLN NONTAGLIS] billResponseData: $billResponseData');
             throw Exception(
               billResponseData['message'] ?? 'Gagal mengambil tagihan',
             );
           }
         }
-        // PATCH: Logic sukses untuk E-Money
+        // PATCH: Logic sukses untuk E-Money (Digiflazz format)
         else if (brandUpper.contains('E-MONEY')) {
-          // Parsing sesuai hasil Postman
-          final billData = {
-            'customer_name': billResponseData['customer_name'],
-            'customer_no': billResponseData['customer_no'],
-            'periode': billResponseData['periode'],
-            'tagihan': billResponseData['tagihan'],
-            'admin': billResponseData['admin'],
-            'denda': billResponseData['denda'] ?? 0,
-            'total_tagihan': billResponseData['total_tagihan'],
-            'lembar_tagihan': billResponseData['lembar_tagihan'] ?? 1,
-            'ref_id': billResponseData['ref_id'],
-            'product_name': billResponseData['product_name'],
-            'buyer_sku_code': billResponseData['buyer_sku_code'],
-            'brand': billResponseData['brand'],
-            'biaya_lain': billResponseData['biaya_lain'],
-            'alamat': billResponseData['alamat'],
-            'jumlah_peserta': billResponseData['jumlah_peserta'],
-          };
-          print('📋 [CekTagihan] Bill Data created: $billData');
-          await _cacheCustomerNo(_customerNoController.text.trim());
-          if (mounted) {
-            setState(() {
-              _billData = billData;
-              _isLoading = false;
-            });
-            print('✅ [CekTagihan] Bill data set in state');
-            _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+          final hasStatus = billResponseData.containsKey('status');
+          final isStatusSuccess =
+              hasStatus && billResponseData['status'] == 'Sukses';
+
+          if (isStatusSuccess) {
+            print('✅ [E-MONEY] Status is success, building bill data...');
+
+            // E-Money with Digiflazz format
+            final price = billResponseData['price'] ?? 0;
+            final admin = billResponseData['admin'] ?? 0;
+            final totalTagihan =
+                billResponseData['selling_price'] ?? (price + admin);
+
+            print('📋 [E-MONEY] price: $price');
+            print('📋 [E-MONEY] admin: $admin');
+            print('📋 [E-MONEY] totalTagihan: $totalTagihan');
+
+            final billData = {
+              'customer_name': billResponseData['customer_name'],
+              'customer_no': billResponseData['customer_no'],
+              'periode': 1, // E-Money doesn't have periode
+              'tagihan': price,
+              'admin': admin,
+              'denda': 0,
+              'total_tagihan': totalTagihan,
+              'lembar_tagihan':
+                  billResponseData['desc']?['lembar_tagihan'] ?? 1,
+              'ref_id': billResponseData['ref_id'],
+              'product_name': billResponseData['buyer_sku_code'],
+              'buyer_sku_code': billResponseData['buyer_sku_code'],
+              'brand': billResponseData['buyer_sku_code'],
+              'biaya_lain': 0,
+              'alamat': null,
+              'jumlah_peserta': null,
+              'sn': billResponseData['sn'],
+            };
+
+            print('📋 [E-MONEY] Bill Data created: $billData');
+            await _cacheCustomerNo(_customerNoController.text.trim());
+
+            if (mounted) {
+              setState(() {
+                _billData = billData;
+                _isLoading = false;
+              });
+
+              print('✅ [E-MONEY] Bill data set in state');
+              _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+            }
+          } else {
+            print('❌ [E-MONEY] Status is not success');
+            print('❌ [E-MONEY] billResponseData: $billResponseData');
+            throw Exception(
+              billResponseData['message'] ?? 'Gagal mengambil tagihan',
+            );
           }
         } else {
           // PATCH: Logic sukses untuk HP Pascabayar, Multifinance, Internet Pascabayar, BPJS, dan PLN Pascabayar (Digiflazz format)
@@ -479,8 +503,21 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           final isPLNPascabayar =
               brandUpper.contains('PLN') && !brandUpper.contains('NONTAGLIS');
           final isPdam = brandUpper.contains('PDAM');
+          final isPbb = brandUpper.contains('PBB');
+          final isTvPascabayar = brandUpper.contains('TV');
+          final isGas = brandUpper.contains('GAS');
+          final isMobileCarrier =
+              brandUpper.contains('BYU') ||
+              brandUpper.contains('TELKOMSEL') ||
+              brandUpper.contains('INDOSAT') ||
+              brandUpper.contains('TRI') ||
+              brandUpper.contains('XL');
           final isHpSuccess =
               isHpPascabayar &&
+              isStatusSuccess &&
+              billResponseData['desc'] is Map;
+          final isMobileCarrierSuccess =
+              isMobileCarrier &&
               isStatusSuccess &&
               billResponseData['desc'] is Map;
           final isMultifinanceSuccess =
@@ -496,9 +533,8 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               (billResponseData['desc']['detail'] as List).isNotEmpty;
           final isBpjsKetenagakerjaanSuccess =
               isBpjsKetenagakerjaan &&
-              !hasStatus &&
-              billResponseData['tagihan'] != null &&
-              billResponseData['total_tagihan'] != null;
+              isStatusSuccess &&
+              billResponseData['desc'] is Map;
 
           // NEW: Check for PLN Pascabayar with Digiflazz format (nested desc.detail)
           final isPlnPascabayarSuccess =
@@ -515,6 +551,28 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           // NEW: Check for PDAM with Digiflazz format (has desc.detail like PLN & Internet)
           final isPdamSuccess =
               isPdam &&
+              isStatusSuccess &&
+              billResponseData['desc'] is Map &&
+              (billResponseData['desc'] as Map).containsKey('detail') &&
+              billResponseData['desc']['detail'] is List &&
+              (billResponseData['desc']['detail'] as List).isNotEmpty;
+
+          // NEW: Check for PBB with Digiflazz format (has desc but no detail array)
+          final isPbbSuccess =
+              isPbb && isStatusSuccess && billResponseData['desc'] is Map;
+
+          // NEW: Check for TV Pascabayar with Digiflazz format (has desc.detail array)
+          final isTvSuccess =
+              isTvPascabayar &&
+              isStatusSuccess &&
+              billResponseData['desc'] is Map &&
+              (billResponseData['desc'] as Map).containsKey('detail') &&
+              billResponseData['desc']['detail'] is List &&
+              (billResponseData['desc']['detail'] as List).isNotEmpty;
+
+          // NEW: Check for GAS with Digiflazz format (has desc.detail array with meter readings)
+          final isGasSuccess =
+              isGas &&
               isStatusSuccess &&
               billResponseData['desc'] is Map &&
               (billResponseData['desc'] as Map).containsKey('detail') &&
@@ -543,6 +601,17 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             print('   - isPdamSuccess FINAL: $isPdamSuccess');
           }
 
+          // DEBUG: Mobile Carrier validation checks
+          if (isMobileCarrier) {
+            print('🔍 [Mobile Carrier Validation] isMobileCarrier: true');
+            print('   - brandUpper: $brandUpper');
+            print('   - isStatusSuccess: $isStatusSuccess');
+            print(
+              '   - billResponseData[desc] is Map: ${billResponseData['desc'] is Map}',
+            );
+            print('   - isMobileCarrierSuccess FINAL: $isMobileCarrierSuccess');
+          }
+
           // Debug validation flags
           print('🔍 [CekTagihan] Validation flags:');
           print('   - hasStatus: $hasStatus');
@@ -559,6 +628,12 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
           );
           print('   - isPdam: $isPdam');
           print('   - isPdamSuccess: $isPdamSuccess');
+          print('   - isPbb: $isPbb');
+          print('   - isPbbSuccess: $isPbbSuccess');
+          print('   - isTvPascabayar: $isTvPascabayar');
+          print('   - isTvSuccess: $isTvSuccess');
+          print('   - isGas: $isGas');
+          print('   - isGasSuccess: $isGasSuccess');
 
           // DEBUG: Check Internet response structure
           if (isInternetPascabayar) {
@@ -579,11 +654,15 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
 
           if (isStatusSuccess ||
               isHpSuccess ||
+              isMobileCarrierSuccess ||
               isMultifinanceSuccess ||
               isInternetSuccess ||
               isBpjsKetenagakerjaanSuccess ||
               isPlnPascabayarSuccess ||
-              isPdamSuccess) {
+              isPdamSuccess ||
+              isPbbSuccess ||
+              isTvSuccess ||
+              isGasSuccess) {
             print(
               '✅ [CekTagihan] Status is success (Digiflazz format), building bill data...',
             );
@@ -862,6 +941,249 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               } else {
                 throw Exception('Detail tagihan tidak ditemukan');
               }
+            } else if (isPbbSuccess) {
+              // NEW: Handle PBB with Digiflazz format (no detail array, single period)
+              print('🔍 [PBB] Processing response');
+
+              final descData = billResponseData['desc'];
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': descData['tahun_pajak'] ?? '',
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan': billResponseData['selling_price'],
+                'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                // PBB-specific fields
+                'alamat': descData['alamat'] ?? null,
+                'kelurahan': descData['kelurahan'] ?? null,
+                'kecamatan': descData['kecamatan'] ?? null,
+                'kab_kota': descData['kab_kota'] ?? null,
+                'luas_tanah': descData['luas_tanah'] ?? null,
+                'luas_gedung': descData['luas_gedung'] ?? null,
+                'jumlah_peserta': null,
+              };
+
+              print('📋 [PBB] Bill Data created:');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - periode: ${billData['periode']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+              print('   - alamat: ${billData['alamat']}');
+              print('   - luas_tanah: ${billData['luas_tanah']}');
+              print('   - luas_gedung: ${billData['luas_gedung']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [PBB] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
+            } else if (isTvSuccess) {
+              // NEW: Handle TV Pascabayar with Digiflazz format
+              print('🔍 [TV Pascabayar] Processing response');
+
+              final descData = billResponseData['desc'];
+              final details = descData['detail'] as List<dynamic>? ?? [];
+
+              // Extract TV-specific fields from first detail
+              final periode = details.isNotEmpty
+                  ? details[0]['periode'] ?? ''
+                  : '';
+              final nilaiTagihan = details.isNotEmpty
+                  ? int.tryParse(details[0]['nilai_tagihan'].toString()) ?? 0
+                  : 0;
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': periode,
+                'tagihan': nilaiTagihan,
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan': billResponseData['selling_price'],
+                'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': null,
+                'jumlah_peserta': null,
+                'details': details,
+              };
+
+              print('📋 [TV Pascabayar] Bill Data created:');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - periode: ${billData['periode']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [TV Pascabayar] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
+            } else if (isGasSuccess) {
+              // NEW: Handle GAS with Digiflazz format (has desc.detail array with meter readings)
+              print('🔍 [GAS] Processing response');
+
+              final descData = billResponseData['desc'];
+              final details = descData['detail'] as List<dynamic>? ?? [];
+
+              // Extract GAS-specific fields from all details (sum meter usage if multiple)
+              int totalUsage = 0;
+              for (var detail in details) {
+                final usage = int.tryParse(detail['usage'].toString()) ?? 0;
+                totalUsage += usage;
+              }
+
+              final periode = details.isNotEmpty
+                  ? details[0]['periode'] ?? ''
+                  : '';
+              final meterAwal = details.isNotEmpty
+                  ? details[0]['meter_awal'] ?? ''
+                  : '';
+              final meterAkhir = details.isNotEmpty
+                  ? details[0]['meter_akhir'] ?? ''
+                  : '';
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': periode,
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan': billResponseData['selling_price'],
+                'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': descData['alamat'] ?? null,
+                'jumlah_peserta': null,
+                // GAS-specific fields
+                'meter_awal': meterAwal,
+                'meter_akhir': meterAkhir,
+                'usage': totalUsage,
+                'details': details,
+              };
+
+              print('📋 [GAS] Bill Data created:');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - periode: ${billData['periode']}');
+              print('   - meter_awal: ${billData['meter_awal']}');
+              print('   - meter_akhir: ${billData['meter_akhir']}');
+              print('   - total_usage: ${billData['usage']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [GAS] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
+            } else if (isBpjsKetenagakerjaanSuccess) {
+              // NEW: Handle BPJS Ketenagakerjaan with Digiflazz format
+              print('🔍 [BPJS Ketenagakerjaan] Processing response');
+
+              final descData = billResponseData['desc'] as Map;
+
+              // Extract BPJS-specific fields from desc
+              final jht = (int.tryParse(descData['jht'].toString()) ?? 0);
+              final jkk = (int.tryParse(descData['jkk'].toString()) ?? 0);
+              final jkm = (int.tryParse(descData['jkm'].toString()) ?? 0);
+              final jpk = (int.tryParse(descData['jpk'].toString()) ?? 0);
+              final jpn = (int.tryParse(descData['jpn'].toString()) ?? 0);
+
+              // Calculate total nilai_tagihan from components
+              final nilaiTagihan = jht + jkk + jkm + jpk + jpn;
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': descData['kode_divisi'] ?? '-',
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan': billResponseData['selling_price'],
+                'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': null,
+                'jumlah_peserta': null,
+                // BPJS Ketenagakerjaan-specific fields
+                'kode_iuran': descData['kode_iuran'] ?? '-',
+                'jht': jht,
+                'jkk': jkk,
+                'jkm': jkm,
+                'jpk': jpk,
+                'jpn': jpn,
+                'npp': descData['npp'] ?? '-',
+                'kode_program': descData['kode_program'] ?? '-',
+                'kantor_cabang': descData['kantor_cabang'] ?? '-',
+                'tgl_efektif': descData['tgl_efektif'] ?? '-',
+                'tgl_expired': descData['tgl_expired'] ?? '-',
+              };
+
+              print('📋 [BPJS Ketenagakerjaan] Bill Data created:');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+              print('   - jht: ${billData['jht']}');
+              print('   - jkk: ${billData['jkk']}');
+              print('   - jkm: ${billData['jkm']}');
+              print('   - kode_iuran: ${billData['kode_iuran']}');
+              print('   - npp: ${billData['npp']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [BPJS Ketenagakerjaan] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
             } else if (isBpjsKesehatan &&
                 billResponseData['desc'] is Map &&
                 (billResponseData['desc'] as Map).containsKey('detail') &&
@@ -919,6 +1241,48 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 print('✅ [BpjsKesehatan] Bill data set in state');
                 _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
               }
+            } else if (isMobileCarrierSuccess) {
+              // NEW: Handle Mobile Carriers (BYU, Telkomsel, Indosat, Tri, XL) with Digiflazz format
+              print('🔍 [Mobile Carrier] Processing response');
+
+              final billData = {
+                'customer_name': billResponseData['customer_name'],
+                'customer_no': billResponseData['customer_no'],
+                'periode': '1',
+                'tagihan': billResponseData['price'],
+                'admin': billResponseData['admin'],
+                'denda': 0,
+                'total_tagihan': billResponseData['selling_price'],
+                'lembar_tagihan':
+                    billResponseData['desc']['lembar_tagihan'] ?? 1,
+                'ref_id': billResponseData['ref_id'],
+                'product_name': billResponseData['buyer_sku_code'],
+                'buyer_sku_code': billResponseData['buyer_sku_code'],
+                'brand': billResponseData['buyer_sku_code'],
+                'biaya_lain': 0,
+                'alamat': null,
+                'jumlah_peserta': null,
+              };
+
+              print('📋 [Mobile Carrier] Bill Data created:');
+              print('   - mobile_type: $brandUpper');
+              print('   - customer_name: ${billData['customer_name']}');
+              print('   - customer_no: ${billData['customer_no']}');
+              print('   - tagihan: ${billData['tagihan']}');
+              print('   - admin: ${billData['admin']}');
+              print('   - total_tagihan: ${billData['total_tagihan']}');
+
+              await _cacheCustomerNo(_customerNoController.text.trim());
+
+              if (mounted) {
+                setState(() {
+                  _billData = billData;
+                  _isLoading = false;
+                });
+
+                print('✅ [Mobile Carrier] Bill data set in state');
+                _showSnackbar('Tagihan berhasil ditemukan', Colors.green);
+              }
             } else if (isHpSuccess) {
               // NEW: Handle HP Pascabayar with Digiflazz format
               print('🔍 [HP Pascabayar] Processing response');
@@ -966,25 +1330,57 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               // NEW: Handle Multifinance with Digiflazz format
               print('🔍 [Multifinance] Processing response');
 
+              final descData = billResponseData['desc'];
+              final details = descData['detail'] as List<dynamic>? ?? [];
+
+              // Extract multifinance-specific fields
+              final itemName = descData['item_name'] ?? '';
+              final noRangka = descData['no_rangka'] ?? '';
+              final noPol = descData['no_pol'] ?? '';
+              final tenor = descData['tenor'] ?? '';
+              final buyerLastSaldo = billResponseData['buyer_last_saldo'] ?? 0;
+
+              // Calculate total denda and biaya_lain from detail
+              int totalDenda = 0;
+              int totalBiayaLain = 0;
+
+              for (var detail in details) {
+                final dnd = int.tryParse(detail['denda'].toString()) ?? 0;
+                final biaya =
+                    int.tryParse(detail['biaya_lain'].toString()) ?? 0;
+                totalDenda += dnd;
+                totalBiayaLain += biaya;
+              }
+
               final billData = {
                 'customer_name': billResponseData['customer_name'],
                 'customer_no': billResponseData['customer_no'],
-                'periode': '1',
+                'periode': details.isNotEmpty
+                    ? details[0]['periode'] ?? '001'
+                    : '001',
                 'tagihan': billResponseData['price'],
                 'admin': billResponseData['admin'],
-                'denda': 0,
+                'denda': totalDenda,
                 'total_tagihan':
                     billResponseData['price'] +
-                    billResponseData['admin'], // price + admin
-                'lembar_tagihan':
-                    billResponseData['desc']['lembar_tagihan'] ?? 1,
+                    billResponseData['admin'] +
+                    totalDenda +
+                    totalBiayaLain, // price + admin + denda + biaya_lain
+                'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
                 'ref_id': billResponseData['ref_id'],
                 'product_name': billResponseData['buyer_sku_code'],
                 'buyer_sku_code': billResponseData['buyer_sku_code'],
                 'brand': billResponseData['buyer_sku_code'],
-                'biaya_lain': 0,
+                'biaya_lain': totalBiayaLain,
                 'alamat': null,
                 'jumlah_peserta': null,
+                // Multifinance-specific fields
+                'item_name': itemName,
+                'no_rangka': noRangka,
+                'no_pol': noPol,
+                'tenor': tenor,
+                'buyer_last_saldo': buyerLastSaldo,
+                'details': details,
               };
 
               print('📋 [Multifinance] Bill Data created:');
@@ -992,7 +1388,14 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               print('   - customer_no: ${billData['customer_no']}');
               print('   - tagihan: ${billData['tagihan']}');
               print('   - admin: ${billData['admin']}');
+              print('   - denda: ${billData['denda']}');
+              print('   - biaya_lain: ${billData['biaya_lain']}');
               print('   - total_tagihan: ${billData['total_tagihan']}');
+              print('   - item_name: ${billData['item_name']}');
+              print('   - no_rangka: ${billData['no_rangka']}');
+              print('   - no_pol: ${billData['no_pol']}');
+              print('   - tenor: ${billData['tenor']}');
+              print('   - buyer_last_saldo: ${billData['buyer_last_saldo']}');
 
               await _cacheCustomerNo(_customerNoController.text.trim());
 
@@ -1962,6 +2365,200 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   value: (_billData?['lembar_tagihan'] ?? 1).toString(),
                   primaryColor: primaryColor,
                 ),
+
+                // Multifinance-specific fields
+                if (widget.brand.toUpperCase().contains('MULTIFINANCE')) ...[
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.directions_car,
+                    label: 'Kendaraan',
+                    value: (_billData?['item_name'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.vpn_key,
+                    label: 'No. Rangka',
+                    value: (_billData?['no_rangka'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.numbers,
+                    label: 'No. Polisi',
+                    value: (_billData?['no_pol'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.calendar_today,
+                    label: 'Tenor',
+                    value: (_billData?['tenor'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactAmountRow(
+                    label: 'Saldo Terakhir',
+                    amount: _billData?['buyer_last_saldo'] ?? 0,
+                  ),
+                ],
+
+                // PBB-specific fields
+                if (widget.brand.toUpperCase().contains('PBB')) ...[
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.location_on,
+                    label: 'Alamat',
+                    value: (_billData?['alamat'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.map,
+                    label: 'Kelurahan',
+                    value: (_billData?['kelurahan'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.domain,
+                    label: 'Kecamatan',
+                    value: (_billData?['kecamatan'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.location_city,
+                    label: 'Kab/Kota',
+                    value: (_billData?['kab_kota'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.aspect_ratio,
+                    label: 'Luas Tanah',
+                    value: (_billData?['luas_tanah'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.business,
+                    label: 'Luas Gedung',
+                    value: (_billData?['luas_gedung'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                ],
+
+                // GAS-specific fields
+                if (widget.brand.toUpperCase().contains('GAS')) ...[
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.location_on,
+                    label: 'Alamat',
+                    value: (_billData?['alamat'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.speed,
+                    label: 'Meter Awal',
+                    value: (_billData?['meter_awal'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.speed,
+                    label: 'Meter Akhir',
+                    value: (_billData?['meter_akhir'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.show_chart,
+                    label: 'Penggunaan (m³)',
+                    value: (_billData?['usage'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                ],
+
+                // PLN NONTAGLIS-specific fields
+                if (widget.brand.toUpperCase().contains('NONTAGLIS')) ...[
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.receipt_long,
+                    label: 'Tipe Transaksi',
+                    value: (_billData?['transaksi_type'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.confirmation_number,
+                    label: 'Nomor Registrasi',
+                    value: (_billData?['no_registrasi'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.calendar_today,
+                    label: 'Tanggal Registrasi',
+                    value: (_billData?['tgl_registrasi'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                ],
+
+                // BPJS Ketenagakerjaan-specific fields
+                if (widget.brand.toUpperCase().contains('KETENAGAKERJAAN')) ...[
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactAmountRow(
+                    label: 'JHT (Jaminan Hari Tua)',
+                    amount: _billData?['jht'] ?? 0,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactAmountRow(
+                    label: 'JKK (Jaminan Kecelakaan Kerja)',
+                    amount: _billData?['jkk'] ?? 0,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactAmountRow(
+                    label: 'JKM (Jaminan Kematian)',
+                    amount: _billData?['jkm'] ?? 0,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.confirmation_number,
+                    label: 'Kode Iuran',
+                    value: (_billData?['kode_iuran'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.receipt,
+                    label: 'NPP',
+                    value: (_billData?['npp'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.business,
+                    label: 'Kantor Cabang',
+                    value: (_billData?['kantor_cabang'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.calendar_today,
+                    label: 'Tgl Efektif',
+                    value: (_billData?['tgl_efektif'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                  const Divider(height: 16, thickness: 0.5),
+                  _buildCompactInfoRow(
+                    icon: Icons.calendar_today,
+                    label: 'Tgl Expired',
+                    value: (_billData?['tgl_expired'] ?? '-').toString(),
+                    primaryColor: primaryColor,
+                  ),
+                ],
 
                 const SizedBox(height: 12),
                 Container(height: 1, color: Colors.grey[300]),

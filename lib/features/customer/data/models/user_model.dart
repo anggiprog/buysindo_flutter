@@ -3,12 +3,14 @@ class UserModel {
   final String username;
   final String email;
   final String? referralCode;
+  final String? status;
 
   UserModel({
     required this.id,
     required this.username,
     required this.email,
     this.referralCode,
+    this.status,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class UserModel {
       username: json['username'] ?? '',
       email: json['email'] ?? '',
       referralCode: json['referral_code'],
+      status: json['status'],
     );
   }
 }
