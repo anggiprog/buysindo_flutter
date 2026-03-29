@@ -71,7 +71,32 @@ class AppConfig with ChangeNotifier {
     _tampilan = prefs.getString(_keyTampilan) ?? _tampilan;
     _logoUrl = prefs.getString(_keyLogoUrl);
     _subdomain = prefs.getString(_keySubdomain) ?? "";
-    _adminUserId = prefs.getString(_keyAdminUserId) ?? _adminUserId;
+
+    // Load adminUserId dari cache dengan STRICT validation
+    final cachedAdminUserId = prefs.getString(_keyAdminUserId);
+
+    print(
+      '📋 [AppConfig.loadLocalConfig] subdomain: "$_subdomain", cachedAdminUserId: "$cachedAdminUserId"',
+    );
+
+    // RULE: Jika tidak ada subdomain (testing langsung via IP), SELALU gunakan default adminId
+    if (_subdomain.isEmpty) {
+      _adminUserId = _adminId;
+      print(
+        '✅ [AppConfig] No subdomain detected - using default adminId: $_adminUserId',
+      );
+    } else if (cachedAdminUserId != null &&
+        cachedAdminUserId.isNotEmpty &&
+        cachedAdminUserId != '0') {
+      // Hanya gunakan cache jika ada subdomain DAN cache tidak kosong/invalid
+      _adminUserId = cachedAdminUserId;
+      print(
+        '✅ [AppConfig] Loaded adminUserId from cache: $_adminUserId (subdomain: $_subdomain)',
+      );
+    } else {
+      _adminUserId = _adminId;
+      print('✅ [AppConfig] Using default adminId: $_adminUserId');
+    }
 
     final hexPrimary = prefs.getString(_keyPrimaryColor);
     if (hexPrimary != null) _primaryColor = _parseColor(hexPrimary);
@@ -179,12 +204,25 @@ class AppConfig with ChangeNotifier {
         // debugPrint('✅ API response valid, parsing data...');
         final model = AppConfigModel.fromApi(responseData);
 
-        // Update admin_user_id jika didapat dari API
-        if (apiAdminUserId != null) {
+        // STRICT RULE: Admin User ID determination
+        // Priority: 1. From subdomain API, 2. From model if subdomain exists, 3. Default admin ID
+        if (apiAdminUserId != null && apiAdminUserId.isNotEmpty) {
           _adminUserId = apiAdminUserId;
-        } else {
-          // Fallback ke ID dari model jika ada
+          print(
+            '✅ [AppConfig] Set adminUserId from subdomain API: $_adminUserId',
+          );
+        } else if (subdomainFromWindow.isNotEmpty && model.id > 0) {
+          // If we detected subdomain but got fallback config, still use model id
           _adminUserId = model.id.toString();
+          print(
+            '✅ [AppConfig] Set adminUserId from model (has subdomain): $_adminUserId',
+          );
+        } else {
+          // No subdomain detected - FORCE default adminId (for testing via IP)
+          _adminUserId = _adminId;
+          print(
+            '✅ [AppConfig] No subdomain - FORCE default adminId: $_adminUserId (testing mode)',
+          );
         }
 
         // debugPrint('🔄 Updating AppConfig from model...');
@@ -193,11 +231,15 @@ class AppConfig with ChangeNotifier {
         // 5. Simpan ke Local
         // debugPrint('📋 Saving config to SharedPreferences...');
         await _saveToLocal(model, adminUserId: _adminUserId);
-        // debugPrint(
-        //   '✅ AppConfig.initializeApp COMPLETE (adminUserId: $_adminUserId)',
-        // );
+        print(
+          '✅ [AppConfig] COMPLETE - adminUserId: $_adminUserId, subdomain: "$_subdomain"',
+        );
       } else {
-        // debugPrint('❌ Failed to fetch config from all endpoints');
+        // Fallback ke default adminId jika initialization gagal
+        _adminUserId = _adminId;
+        print(
+          '❌ [AppConfig] Failed to fetch config - FORCE default adminId: $_adminUserId',
+        );
       }
     } on TimeoutException catch (_) {
       // debugPrint('⏱️ AppConfig Initialize Timeout: $_');

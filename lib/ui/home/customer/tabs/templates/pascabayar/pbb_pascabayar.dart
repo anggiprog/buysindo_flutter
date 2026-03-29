@@ -636,7 +636,7 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
 
     try {
       // Get admin user ID
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [PBB] Customer ID: $customerId');
       print('📝 [PBB] Admin User ID (from AppConfig): $adminUserId');

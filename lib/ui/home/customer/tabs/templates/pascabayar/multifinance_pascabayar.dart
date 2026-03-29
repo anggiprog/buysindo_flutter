@@ -620,7 +620,7 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
 
     try {
       // Get admin user ID
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [MULTIFINANCE] Customer ID: $customerId');
       print('📝 [MULTIFINANCE] Admin User ID (from AppConfig): $adminUserId');

@@ -126,7 +126,7 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
 
     try {
       // Get admin ID from AppConfig
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [PLN] Admin User ID (from AppConfig): $adminUserId');
       print('📝 [PLN] Product Name: ${_selectedProduct!.productName}');

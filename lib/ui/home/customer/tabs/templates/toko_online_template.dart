@@ -79,12 +79,20 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
 
   Future<void> _fetchBanners() async {
     try {
-      final response = await _apiService.getBanners(appConfig.adminId);
+      final response = await _apiService.getBanners(appConfig.adminUserId);
       if (response.statusCode == 200 && response.data['status'] == 'success') {
-        setState(() {
-          _bannerList = List<String>.from(response.data['banners'] ?? []);
-          _isLoadingBanners = false;
-        });
+        final newBanners = List<String>.from(response.data['banners'] ?? []);
+
+        // Only update if banners changed
+        if (newBanners.length != _bannerList.length ||
+            !newBanners.every((b) => _bannerList.contains(b))) {
+          setState(() {
+            _bannerList = newBanners;
+            _isLoadingBanners = false;
+          });
+        } else {
+          setState(() => _isLoadingBanners = false);
+        }
       } else {
         setState(() => _isLoadingBanners = false);
       }
@@ -96,18 +104,30 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
 
   Future<void> _fetchMenus() async {
     try {
-      final response = await _apiService.getTokoOnlineMenus(appConfig.adminId);
+      final response = await _apiService.getTokoOnlineMenus(
+        appConfig.adminUserId,
+      );
       if (response.statusCode == 200 && response.data['success'] == true) {
         final menus = List<Map<String, dynamic>>.from(
           response.data['data'] ?? [],
         );
-        setState(() {
-          _menuList = menus;
-          _isLoadingMenus = false;
-        });
-        // Save to cache
-        await tokoOnlineCache.saveMenus(menus);
-        debugPrint('Menus loaded and cached: ${menus.length}');
+
+        // Compare with current list
+        bool menusChanged =
+            menus.length != _menuList.length ||
+            !_areMenusIdentical(menus, _menuList);
+
+        if (menusChanged) {
+          setState(() {
+            _menuList = menus;
+            _isLoadingMenus = false;
+          });
+          // Save to cache
+          await tokoOnlineCache.saveMenus(menus);
+          debugPrint('Menus updated and cached: ${menus.length}');
+        } else {
+          setState(() => _isLoadingMenus = false);
+        }
       } else {
         setState(() => _isLoadingMenus = false);
       }
@@ -124,7 +144,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
     }
     try {
       final response = await _apiService.getTokoOnlineProducts(
-        adminUserId: appConfig.adminId,
+        adminUserId: appConfig.adminUserId,
         menuId: menuId,
         perPage: 50, // Fetch more products for caching
       );
@@ -132,13 +152,23 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         final products = List<Map<String, dynamic>>.from(
           response.data['data'] ?? [],
         );
-        setState(() {
-          _productList = products;
-          _isLoadingProducts = false;
-        });
-        // Save to cache
-        await tokoOnlineCache.saveProducts(products);
-        debugPrint('Products loaded and cached: ${products.length}');
+
+        // Compare with current list
+        bool productsChanged =
+            products.length != _productList.length ||
+            !_areProductsIdentical(products, _productList);
+
+        if (productsChanged) {
+          setState(() {
+            _productList = products;
+            _isLoadingProducts = false;
+          });
+          // Save to cache
+          await tokoOnlineCache.saveProducts(products);
+          debugPrint('Products updated and cached: ${products.length}');
+        } else {
+          setState(() => _isLoadingProducts = false);
+        }
       } else {
         setState(() => _isLoadingProducts = false);
       }
@@ -146,6 +176,36 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
       debugPrint('Error fetching products: $e');
       setState(() => _isLoadingProducts = false);
     }
+  }
+
+  // Helper to compare menu lists
+  bool _areMenusIdentical(
+    List<Map<String, dynamic>> list1,
+    List<Map<String, dynamic>> list2,
+  ) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i]['id'] != list2[i]['id'] ||
+          list1[i]['name'] != list2[i]['name']) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Helper to compare product lists
+  bool _areProductsIdentical(
+    List<Map<String, dynamic>> list1,
+    List<Map<String, dynamic>> list2,
+  ) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i]['id'] != list2[i]['id'] ||
+          list1[i]['nama_barang'] != list2[i]['nama_barang']) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _navigateToProductList(Map<String, dynamic> menu) {

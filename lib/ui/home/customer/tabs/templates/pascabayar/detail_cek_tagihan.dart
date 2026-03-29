@@ -1128,9 +1128,6 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               final jpk = (int.tryParse(descData['jpk'].toString()) ?? 0);
               final jpn = (int.tryParse(descData['jpn'].toString()) ?? 0);
 
-              // Calculate total nilai_tagihan from components
-              final nilaiTagihan = jht + jkk + jkm + jpk + jpn;
-
               final billData = {
                 'customer_name': billResponseData['customer_name'],
                 'customer_no': billResponseData['customer_no'],

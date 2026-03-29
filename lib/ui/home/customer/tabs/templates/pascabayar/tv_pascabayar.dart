@@ -614,7 +614,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
 
     try {
       // Get admin user ID
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [TV] Customer ID: $customerId');
       print('📝 [TV] Admin User ID (from AppConfig): $adminUserId');

@@ -144,7 +144,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
           case 'ppob':
             content = const PpobTemplate();
             break;
-          case 'toko_online':
+          case 'Toko Online':
             content = const TokoOnlineTemplate();
             break;
           case 'ojek_online':

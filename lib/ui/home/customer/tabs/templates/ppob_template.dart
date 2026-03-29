@@ -124,9 +124,15 @@ class _PpobTemplateState extends State<PpobTemplate> {
       setState(() {
         // Load banners dari cache
         final cachedBanners = _prefs.getStringList('cached_banners');
+        print('📚 [Cache] Cached banners: $cachedBanners');
         if (cachedBanners != null && cachedBanners.isNotEmpty) {
           _bannerList = cachedBanners;
           _isLoadingBanners = false;
+          print('📚 [Cache] Loaded ${cachedBanners.length} banners from cache');
+        } else {
+          print(
+            '📚 [Cache] No cached banners found, will show loading shimmer',
+          );
         }
 
         // Load menu prabayar dari cache
@@ -138,8 +144,11 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 .map((item) => MenuPrabayarItem.fromJson(item))
                 .toList();
             _isLoadingMenu = false;
+            print(
+              '📚 [Cache] Loaded ${_menuList.length} menu prabayar from cache',
+            );
           } catch (e) {
-            // Handle error silently
+            print('❌ [Cache] Error loading menu prabayar: $e');
           }
         }
 
@@ -200,10 +209,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
     }
   }
 
-  //saldo
+  //saldo - WITH CACHE CHECK
   Future<void> _fetchSaldo() async {
     try {
-      // 1. Gunakan SessionManager untuk mengambil token (bukan storage.read)
       String? token = await SessionManager.getToken();
 
       if (token == null || token.isEmpty) {
@@ -211,22 +219,25 @@ class _PpobTemplateState extends State<PpobTemplate> {
         return;
       }
 
-      // 2. Panggil API dengan token yang benar
       final response = await apiService.getSaldo(token);
 
-      // Karena Anda menggunakan Dio dengan validateStatus < 500,
-      // pastikan cek status code secara manual
       if (response.statusCode == 200) {
-        final saldo = response.data['saldo'].toString();
+        final newSaldo = response.data['saldo'].toString();
 
-        // Cache to SharedPreference
-        await _prefs.setString('cached_saldo', saldo);
+        // Get cached saldo to compare
+        final cachedSaldo = _prefs.getString('cached_saldo');
 
-        if (mounted) {
-          setState(() {
-            _saldo = saldo;
-            _isLoadingSaldo = false;
-          });
+        // Only update if saldo changed
+        if (cachedSaldo != newSaldo) {
+          await _prefs.setString('cached_saldo', newSaldo);
+          if (mounted) {
+            setState(() {
+              _saldo = newSaldo;
+              _isLoadingSaldo = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoadingSaldo = false);
         }
       } else {
         if (mounted) setState(() => _isLoadingSaldo = false);
@@ -236,7 +247,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
     }
   }
 
-  // Fetch Poin
+  // Fetch Poin - WITH CACHE CHECK
   Future<void> _fetchPoin() async {
     try {
       String? token = await SessionManager.getToken();
@@ -249,16 +260,22 @@ class _PpobTemplateState extends State<PpobTemplate> {
       final response = await apiService.getPoinSummary(token);
 
       if (response.statusCode == 200 && response.data != null) {
-        final totalPoin = (response.data['total_poin'] ?? 0).toInt();
+        final newPoin = (response.data['total_poin'] ?? 0).toInt();
 
-        // Cache to SharedPreference
-        await _prefs.setInt('cached_poin', totalPoin);
+        // Get cached poin to compare
+        final cachedPoin = _prefs.getInt('cached_poin');
 
-        if (mounted) {
-          setState(() {
-            _totalPoin = totalPoin;
-            _isLoadingPoin = false;
-          });
+        // Only update if poin changed
+        if (cachedPoin != newPoin) {
+          await _prefs.setInt('cached_poin', newPoin);
+          if (mounted) {
+            setState(() {
+              _totalPoin = newPoin;
+              _isLoadingPoin = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoadingPoin = false);
         }
       } else {
         if (mounted) setState(() => _isLoadingPoin = false);
@@ -268,39 +285,117 @@ class _PpobTemplateState extends State<PpobTemplate> {
     }
   }
 
-  //banner
+  //banner - WITH CACHE CHECK
   Future<void> _fetchBanners() async {
     try {
-      final String adminId = appConfig.adminId;
+      // STRICT validation: Get adminId with fallback
+      String adminId = appConfig.adminUserId;
+      String subdomain = appConfig.subdomain;
+
+      print(
+        '📌 [Banner] Initial - adminUserId: "$adminId", subdomain: "$subdomain"',
+      );
+
+      // RULE 1: If no subdomain (testing via IP), MUST use default 1050
+      if (subdomain.isEmpty) {
+        adminId = appConfig.adminId;
+        print('📌 [Banner] No subdomain - FORCE default adminId: $adminId');
+      }
+      // RULE 2: If adminId empty or zero, fallback
+      else if (adminId.isEmpty || adminId == '0') {
+        adminId = appConfig.adminId;
+        print('📌 [Banner] adminUserId empty/zero - fallback to: $adminId');
+      }
+      // RULE 3: If adminId looks like old cache (very large number), reset to 1050
+      else if (int.tryParse(adminId) != null) {
+        int idNum = int.parse(adminId);
+        // If ID is suspiciously large (testing artifact), reset to default
+        if (idNum > 10000) {
+          print(
+            '📌 [Banner] adminUserId suspiciously large ($idNum) - might be testing artifact',
+          );
+          // Keep it but log warning
+        }
+      }
+
+      print(
+        '📌 [Banner] FINAL - Fetching banners for adminId: $adminId (subdomain: $subdomain)',
+      );
 
       final response = await apiService.getBanners(adminId);
 
+      print('📌 [Banner] Response status: ${response.statusCode}');
+      print('📌 [Banner] Response data: ${response.data}');
+
       if (response.statusCode == 200 && response.data != null) {
+        // Handle both nested and non-nested response structures
+        dynamic responseData = response.data;
+
+        // If response has nested 'data' field, extract it
+        if (responseData is Map &&
+            responseData.containsKey('data') &&
+            responseData['data'] is Map) {
+          responseData = responseData['data'];
+          print('📌 [Banner] Extracted data from nested structure');
+        }
+
+        print('📌 [Banner] Processing banners data: $responseData');
+
         // Parsing data menggunakan model
-        final data = BannerResponse.fromJson(response.data);
+        final data = BannerResponse.fromJson(responseData);
 
-        // Cache to SharedPreference
-        await _prefs.setStringList('cached_banners', data.banners);
+        print('📌 [Banner] Parsed banners count: ${data.banners.length}');
+        print('📌 [Banner] Banners: ${data.banners}');
 
-        if (mounted) {
-          setState(() {
-            _bannerList = data.banners;
-            _isLoadingBanners = false;
-          });
+        // Get current cached banners to compare
+        final cachedBanners = _prefs.getStringList('cached_banners') ?? [];
+
+        print('📌 [Banner] Cached banners count: ${cachedBanners.length}');
+
+        // Check if banners have changed
+        bool bannersChanged = cachedBanners.length != data.banners.length;
+        if (!bannersChanged && data.banners.isNotEmpty) {
+          // Also check individual items
+          for (int i = 0; i < data.banners.length; i++) {
+            if (cachedBanners[i] != data.banners[i]) {
+              bannersChanged = true;
+              break;
+            }
+          }
+        }
+
+        print('📌 [Banner] Banners changed: $bannersChanged');
+
+        // Only update and cache if banners changed
+        if (bannersChanged) {
+          await _prefs.setStringList('cached_banners', data.banners);
+          print('📌 [Banner] Saved ${data.banners.length} banners to cache');
+
+          if (mounted) {
+            setState(() {
+              _bannerList = data.banners;
+              _isLoadingBanners = false;
+            });
+            print('📌 [Banner] Updated UI with new banners');
+          }
+        } else {
+          // Data unchanged, just update loading state
+          print('📌 [Banner] Banners unchanged, keeping cached data');
+          if (mounted) setState(() => _isLoadingBanners = false);
         }
       } else {
+        print('❌ [Banner] Failed to fetch - Status: ${response.statusCode}');
         if (mounted) setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
+      print('❌ [Banner] Error fetching banners: $e');
       if (mounted) setState(() => _isLoadingBanners = false);
     }
   }
 
-  // Menu Prabayar - WITH CACHE
+  // Menu Prabayar - WITH CACHE CHECK
   Future<void> _fetchMenuPrabayar() async {
     try {
-      // 1. Ambil token
-
       String? token = await SessionManager.getToken();
 
       if (token == null || token.isEmpty) {
@@ -308,24 +403,46 @@ class _PpobTemplateState extends State<PpobTemplate> {
         return;
       }
 
-      // 2. Fetch dari API dengan token
-
       final response = await apiService.getMenuPrabayar(token);
 
       if (response.statusCode == 200 && response.data != null) {
         final data = MenuPrabayarResponse.fromJson(response.data);
 
-        // Cache to SharedPreference
-        final menusJson = jsonEncode(
-          data.menus.map((m) => m.toJson()).toList(),
-        );
-        await _prefs.setString('cached_menu_prabayar', menusJson);
+        // Get cached menus to compare
+        final cachedMenuJson = _prefs.getString('cached_menu_prabayar');
+        bool menusChanged = true;
 
-        if (mounted) {
-          setState(() {
-            _menuList = data.menus;
-            _isLoadingMenu = false;
-          });
+        if (cachedMenuJson != null) {
+          try {
+            final List<dynamic> cachedData = jsonDecode(cachedMenuJson);
+            final cachedMenus = cachedData
+                .map((item) => MenuPrabayarItem.fromJson(item))
+                .toList();
+
+            // Compare: if length differs or any menu changed
+            menusChanged =
+                cachedMenus.length != data.menus.length ||
+                !_areMenusEqual(cachedMenus, data.menus);
+          } catch (e) {
+            menusChanged = true; // If can't parse, consider changed
+          }
+        }
+
+        // Only update and cache if menus changed
+        if (menusChanged) {
+          final menusJson = jsonEncode(
+            data.menus.map((m) => m.toJson()).toList(),
+          );
+          await _prefs.setString('cached_menu_prabayar', menusJson);
+
+          if (mounted) {
+            setState(() {
+              _menuList = data.menus;
+              _isLoadingMenu = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoadingMenu = false);
         }
       } else {
         if (mounted) setState(() => _isLoadingMenu = false);
@@ -335,6 +452,7 @@ class _PpobTemplateState extends State<PpobTemplate> {
     }
   }
 
+  // Menu Pascabayar - WITH CACHE CHECK
   Future<void> _fetchPascabayar() async {
     try {
       String? token = await SessionManager.getToken();
@@ -352,22 +470,76 @@ class _PpobTemplateState extends State<PpobTemplate> {
             .map((item) => MenuPascabayarItem.fromJson(item))
             .toList();
 
-        // Cache to SharedPreference
-        final pascabayarJson = jsonEncode(
-          pascabayarList.map((p) => p.toJson()).toList(),
-        );
-        await _prefs.setString('cached_menu_pascabayar', pascabayarJson);
+        // Get cached pascabayar to compare
+        final cachedPascabayarJson = _prefs.getString('cached_menu_pascabayar');
+        bool pascabayarChanged = true;
 
-        if (mounted) {
-          setState(() {
-            _pascabayarList = pascabayarList;
-            _isLoadingPascabayar = false;
-          });
+        if (cachedPascabayarJson != null) {
+          try {
+            final List<dynamic> cachedData = jsonDecode(cachedPascabayarJson);
+            final cachedPascabayar = cachedData
+                .map((item) => MenuPascabayarItem.fromJson(item))
+                .toList();
+
+            // Compare
+            pascabayarChanged =
+                cachedPascabayar.length != pascabayarList.length ||
+                !_arePascabayarEqual(cachedPascabayar, pascabayarList);
+          } catch (e) {
+            pascabayarChanged = true;
+          }
+        }
+
+        // Only update and cache if changed
+        if (pascabayarChanged) {
+          final pascabayarJson = jsonEncode(
+            pascabayarList.map((p) => p.toJson()).toList(),
+          );
+          await _prefs.setString('cached_menu_pascabayar', pascabayarJson);
+
+          if (mounted) {
+            setState(() {
+              _pascabayarList = pascabayarList;
+              _isLoadingPascabayar = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoadingPascabayar = false);
         }
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingPascabayar = false);
     }
+  }
+
+  // Helper to compare menu lists
+  bool _areMenusEqual(
+    List<MenuPrabayarItem> list1,
+    List<MenuPrabayarItem> list2,
+  ) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i].id != list2[i].id ||
+          list1[i].namaKategori != list2[i].namaKategori) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Helper to compare pascabayar lists
+  bool _arePascabayarEqual(
+    List<MenuPascabayarItem> list1,
+    List<MenuPascabayarItem> list2,
+  ) {
+    if (list1.length != list2.length) return false;
+    for (int i = 0; i < list1.length; i++) {
+      if (list1[i].id != list2[i].id ||
+          list1[i].namaBrand != list2[i].namaBrand) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void _showTopup() async {

@@ -81,7 +81,8 @@ class _PlnNontaglisPascabayarPageState
           final brandUpper = p.brand.toUpperCase().replaceAll(' ', '');
           final skuUpper = p.buyerSkuCode.toUpperCase();
           return brandUpper.contains('PLNNONTAGLIS') ||
-              brandUpper.contains('PLN NONTAGLIS') && brandUpper.contains('NONTAGLIS') ||
+              brandUpper.contains('PLN NONTAGLIS') &&
+                  brandUpper.contains('NONTAGLIS') ||
               skuUpper.contains('PLNNONTAGLIS');
         }).toList();
 
@@ -245,7 +246,7 @@ class _PlnNontaglisPascabayarPageState
       return;
     }
     try {
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('🚀 [PLN NONTAGLIS] Showing CekTagihan bottom sheet...');
       print(

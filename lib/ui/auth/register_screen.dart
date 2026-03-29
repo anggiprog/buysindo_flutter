@@ -47,7 +47,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       debugPrint('🔐 Fetching admin token...');
 
-      final response = await apiService.getAdminToken(appConfig.adminId);
+      // ⚠️ IMPORTANT: Wait for appConfig to be fully initialized with subdomain-based admin_user_id
+      // This ensures user gets registered to the correct store (admin), not the default 1050
+      String adminUserId = appConfig.adminUserId;
+      int retries = 0;
+      const maxRetries = 10;
+      const retryDelayMs = 500;
+
+      // Poll until we get a subdomain-based config (or timeout after ~5 seconds)
+      while (adminUserId == '1050' && retries < maxRetries) {
+        debugPrint(
+          '⏳ Waiting for subdomain config... (retry ${retries + 1}/$maxRetries)',
+        );
+        await Future.delayed(const Duration(milliseconds: retryDelayMs));
+        adminUserId = appConfig.adminUserId;
+        retries++;
+      }
+
+      if (adminUserId == '1050' && retries >= maxRetries) {
+        debugPrint(
+          '⚠️  Config still default (1050) after waiting. Using it anyway.',
+        );
+      } else if (adminUserId != '1050') {
+        debugPrint('✅ Got subdomain-based adminUserId: $adminUserId');
+      }
+
+      debugPrint('   Using adminUserId: $adminUserId (subdomain-based)');
+
+      final response = await apiService.getAdminToken(adminUserId);
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -155,7 +182,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       // Ensure username sanitized (no spaces, lowercase)
-      final sanitizedUsername = _usernameController.text.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+      final sanitizedUsername = _usernameController.text
+          .replaceAll(RegExp(r'\s+'), '')
+          .toLowerCase();
 
       final response = await apiService.registerV2(
         adminToken: _adminToken!,
@@ -298,7 +327,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         onTap: () => Navigator.pop(context),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: appConfig.primaryColor.withAlpha((0.1 * 255).round()),
+                            color: appConfig.primaryColor.withAlpha(
+                              (0.1 * 255).round(),
+                            ),
                             borderRadius: BorderRadius.circular(50),
                           ),
                           padding: const EdgeInsets.all(10),
@@ -339,7 +370,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.red.withAlpha((0.1 * 255).round()),
-                        border: Border.all(color: Colors.red.withAlpha((0.5 * 255).round())),
+                        border: Border.all(
+                          color: Colors.red.withAlpha((0.5 * 255).round()),
+                        ),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
@@ -411,16 +444,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: const TextStyle(color: Colors.black87),
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
-                    inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                    ],
                     onChanged: (value) {
                       _clearErrorMessage();
                       // sanitize: remove whitespace and force lowercase
-                      final sanitized = value.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+                      final sanitized = value
+                          .replaceAll(RegExp(r'\s+'), '')
+                          .toLowerCase();
                       if (sanitized != value) {
                         // update controller and move cursor to the end
                         _usernameController.value = TextEditingValue(
                           text: sanitized,
-                          selection: TextSelection.collapsed(offset: sanitized.length),
+                          selection: TextSelection.collapsed(
+                            offset: sanitized.length,
+                          ),
                         );
                       }
                     },
@@ -435,7 +474,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 6),
-                  
+
                   // Email
                   _buildLabel('Email'),
                   const SizedBox(height: 8),
@@ -485,7 +524,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       _clearErrorMessage();
                       final hasMin8 = value.length >= 8;
                       final hasDigit = RegExp(r'\d').hasMatch(value);
-                      final hasSpecial = RegExp(r'[^A-Za-z0-9]').hasMatch(value);
+                      final hasSpecial = RegExp(
+                        r'[^A-Za-z0-9]',
+                      ).hasMatch(value);
                       setState(() {
                         _pwHasMin8 = hasMin8;
                         _pwHasDigit = hasDigit;
@@ -493,8 +534,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       });
                     },
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'Password harus diisi';
-                      if (value.length < 8) return 'Password minimal 8 karakter';
+                      if (value == null || value.isEmpty)
+                        return 'Password harus diisi';
+                      if (value.length < 8)
+                        return 'Password minimal 8 karakter';
                       // require at least one digit and one special character
                       final pattern = RegExp(r'(?=.*\d)(?=.*[^A-Za-z0-9])');
                       if (!pattern.hasMatch(value)) {
@@ -507,22 +550,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   // Live password requirement indicators
                   Row(
                     children: [
-                      Icon(_pwHasMin8 ? Icons.check_circle : Icons.radio_button_unchecked, color: _pwHasMin8 ? Colors.green : Colors.grey, size: 16),
+                      Icon(
+                        _pwHasMin8
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: _pwHasMin8 ? Colors.green : Colors.grey,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
-                      const Text('Minimal 8 karakter', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      const Text(
+                        'Minimal 8 karakter',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
                       const SizedBox(width: 16),
-                      Icon(_pwHasDigit ? Icons.check_circle : Icons.radio_button_unchecked, color: _pwHasDigit ? Colors.green : Colors.grey, size: 16),
+                      Icon(
+                        _pwHasDigit
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: _pwHasDigit ? Colors.green : Colors.grey,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
-                      const Text('Minimal 1 angka', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      const Text(
+                        'Minimal 1 angka',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
                       const SizedBox(width: 16),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      Icon(_pwHasSpecial ? Icons.check_circle : Icons.radio_button_unchecked, color: _pwHasSpecial ? Colors.green : Colors.grey, size: 16),
+                      Icon(
+                        _pwHasSpecial
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: _pwHasSpecial ? Colors.green : Colors.grey,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
-                      const Text('Minimal 1 karakter khusus', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      const Text(
+                        'Minimal 1 karakter khusus',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -549,7 +619,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onPressed: _isLoading ? null : _handleRegister,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: appConfig.primaryColor,
-                        disabledBackgroundColor: appConfig.primaryColor.withAlpha((0.5 * 255).round()),
+                        disabledBackgroundColor: appConfig.primaryColor
+                            .withAlpha((0.5 * 255).round()),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

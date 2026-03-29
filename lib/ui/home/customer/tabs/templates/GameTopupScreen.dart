@@ -111,7 +111,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
 
   Future<void> _fetchBanners() async {
     try {
-      final String adminId = appConfig.adminId;
+      final String adminId = appConfig.adminUserId;
       final response = await _apiService.getBanners(adminId);
 
       if (response.statusCode == 200 && response.data != null) {
@@ -160,16 +160,22 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
       final response = await _apiService.getSaldo(token);
 
       if (response.statusCode == 200 && response.data != null) {
-        final saldo = response.data['saldo'].toString();
+        final newSaldo = response.data['saldo'].toString();
 
-        // Cache to SharedPreference
-        await _prefs.setString('cached_saldo', saldo);
+        // Get cached saldo to compare
+        final cachedSaldo = _prefs.getString('cached_saldo');
 
-        if (mounted) {
-          setState(() {
-            _saldo = saldo;
-            _isLoadingSaldo = false;
-          });
+        // Only update if saldo changed
+        if (cachedSaldo != newSaldo) {
+          await _prefs.setString('cached_saldo', newSaldo);
+          if (mounted) {
+            setState(() {
+              _saldo = newSaldo;
+              _isLoadingSaldo = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoadingSaldo = false);
         }
       } else {
         if (mounted) setState(() => _isLoadingSaldo = false);
@@ -191,16 +197,22 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
       final response = await _apiService.getPoinSummary(token);
 
       if (response.statusCode == 200 && response.data != null) {
-        final totalPoin = (response.data['poin'] ?? 0).toInt();
+        final newPoin = (response.data['poin'] ?? 0).toInt();
 
-        // Cache to SharedPreference
-        await _prefs.setInt('cached_poin', totalPoin);
+        // Get cached poin to compare
+        final cachedPoin = _prefs.getInt('cached_poin');
 
-        if (mounted) {
-          setState(() {
-            _totalPoin = totalPoin;
-            _isLoadingPoin = false;
-          });
+        // Only update if poin changed
+        if (cachedPoin != newPoin) {
+          await _prefs.setInt('cached_poin', newPoin);
+          if (mounted) {
+            setState(() {
+              _totalPoin = newPoin;
+              _isLoadingPoin = false;
+            });
+          }
+        } else {
+          if (mounted) setState(() => _isLoadingPoin = false);
         }
       } else {
         if (mounted) setState(() => _isLoadingPoin = false);

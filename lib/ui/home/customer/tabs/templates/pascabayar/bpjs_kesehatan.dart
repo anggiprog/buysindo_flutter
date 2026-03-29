@@ -126,7 +126,7 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
 
     try {
       // Get admin ID from AppConfig
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [BPJS] Admin User ID (from AppConfig): $adminUserId');
       print('📝 [BPJS] Product Name: ${_selectedProduct!.productName}');

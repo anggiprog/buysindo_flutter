@@ -487,7 +487,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
     try {
       // Get admin ID from AppConfig
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [PDAM] Admin User ID (from AppConfig): $adminUserId');
       print('📝 [PDAM] Product Name: ${_selectedProduct!.productName}');

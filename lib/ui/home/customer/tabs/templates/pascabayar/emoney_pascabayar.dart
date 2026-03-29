@@ -506,7 +506,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
 
     try {
       // Get admin ID from AppConfig
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [EMONEY] Admin User ID (from AppConfig): $adminUserId');
       print('📝 [EMONEY] Product Name: ${_selectedProduct!.productName}');

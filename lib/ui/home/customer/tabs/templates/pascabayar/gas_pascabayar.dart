@@ -661,7 +661,7 @@ class _GasPascabayarState extends State<GasPascabayar> {
       return;
     }
     try {
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,

@@ -495,7 +495,7 @@ class _HpPascabayarState extends State<HpPascabayar> {
 
     try {
       // Get admin ID from AppConfig
-      final adminUserId = int.parse(appConfig.adminId);
+      final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [HP] Admin User ID (from AppConfig): $adminUserId');
       print('📝 [HP] Product Name: ${_selectedProduct!.productName}');
