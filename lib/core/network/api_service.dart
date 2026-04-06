@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:math' as Math;
+import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:get/get.dart';
 import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
 import '../../features/customer/data/models/notification_count_model.dart';
 import '../../features/topup/models/topup_response_models.dart';
@@ -880,7 +879,7 @@ class ApiService {
   /// Generate unique device identifier (timestamp + random number)
   String _generateUniqueDeviceId() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = Math.Random().nextInt(999999);
+    final random = Random().nextInt(999999);
     return 'device_${timestamp}_${random}';
   }
 
@@ -2118,7 +2117,8 @@ class ApiService {
   }) async {
     try {
       // Generate nomorTransaksi: TRX{adminId}{randomString} - only letters and numbers
-      final random = Random().nextInt(999999);
+      final rng = Random();
+      final random = rng.nextInt(999999);
       final nomorTransaksi =
           'TRX${adminUserId}${random.toString().padLeft(6, '0')}';
 
