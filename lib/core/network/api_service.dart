@@ -800,17 +800,6 @@ class ApiService {
         '📤 [ApiService] Sending login request with device_token: $deviceToken',
       );
 
-      // Get subdomain for multi-tenant validation
-      final subdomain = WebHelper.getSubdomain();
-      final Map<String, String> headers = {};
-
-      if (subdomain != null && subdomain.isNotEmpty) {
-        headers['X-Subdomain'] = subdomain;
-        _noopLog(
-          '📌 [ApiService] Adding X-Subdomain header for multi-tenant protection: $subdomain',
-        );
-      }
-
       final response = await _dio.post(
         'api/login',
         data: {
@@ -818,7 +807,6 @@ class ApiService {
           'password': password,
           'device_token': deviceToken,
         },
-        options: headers.isNotEmpty ? Options(headers: headers) : null,
       );
 
       if (response.statusCode == 200) {
@@ -902,17 +890,6 @@ class ApiService {
     try {
       final deviceToken = await getDeviceToken();
 
-      // Get subdomain for multi-tenant validation
-      final subdomain = WebHelper.getSubdomain();
-      final Map<String, String> headers = {};
-
-      if (subdomain != null && subdomain.isNotEmpty) {
-        headers['X-Subdomain'] = subdomain;
-        debugPrint(
-          '📌 [ApiService] verifyOtp: Adding X-Subdomain header for multi-tenant protection: $subdomain',
-        );
-      }
-
       final response = await _dio.post(
         'api/verify-otp',
         data: {
@@ -920,7 +897,6 @@ class ApiService {
           'otp_code': otpCode,
           'device_token': deviceToken,
         },
-        options: headers.isNotEmpty ? Options(headers: headers) : null,
       );
 
       if (response.statusCode == 200) {
