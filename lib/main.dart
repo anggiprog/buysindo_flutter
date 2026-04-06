@@ -2,6 +2,7 @@ import 'package:buysindo_app/ui/home/customer/tabs/templates/pascabayar/bpjs_kes
 import 'package:buysindo_app/ui/home/customer/tabs/templates/pascabayar/byu_pascabayar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,6 +13,7 @@ import 'core/app_config.dart';
 import 'ui/splash_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/auth/register_screen.dart';
+import 'ui/auth/verify_email_screen.dart';
 import 'ui/home/home_screen.dart';
 // Import semua template prabayar
 import 'ui/home/customer/tabs/templates/prabayar/pulsa.dart';
@@ -77,6 +79,9 @@ import 'main_io_stub.dart' if (dart.library.io) 'main_io.dart';
 // Global navigator key so we can navigate from background/message handlers
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// Platform channel for deep links
+const platform = MethodChannel('com.buysindo.app/deeplink');
+
 // Global notification plugin instance
 final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -138,22 +143,22 @@ Future<void> main() async {
   }
 
   // 4. Load cached config dari SharedPreferences (FAST - dari local storage ~50-100ms)
- // print('📦 [main] Loading cached config from SharedPreferences...');
+  // print('📦 [main] Loading cached config from SharedPreferences...');
   await appConfig.loadLocalConfig();
- // print(
- //   '✅ [main] Cached config loaded. AppConfig.appName=${appConfig.appName}',
- // );
+  // print(
+  //   '✅ [main] Cached config loaded. AppConfig.appName=${appConfig.appName}',
+  // );
 
   // 5. Start API initialization in background - TANPA AWAIT
- // print('🌐 [main] Starting API initialization (_fetchConfigAsync)...');
+  // print('🌐 [main] Starting API initialization (_fetchConfigAsync)...');
   _fetchConfigAsync();
 
- // print('📱 [main] Calling runApp(MyApp())...');
+  // print('📱 [main] Calling runApp(MyApp())...');
   try {
     runApp(const MyApp());
- //   print('✅ [main] runApp completed');
+    //   print('✅ [main] runApp completed');
   } catch (e) {
-  //  print('❌ [main] ERROR in runApp: $e');
+    //  print('❌ [main] ERROR in runApp: $e');
     rethrow;
   }
 }
@@ -357,6 +362,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Register lifecycle observer
     WidgetsBinding.instance.addObserver(this);
 
+    // Setup deep link handler
+    _setupDeepLinkHandler();
+
     // Setup FCM handlers with error handling
     try {
       print(
@@ -408,6 +416,143 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   /// Check whether the saved auth token is still valid on the backend.
   /// If invalid, clear local session and force navigation to /login.
+  /// Setup deep link handler for email verification and other deep links
+  Future<void> _setupDeepLinkHandler() async {
+    try {
+      if (kIsWeb) {
+        print('⏭️ [DeepLink] Skipping deep link setup on web platform');
+        return;
+      }
+
+      // Add slight delay to ensure app is fully initialized
+      await Future.delayed(Duration(milliseconds: 500));
+
+      // Try to get initial URI when app is launched
+      try {
+        final initialUri = await platform.invokeMethod<String>('getInitialUri');
+        if (initialUri != null && initialUri.isNotEmpty) {
+          print('✅ [DeepLink] Got initial URI: $initialUri');
+          _handleDeepLink(Uri.parse(initialUri));
+        }
+      } on PlatformException catch (e) {
+        print('⚠️ [DeepLink] Could not get initial URI: ${e.message}');
+      }
+    } catch (e) {
+      print('⚠️ [DeepLink] Setup error (non-fatal): $e');
+    }
+  }
+
+  /// Handle deep link URI
+  void _handleDeepLink(Uri uri) {
+    print('🔗 [DeepLink] Handling deep link: $uri');
+    print(
+      '🔗 [DeepLink] Scheme: ${uri.scheme}, Host: ${uri.host}, Path: ${uri.path}',
+    );
+
+    // Handle custom scheme deep links (myapp://verify-success)
+    if (uri.scheme == 'myapp' && uri.host == 'verify-success') {
+      final status = uri.queryParameters['status'];
+      final token = uri.queryParameters['token'];
+      final email = uri.queryParameters['email'];
+
+      print('🔗 [DeepLink] Custom scheme - status: $status');
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/verify-success',
+          (route) => false,
+          arguments: {'status': status, 'token': token, 'email': email},
+        );
+      });
+      return;
+    }
+
+    // Handle HTTP/HTTPS email verification links
+    if ((uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.path.contains('/api/verify-email')) {
+      final token = uri.queryParameters['token'];
+      print('🔗 [DeepLink] HTTP link - token: $token');
+
+      if (token != null && token.isNotEmpty) {
+        // Redirect to verify endpoint to get proper response
+        _handleEmailVerificationLink(token);
+      }
+      return;
+    }
+  }
+
+  /// Handle HTTP email verification links by redirecting to API
+  void _handleEmailVerificationLink(String token) async {
+    print('🔗 [EmailVerification] Processing verification token');
+
+    try {
+      // Make a request to the verification endpoint
+      // This will handle the verification and redirect appropriately
+      final dio = Dio();
+      final response = await dio.get(
+        'http://192.168.101.10/api/verify-email',
+        queryParameters: {'token': token},
+        options: Options(
+          followRedirects: false,
+          validateStatus: (status) => status != null && status < 500,
+        ),
+      );
+
+      print('🔗 [EmailVerification] Response status: ${response.statusCode}');
+
+      // Check if response contains json (API response) or redirects (for mobile)
+      if (response.data is String) {
+        final body = response.data as String;
+
+        // If it returns HTML, we're being treated as web browser - show error
+        if (body.contains('<!DOCTYPE') || body.contains('<html')) {
+          print(
+            '🔗 [EmailVerification] Received HTML response - treated as web',
+          );
+          // Redirect to failure screen since API returned web page instead of deep link
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              '/verify-success',
+              (route) => false,
+              arguments: {'status': 'failed', 'token': null, 'email': null},
+            );
+          });
+          return;
+        }
+      }
+
+      // Parse response to get status
+      if (response.statusCode == 302 || response.statusCode == 301) {
+        // Redirect response - extract location header
+        final redirectUrl = response.headers['location']?.first;
+        print('🔗 [EmailVerification] Redirect to: $redirectUrl');
+
+        if (redirectUrl != null && redirectUrl.contains('myapp://')) {
+          _handleDeepLink(Uri.parse(redirectUrl));
+          return;
+        }
+      }
+
+      // If we get here, show failure
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/verify-success',
+          (route) => false,
+          arguments: {'status': 'failed', 'token': null, 'email': null},
+        );
+      });
+    } catch (e) {
+      print('❌ [EmailVerification] Error: $e');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/verify-success',
+          (route) => false,
+          arguments: {'status': 'failed', 'token': null, 'email': null},
+        );
+      });
+    }
+  }
+
   Future<void> _checkDeviceTokenMismatch() async {
     try {
       final token = await SessionManager.getToken();
@@ -481,7 +626,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             if (navigatorKey.currentState != null) {
               _handleNotificationTap(message.data);
             } else {
-           //   debugPrint('⚠️ [FCM] Navigator belum ready, coba next frame');
+              //   debugPrint('⚠️ [FCM] Navigator belum ready, coba next frame');
               // try again next frame
               WidgetsBinding.instance.addPostFrameCallback(
                 (__) => _handleNotificationTap(message.data),
@@ -1200,6 +1345,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   case '/register':
                     return MaterialPageRoute(
                       builder: (_) => const RegisterScreen(),
+                    );
+                  case '/verify-success':
+                    final args = settings.arguments as Map<String, dynamic>?;
+                    final token = args?['token'] as String?;
+                    final status = args?['status'] as String?;
+                    final email = args?['email'] as String?;
+                    return MaterialPageRoute(
+                      builder: (_) => VerifyEmailScreen(
+                        token: token,
+                        status: status,
+                        email: email,
+                      ),
                     );
                   case '/notifications':
                     return MaterialPageRoute(

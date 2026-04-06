@@ -6,6 +6,8 @@ import android.bluetooth.BluetoothSocket
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.content.Intent
+import android.net.Uri
 import androidx.annotation.NonNull
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -17,6 +19,7 @@ import java.util.UUID
 class MainActivity : FlutterActivity() {
     companion object {
         private const val CHANNEL = "com.buysindo.app/printer"
+        private const val DEEPLINK_CHANNEL = "com.buysindo.app/deeplink"
         private val PRINTER_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     }
 
@@ -26,6 +29,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
+        // Printer channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getPairedDevices" -> {
@@ -56,6 +60,37 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+
+        // Deep link channel
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DEEPLINK_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInitialUri" -> {
+                    val initialUri = getInitialUri()
+                    result.success(initialUri)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun getInitialUri(): String? {
+        val intent = intent
+        val action = intent?.action
+        val data = intent?.data
+
+        println("🔗 [MainActivity] getInitialUri called")
+        println("🔗 [MainActivity] Action: $action")
+        println("🔗 [MainActivity] Data: $data")
+        println("🔗 [MainActivity] Intent: ${intent.toString()}")
+
+        return if (action == Intent.ACTION_VIEW && data != null) {
+            val uri = data.toString()
+            println("✅ [MainActivity] Returning URI: $uri")
+            uri
+        } else {
+            println("⚠️ [MainActivity] No VIEW action or data found")
+            null
         }
     }
 

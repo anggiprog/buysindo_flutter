@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:math';
+import 'dart:math' as Math;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:get/get.dart';
 import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
 import '../../features/customer/data/models/notification_count_model.dart';
 import '../../features/topup/models/topup_response_models.dart';
@@ -660,15 +661,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    //final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-         baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-      //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -824,23 +825,63 @@ class ApiService {
     }
   }
 
-  /// Get Firebase Device Token safely
+  /// Get Firebase Device Token safely - with better fallback
   Future<String> getDeviceToken() async {
     try {
       _noopLog('📱 [ApiService] Fetching Firebase device token...');
       final token = await FirebaseMessaging.instance.getToken();
 
       if (token != null && token.isNotEmpty) {
-        _noopLog('✅ [ApiService] Device token fetched: $token');
+        _noopLog('✅ [ApiService] Firebase device token fetched: $token');
         return token;
       } else {
-        _noopLog('⚠️ [ApiService] Firebase device token is empty/null');
-        return 'unknown_device_token';
+        _noopLog(
+          '⚠️ [ApiService] Firebase token is empty/null, using fallback device ID...',
+        );
+        return await _getStoredDeviceId();
       }
     } catch (e) {
-      _noopLog('❌ [ApiService] Error getting device token: $e');
-      return 'error_getting_token';
+      _noopLog(
+        '❌ [ApiService] Error getting Firebase token: $e, using fallback device ID',
+      );
+      return await _getStoredDeviceId();
     }
+  }
+
+  /// Get or generate stored device identifier (persists across app sessions)
+  Future<String> _getStoredDeviceId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const deviceIdKey = 'stored_device_id';
+
+      // Check if we have a stored device ID
+      var storedId = prefs.getString(deviceIdKey);
+
+      if (storedId == null || storedId.isEmpty) {
+        // Generate new unique device ID
+        storedId = _generateUniqueDeviceId();
+        // Store it for future use
+        await prefs.setString(deviceIdKey, storedId);
+        _noopLog('📱 [ApiService] Generated new device ID: $storedId');
+      } else {
+        _noopLog('📱 [ApiService] Using stored device ID: $storedId');
+      }
+
+      return storedId;
+    } catch (e) {
+      _noopLog(
+        '⚠️ [ApiService] Error managing stored device ID: $e, generating random token',
+      );
+      // Last resort: generate random token
+      return _generateUniqueDeviceId();
+    }
+  }
+
+  /// Generate unique device identifier (timestamp + random number)
+  String _generateUniqueDeviceId() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final random = Math.Random().nextInt(999999);
+    return 'device_${timestamp}_${random}';
   }
 
   /// Verify OTP code

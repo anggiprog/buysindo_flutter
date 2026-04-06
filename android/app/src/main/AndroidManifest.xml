@@ -32,6 +32,45 @@
                 <action android:name="FLUTTER_NOTIFICATION_CLICK" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            
+            <!-- Deep link intent filter for email verification -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="myapp" android:host="verify-success" />
+            </intent-filter>
+
+            <!-- App Links for HTTP verification (email clicks) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Support 192.168.101.10 (development) -->
+                <data
+                    android:scheme="http"
+                    android:host="192.168.101.10"
+                    android:path="/api/verify-email" />
+                <data
+                    android:scheme="https"
+                    android:host="192.168.101.10"
+                    android:path="/api/verify-email" />
+            </intent-filter>
+
+            <!-- App Links for production domain -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="http"
+                    android:host="buysindo.com"
+                    android:path="/api/verify-email" />
+                <data
+                    android:scheme="https"
+                    android:host="buysindo.com"
+                    android:path="/api/verify-email" />
+            </intent-filter>
         </activity>
 
         <meta-data
