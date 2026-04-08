@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:buysindo_app/core/app_config.dart';
 import 'package:buysindo_app/core/network/session_manager.dart';
+import 'package:buysindo_app/core/logger.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/network/api_service.dart';
@@ -77,7 +78,9 @@ class _SplashScreenState extends State<SplashScreen> {
         });
       } else {
         // No cached image -- perform fetch and navigate when completed
-        debugPrint('⏳ [SplashScreen] No cached logo, fetching from API...');
+        AppLogger.logDebug(
+          '⏳ [SplashScreen] No cached logo, fetching from API...',
+        );
         _fetchRemoteSplashAndPrecache();
       }
     });
@@ -143,9 +146,9 @@ class _SplashScreenState extends State<SplashScreen> {
   ) async {
     // Skip file caching untuk web platform
     if (kIsWeb) {
-     // debugPrint(
-     //   'ℹ️ Web platform: skipping file cache, using SharedPreferences only',
-     // );
+      // debugPrint(
+      //   'ℹ️ Web platform: skipping file cache, using SharedPreferences only',
+      // );
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString(_kSplashUrlKey, url);
@@ -226,14 +229,14 @@ class _SplashScreenState extends State<SplashScreen> {
       //   '📧 [SplashScreen.skipSplash] Pending OTP: ${pendingOtp ?? "none"}',
       // );
       if (pendingOtp != null && pendingOtp.isNotEmpty) {
-       // debugPrint(
-       //   '🎯 [SplashScreen.skipSplash] Navigating to /login (pending OTP)',
-       // );
+        // debugPrint(
+        //   '🎯 [SplashScreen.skipSplash] Navigating to /login (pending OTP)',
+        // );
         Navigator.pushReplacementNamed(context, '/login');
         return;
       }
       final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
-     // debugPrint('🎯 [SplashScreen.skipSplash] Navigating to: $next');
+      // debugPrint('🎯 [SplashScreen.skipSplash] Navigating to: $next');
       Navigator.pushReplacementNamed(context, next);
       return;
     }
@@ -335,7 +338,7 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
     final next = (token != null && token.isNotEmpty) ? '/home' : '/login';
-    debugPrint('🎯 [SplashScreen._fetchRemote] Navigating to: $next');
+    AppLogger.logDebug('🎯 [SplashScreen._fetchRemote] Navigating to: $next');
     Navigator.pushReplacementNamed(context, next);
   }
 
@@ -409,7 +412,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    print('📱 [SplashScreen.build] Building splash screen UI');
+    AppLogger.logDebug('🚀 [SplashScreen.build] Building splash screen UI');
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(

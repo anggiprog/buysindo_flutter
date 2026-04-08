@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
 import '../../features/customer/data/models/notification_count_model.dart';
@@ -11,6 +12,7 @@ import '../../models/topup_history_models.dart';
 import 'session_manager.dart';
 import '../utils/web_helper.dart';
 import '../utils/file_reader.dart';
+import '../logger.dart';
 
 // Silence all debug logging in this service
 void _noopLog(Object? _) {}
@@ -171,7 +173,9 @@ class ApiService {
   /// Hapus semua chat antara user dan admin
   Future<bool> deleteAllChat(String token) async {
     try {
-      print('[ApiService] deleteAllChat: Mengirim request hapus semua chat');
+      AppLogger.logDebug(
+        '[ApiService] deleteAllChat: Mengirim request hapus semua chat',
+      );
       final response = await _dio.delete(
         'api/user/chat',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -182,7 +186,7 @@ class ApiService {
       // print('[ApiService] deleteAllChat: Response: ${response.data}'); // Sembunyikan untuk keamanan
       return response.statusCode == 200;
     } catch (e) {
-      print('[ApiService] deleteAllChat: ERROR: $e');
+      AppLogger.logError('[ApiService] deleteAllChat: ERROR', e);
     }
     return false;
   }
@@ -190,7 +194,7 @@ class ApiService {
   /// Ambil pesan chat user-admin
   Future<List<dynamic>?> getChatMessages(String token) async {
     try {
-      print('[ApiService] getChatMessages: Mengirim request ambil chat');
+      AppLogger.logDebug('[ApiService] getChatMessages: Sending chat request');
       final response = await _dio.get(
         'api/user/chat',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
@@ -202,15 +206,15 @@ class ApiService {
       if (response.statusCode == 200 && response.data != null) {
         if (response.data is Map<String, dynamic> &&
             response.data.containsKey('messages')) {
-          print('[ApiService] getChatMessages: Format Map, return messages');
+          AppLogger.logDebug('[ApiService] getChatMessages: Map format');
           return response.data['messages'] as List<dynamic>;
         } else if (response.data is List) {
-          print('[ApiService] getChatMessages: Format List, return data');
+          AppLogger.logDebug('[ApiService] getChatMessages: List format');
           return response.data as List<dynamic>;
         }
       }
     } catch (e) {
-      print('[ApiService] getChatMessages: ERROR: $e');
+      AppLogger.logError('[ApiService] getChatMessages: ERROR', e);
     }
     return null;
   }
@@ -218,7 +222,7 @@ class ApiService {
   /// Kirim pesan chat user-admin
   Future<bool> sendChatMessage(String token, String message) async {
     try {
-      print('[ApiService] sendChatMessage: Mengirim pesan: $message');
+      AppLogger.logDebug('[ApiService] sendChatMessage: Sending message');
       final response = await _dio.post(
         'api/user/chat-send',
         data: {'message': message},
@@ -230,7 +234,7 @@ class ApiService {
       // print('[ApiService] sendChatMessage: Response: ${response.data}'); // Sembunyikan untuk keamanan
       return response.statusCode == 200;
     } catch (e) {
-      print('[ApiService] sendChatMessage: ERROR: $e');
+      AppLogger.logError('[ApiService] sendChatMessage: ERROR', e);
     }
     return false;
   }
@@ -260,7 +264,7 @@ class ApiService {
         return Map<String, dynamic>.from(response.data);
       }
     } catch (e) {
-      print('[ApiService] getPaket: ERROR: $e');
+      AppLogger.logError('[ApiService] getPaket: ERROR', e);
     }
     return null;
   }
@@ -270,13 +274,18 @@ class ApiService {
     try {
       final response = await _dio.get(
         'api/admin/app-update',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+          validateStatus: (status) => status! < 500,
+        ),
       );
       if (response.statusCode == 200 && response.data != null) {
         return Map<String, dynamic>.from(response.data);
       }
+      // Silently return null for 404 or other non-200 responses
+      return null;
     } catch (e) {
-      print('[ApiService] getAppUpdate: ERROR: $e');
+      AppLogger.logDebug('[ApiService] getAppUpdate: Not available');
     }
     return null;
   }
@@ -661,7 +670,7 @@ class ApiService {
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+    // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     return ApiService(dio, baseUrl: url);
   }
 
@@ -726,7 +735,10 @@ class ApiService {
   Future<Response> getPopup(String token) {
     return _dio.get(
       'api/user/popup',
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+      options: Options(
+        headers: {'Authorization': 'Bearer $token'},
+        validateStatus: (status) => status! < 500,
+      ),
     );
   }
 
@@ -828,21 +840,60 @@ class ApiService {
   Future<String> getDeviceToken() async {
     try {
       _noopLog('📱 [ApiService] Fetching Firebase device token...');
-      final token = await FirebaseMessaging.instance.getToken();
 
-      if (token != null && token.isNotEmpty) {
-        _noopLog('✅ [ApiService] Firebase device token fetched: $token');
-        return token;
-      } else {
-        _noopLog(
-          '⚠️ [ApiService] Firebase token is empty/null, using fallback stored device ID...',
-        );
+      // Check if Firebase is initialized
+      final firebaseInitialized = Firebase.apps.isNotEmpty;
+      _noopLog('📱 [ApiService] Firebase.apps.length: ${Firebase.apps.length}');
+      _noopLog('📱 [ApiService] Firebase initialized: $firebaseInitialized');
+
+      if (!firebaseInitialized) {
+        _noopLog('⚠️ [ApiService] Firebase NOT initialized! Using fallback.');
         return await _getStoredDeviceId();
       }
-    } catch (e) {
-      _noopLog(
-        '❌ [ApiService] Error getting Firebase token: $e, using fallback stored device ID',
+
+      final fm = FirebaseMessaging.instance;
+      _noopLog('📱 [ApiService] FirebaseMessaging instance acquired');
+
+      // Request permission first
+      final settings = await fm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
       );
+      _noopLog(
+        '📱 [ApiService] FCM Permission status: ${settings.authorizationStatus}',
+      );
+
+      // Try to get token
+      final token = await fm.getToken();
+      _noopLog(
+        '📱 [ApiService] Firebase.getToken() returned: ${token != null ? '✅ TOKEN' : '❌ NULL'}',
+      );
+      _noopLog('📱 [ApiService] Token length: ${token?.length ?? 0}');
+
+      if (token != null && token.isNotEmpty) {
+        _noopLog(
+          '✅ [ApiService] Firebase device token fetched: ${token.substring(0, 30)}...',
+        );
+        return token;
+      } else {
+        _noopLog('⚠️ [ApiService] Firebase token is NULL/EMPTY!');
+        _noopLog('⚠️ [ApiService] Common causes:');
+        _noopLog('   - Device without Google Play Services');
+        _noopLog('   - Firebase config (google-services.json) invalid');
+        _noopLog('   - Network connectivity issue');
+        _noopLog('   - FCM permission not granted');
+        _noopLog('⚠️ [ApiService] Using fallback stored device ID instead...');
+        final storedId = await _getStoredDeviceId();
+        _noopLog('⚠️ [ApiService] Fallback device ID: $storedId');
+        return storedId;
+      }
+    } catch (e) {
+      _noopLog('❌ [ApiService] EXCEPTION getting Firebase token: $e');
+      _noopLog('❌ [ApiService] Exception type: ${e.runtimeType}');
+      _noopLog('❌ [ApiService] Stack trace: ${StackTrace.current}');
+      _noopLog('❌ [ApiService] Using fallback stored device ID...');
       return await _getStoredDeviceId();
     }
   }
@@ -1108,7 +1159,10 @@ class ApiService {
 
   Future<Response> getMenuPascabayar(String token) => _dio.get(
     'api/menu-pascabayar',
-    options: Options(headers: {'Authorization': 'Bearer $token'}),
+    options: Options(
+      headers: {'Authorization': 'Bearer $token'},
+      validateStatus: (status) => status! < 500,
+    ),
   );
 
   // --- Ambil Produk dengan Logika Cache ---
@@ -1558,6 +1612,87 @@ class ApiService {
     }
   }
 
+  /// 🆕 DIAGNOSTIC: Check Firebase & FCM Status
+  Future<Map<String, dynamic>> diagnosticFcmStatus() async {
+    try {
+      _noopLog('🔍 [ApiService] Starting FCM diagnostics...');
+
+      final result = <String, dynamic>{};
+
+      // Check 1: Firebase initialized?
+      try {
+        result['firebase_initialized'] = Firebase.apps.isNotEmpty;
+        _noopLog('📊 Firebase initialized: ${result['firebase_initialized']}');
+      } catch (_) {
+        result['firebase_initialized'] = false;
+        _noopLog('📊 Firebase not available');
+      }
+
+      // Check 2: Try to get FCM token
+      String? fcmToken;
+      String? fcmError;
+      try {
+        final fm = FirebaseMessaging.instance;
+        fcmToken = await fm.getToken();
+        result['fcm_token'] = fcmToken;
+        result['fcm_token_valid'] = fcmToken != null && fcmToken.isNotEmpty;
+        _noopLog('📊 FCM Token valid: ${result['fcm_token_valid']}');
+        _noopLog('📊 FCM Token: ${fcmToken?.substring(0, 30) ?? 'NULL'}...');
+      } catch (e) {
+        fcmError = e.toString();
+        result['fcm_error'] = fcmError;
+        _noopLog('📊 FCM Error: $fcmError');
+      }
+
+      // Check 3: Stored device ID
+      final storedId = await _getStoredDeviceId();
+      result['stored_device_id'] = storedId;
+      result['is_mock_token'] = storedId.startsWith('device_');
+      _noopLog('📊 Stored Device ID: $storedId');
+      _noopLog('📊 Is Mock Token: ${result['is_mock_token']}');
+
+      // Check 4: Current selected token
+      final currentToken = await getDeviceToken();
+      result['current_device_token'] = currentToken;
+      result['token_source'] = fcmToken != null ? 'FCM' : 'FALLBACK';
+      _noopLog('📊 Current Token Source: ${result['token_source']}');
+
+      _noopLog('✅ [ApiService] FCM diagnostics complete');
+      return result;
+    } catch (e) {
+      _noopLog('❌ [ApiService] Error in diagnosticFcmStatus: $e');
+      return {'error': e.toString()};
+    }
+  }
+
+  /// 🆕 Force refresh FCM token
+  Future<String> forceRefreshFcmToken() async {
+    try {
+      _noopLog('🔄 [ApiService] Force refreshing FCM token...');
+
+      // Delete old token
+      await FirebaseMessaging.instance.deleteToken();
+      _noopLog('🔄 [ApiService] Old token deleted');
+
+      // Get new token
+      final newToken = await FirebaseMessaging.instance.getToken();
+      _noopLog(
+        '🔄 [ApiService] New token: ${newToken?.substring(0, 30) ?? 'NULL'}...',
+      );
+
+      if (newToken != null && newToken.isNotEmpty) {
+        _noopLog('✅ [ApiService] FCM token refreshed successfully: $newToken');
+        return newToken;
+      } else {
+        _noopLog('⚠️ [ApiService] New token is still NULL/EMPTY after refresh');
+        throw Exception('Failed to get new FCM token');
+      }
+    } catch (e) {
+      _noopLog('❌ [ApiService] Error force refreshing FCM token: $e');
+      rethrow;
+    }
+  }
+
   /// Logout user
   Future<void> logout(String token) async {
     try {
@@ -1681,7 +1816,10 @@ class ApiService {
   Future<Response> getUserNotifications(String token) {
     return _dio.get(
       'api/user/notifications',
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+      options: Options(
+        headers: {'Authorization': 'Bearer $token'},
+        validateStatus: (status) => status! < 500,
+      ),
     );
   }
 

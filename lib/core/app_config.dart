@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../features/customer/data/models/customer_config_model.dart';
 import 'network/api_service.dart';
+import 'logger.dart';
 
 class AppConfig with ChangeNotifier {
   int _showAppbar = 1;
@@ -75,14 +76,14 @@ class AppConfig with ChangeNotifier {
     // Load adminUserId dari cache dengan STRICT validation
     final cachedAdminUserId = prefs.getString(_keyAdminUserId);
 
-    print(
+    AppLogger.logDebug(
       '📋 [AppConfig.loadLocalConfig] subdomain: "$_subdomain", cachedAdminUserId: "$cachedAdminUserId"',
     );
 
     // RULE: Jika tidak ada subdomain (testing langsung via IP), SELALU gunakan default adminId
     if (_subdomain.isEmpty) {
       _adminUserId = _adminId;
-      print(
+      AppLogger.logDebug(
         '✅ [AppConfig] No subdomain detected - using default adminId: $_adminUserId',
       );
     } else if (cachedAdminUserId != null &&
@@ -90,12 +91,12 @@ class AppConfig with ChangeNotifier {
         cachedAdminUserId != '0') {
       // Hanya gunakan cache jika ada subdomain DAN cache tidak kosong/invalid
       _adminUserId = cachedAdminUserId;
-      print(
+      AppLogger.logDebug(
         '✅ [AppConfig] Loaded adminUserId from cache: $_adminUserId (subdomain: $_subdomain)',
       );
     } else {
       _adminUserId = _adminId;
-      print('✅ [AppConfig] Using default adminId: $_adminUserId');
+      AppLogger.logDebug('✅ [AppConfig] Using default adminId: $_adminUserId');
     }
 
     final hexPrimary = prefs.getString(_keyPrimaryColor);
@@ -208,19 +209,19 @@ class AppConfig with ChangeNotifier {
         // Priority: 1. From subdomain API, 2. From model if subdomain exists, 3. Default admin ID
         if (apiAdminUserId != null && apiAdminUserId.isNotEmpty) {
           _adminUserId = apiAdminUserId;
-          print(
+          AppLogger.logDebug(
             '✅ [AppConfig] Set adminUserId from subdomain API: $_adminUserId',
           );
         } else if (subdomainFromWindow.isNotEmpty && model.id > 0) {
           // If we detected subdomain but got fallback config, still use model id
           _adminUserId = model.id.toString();
-          print(
+          AppLogger.logDebug(
             '✅ [AppConfig] Set adminUserId from model (has subdomain): $_adminUserId',
           );
         } else {
           // No subdomain detected - FORCE default adminId (for testing via IP)
           _adminUserId = _adminId;
-          print(
+          AppLogger.logDebug(
             '✅ [AppConfig] No subdomain - FORCE default adminId: $_adminUserId (testing mode)',
           );
         }
@@ -231,13 +232,13 @@ class AppConfig with ChangeNotifier {
         // 5. Simpan ke Local
         // debugPrint('📋 Saving config to SharedPreferences...');
         await _saveToLocal(model, adminUserId: _adminUserId);
-        print(
+        AppLogger.logDebug(
           '✅ [AppConfig] COMPLETE - adminUserId: $_adminUserId, subdomain: "$_subdomain"',
         );
       } else {
         // Fallback ke default adminId jika initialization gagal
         _adminUserId = _adminId;
-        print(
+        AppLogger.logDebug(
           '❌ [AppConfig] Failed to fetch config - FORCE default adminId: $_adminUserId',
         );
       }

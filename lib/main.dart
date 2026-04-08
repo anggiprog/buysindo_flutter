@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'core/network/api_service.dart';
 import 'core/network/session_manager.dart';
 import 'core/app_config.dart';
+import 'core/logger.dart';
 import 'ui/splash_screen.dart';
 import 'ui/auth/login_screen.dart';
 import 'ui/auth/register_screen.dart';
@@ -105,13 +106,29 @@ class PlaceholderWidget extends StatelessWidget {
 }
 
 Future<void> main() async {
-  print('🚀 [main] START');
+  // ============================================================================
+  // SECURITY: Nonaktifkan semua debug output di mode Web dan Release
+  // Ini penting untuk mencegah token, user ID, dan info sensitif terlihat
+  // ============================================================================
+
+  // Initialize logger - HARUS dipanggil pertama kali sebelum ada print statement
+  AppLogger.initialize();
+
+  // Disable debugPrint untuk memastikan tidak ada output yang tidak terkontrol
+  if (kIsWeb) {
+    debugPrint = (String? message, {int? wrapWidth}) {
+      // Silent - disable all debug print on web
+    };
+  }
+
+  AppLogger.log('🚀 [main] START');
+
   // Ensure Flutter bindings are initialized for native calls and plugins
   WidgetsFlutterBinding.ensureInitialized();
-  print('✅ [main] WidgetsFlutterBinding initialized');
+  AppLogger.log('✅ [main] WidgetsFlutterBinding initialized');
 
   // Load environment variables if used by DefaultFirebaseOptions
-  // Skip dotenv loading on web since .env file is not accessible via HTTP
+  // Skip dotenv loading on web since .env file is not accessible
   if (!kIsWeb) {
     try {
       await dotenv.load(fileName: ".env");
@@ -120,13 +137,14 @@ Future<void> main() async {
     }
   }
 
-  // Initialize Firebase synchronously so any Firebase API usage after this
-  // point (including in tests) has a default app available.
+  // Initialize Firebase
   try {
-    print('🔥 [main] Initializing Firebase...');
+    AppLogger.log('🔥 [main] Initializing Firebase...');
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    AppLogger.log('✅ [main] Firebase initialized successfully');
+
     // Register background message handler and request permission for messaging
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     await FirebaseMessaging.instance.requestPermission(
@@ -135,30 +153,24 @@ Future<void> main() async {
       sound: true,
       provisional: false,
     );
+    AppLogger.log('✅ [main] FCM Permission requested');
   } catch (e) {
-    // Log the error but allow the app to continue. Tests or environments without
-    // Firebase credentials will still be able to run UI logic that doesn't
-    // require Firebase.
-    // debugPrint('Firebase initialization error: $e');
+    AppLogger.logError('Firebase initialization error', e);
+    AppLogger.log(
+      '⚠️  [main] FCM will not be available. App will use mock token fallback.',
+    );
   }
 
-  // 4. Load cached config dari SharedPreferences (FAST - dari local storage ~50-100ms)
-  // print('📦 [main] Loading cached config from SharedPreferences...');
+  // Load cached config dari SharedPreferences (FAST - dari local storage ~50-100ms)
   await appConfig.loadLocalConfig();
-  // print(
-  //   '✅ [main] Cached config loaded. AppConfig.appName=${appConfig.appName}',
-  // );
 
-  // 5. Start API initialization in background - TANPA AWAIT
-  // print('🌐 [main] Starting API initialization (_fetchConfigAsync)...');
+  // Start API initialization in background - TANPA AWAIT
   _fetchConfigAsync();
 
-  // print('📱 [main] Calling runApp(MyApp())...');
   try {
     runApp(const MyApp());
-    //   print('✅ [main] runApp completed');
   } catch (e) {
-    //  print('❌ [main] ERROR in runApp: $e');
+    AppLogger.logError('ERROR in runApp', e);
     rethrow;
   }
 }
@@ -327,10 +339,10 @@ Future<void> _fetchConfigAsync() async {
     // debugPrint('✅ [_fetchConfigAsync] Successfully initialized AppConfig');
   } on TimeoutException catch (e) {
     // debugPrint('❌ [_fetchConfigAsync] TimeoutException: $e');
-    print('ERROR: Config timeout - $e'); // Print to console for visibility
+    AppLogger.logError('ERROR: Config timeout', e);
   } catch (e) {
     // debugPrint('❌ [_fetchConfigAsync] Exception: $e');
-    print('ERROR: Config failed - $e'); // Print to console for visibility
+    AppLogger.logError('ERROR: Config failed', e);
     // debugPrint('📋 Stack trace: ${StackTrace.current}');
   }
 }
@@ -349,7 +361,7 @@ class MyApp extends StatefulWidget {
 
   @override
   State<MyApp> createState() {
-    print('🔧 [MyApp.createState] Creating _MyAppState');
+    AppLogger.logDebug('🔧 [MyApp.createState] Creating _MyAppState');
     return _MyAppState();
   }
 }
@@ -357,7 +369,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
-    print('🔧 [_MyAppState.initState] Initializing state');
+    AppLogger.logDebug('🔧 [_MyAppState.initState] Initializing state');
     super.initState();
     // Register lifecycle observer
     WidgetsBinding.instance.addObserver(this);
@@ -367,13 +379,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // Setup FCM handlers with error handling
     try {
-      print(
+      AppLogger.logDebug(
         '🔧 [_MyAppState.initState] Setting up Firebase message handlers...',
       );
       _setupForegroundMessageHandler();
-      print('✅ [_MyAppState.initState] Firebase handlers setup complete');
+      AppLogger.logDebug(
+        '✅ [_MyAppState.initState] Firebase handlers setup complete',
+      );
     } catch (e) {
-      print(
+      AppLogger.logDebug(
         '⚠️ [_MyAppState.initState] Firebase handler error (non-fatal): $e',
       );
       // Don't crash app, FCM is optional for web
@@ -383,7 +397,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkDeviceTokenMismatch();
     });
-    print('✅ [_MyAppState.initState] Setup complete');
+    AppLogger.logDebug('✅ [_MyAppState.initState] Setup complete');
   }
 
   @override
@@ -420,7 +434,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Future<void> _setupDeepLinkHandler() async {
     try {
       if (kIsWeb) {
-        print('⏭️ [DeepLink] Skipping deep link setup on web platform');
+        AppLogger.logDebug(
+          '⏭️ [DeepLink] Skipping deep link setup on web platform',
+        );
         return;
       }
 
@@ -431,21 +447,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       try {
         final initialUri = await platform.invokeMethod<String>('getInitialUri');
         if (initialUri != null && initialUri.isNotEmpty) {
-          print('✅ [DeepLink] Got initial URI: $initialUri');
+          AppLogger.logDebug('✅ [DeepLink] Got initial URI: $initialUri');
           _handleDeepLink(Uri.parse(initialUri));
         }
       } on PlatformException catch (e) {
-        print('⚠️ [DeepLink] Could not get initial URI: ${e.message}');
+        AppLogger.logDebug(
+          '⚠️ [DeepLink] Could not get initial URI: ${e.message}',
+        );
       }
     } catch (e) {
-      print('⚠️ [DeepLink] Setup error (non-fatal): $e');
+      AppLogger.logDebug('⚠️ [DeepLink] Setup error (non-fatal): $e');
     }
   }
 
   /// Handle deep link URI
   void _handleDeepLink(Uri uri) {
-    print('🔗 [DeepLink] Handling deep link: $uri');
-    print(
+    AppLogger.logDebug('🔗 [DeepLink] Handling deep link: $uri');
+    AppLogger.logDebug(
       '🔗 [DeepLink] Scheme: ${uri.scheme}, Host: ${uri.host}, Path: ${uri.path}',
     );
 
@@ -455,7 +473,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final token = uri.queryParameters['token'];
       final email = uri.queryParameters['email'];
 
-      print('🔗 [DeepLink] Custom scheme - status: $status');
+      AppLogger.logDebug('🔗 [DeepLink] Custom scheme - status: $status');
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
@@ -471,7 +489,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if ((uri.scheme == 'http' || uri.scheme == 'https') &&
         uri.path.contains('/api/verify-email')) {
       final token = uri.queryParameters['token'];
-      print('🔗 [DeepLink] HTTP link - token: $token');
+      AppLogger.logDebug('🔗 [DeepLink] HTTP link - token: $token');
 
       if (token != null && token.isNotEmpty) {
         // Redirect to verify endpoint to get proper response
@@ -483,7 +501,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   /// Handle HTTP email verification links by redirecting to API
   void _handleEmailVerificationLink(String token) async {
-    print('🔗 [EmailVerification] Processing verification token');
+    AppLogger.logDebug('🔗 [EmailVerification] Processing verification token');
 
     try {
       // Make a request to the verification endpoint
@@ -498,7 +516,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
       );
 
-      print('🔗 [EmailVerification] Response status: ${response.statusCode}');
+      AppLogger.logDebug(
+        '🔗 [EmailVerification] Response status: ${response.statusCode}',
+      );
 
       // Check if response contains json (API response) or redirects (for mobile)
       if (response.data is String) {
@@ -506,7 +526,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         // If it returns HTML, we're being treated as web browser - show error
         if (body.contains('<!DOCTYPE') || body.contains('<html')) {
-          print(
+          AppLogger.logDebug(
             '🔗 [EmailVerification] Received HTML response - treated as web',
           );
           // Redirect to failure screen since API returned web page instead of deep link
@@ -525,7 +545,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (response.statusCode == 302 || response.statusCode == 301) {
         // Redirect response - extract location header
         final redirectUrl = response.headers['location']?.first;
-        print('🔗 [EmailVerification] Redirect to: $redirectUrl');
+        AppLogger.logDebug('🔗 [EmailVerification] Redirect to: $redirectUrl');
 
         if (redirectUrl != null && redirectUrl.contains('myapp://')) {
           _handleDeepLink(Uri.parse(redirectUrl));
@@ -542,7 +562,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         );
       });
     } catch (e) {
-      print('❌ [EmailVerification] Error: $e');
+      AppLogger.logError('❌ [EmailVerification] Error', e);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         navigatorKey.currentState?.pushNamedAndRemoveUntil(
           '/verify-success',
@@ -586,12 +606,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void _setupForegroundMessageHandler() {
     // Skip FCM setup on web platform (not fully supported)
     if (kIsWeb) {
-      print('⏭️ [FCM] Skipping FCM setup on web platform');
+      AppLogger.logDebug('⏭️ [FCM] Skipping FCM setup on web platform');
       return;
     }
 
     try {
-      print('🔧 [FCM] Setting up foreground message handlers...');
+      AppLogger.logDebug('🔧 [FCM] Setting up foreground message handlers...');
 
       // 1. Handle message received when app in foreground
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -648,9 +668,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         sound: true,
       );
 
-      print('✅ [FCM] All handlers setup successfully');
+      AppLogger.logDebug('✅ [FCM] All handlers setup successfully');
     } catch (e) {
-      print('⚠️ [FCM] Error during handler setup: $e');
+      AppLogger.logError('⚠️ [FCM] Error during handler setup', e);
       // Continue even if FCM setup fails
     }
   }
@@ -1268,11 +1288,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     try {
-      print(
+      AppLogger.logDebug(
         '🏗️ [MyApp.build] Building MaterialApp, appConfig.appName=${appConfig.appName}, primaryColor=${appConfig.primaryColor}',
       );
       if (appConfig.appName.isEmpty) {
-        print(
+        AppLogger.logDebug(
           '⚠️  [MyApp.build] AppConfig not initialized yet, showing fallback',
         );
         return MaterialApp(
@@ -1284,7 +1304,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       return AnimatedBuilder(
         animation: appConfig,
         builder: (context, child) {
-          print(
+          AppLogger.logDebug(
             '🏗️ [MyApp.AnimatedBuilder] Rebuilding with appConfig update, appName=${appConfig.appName}',
           );
           try {
@@ -1588,7 +1608,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               home: const SplashScreen(),
             );
           } catch (e) {
-            print('❌ [AnimatedBuilder] Error creating MaterialApp: $e');
+            AppLogger.logError(
+              '❌ [AnimatedBuilder] Error creating MaterialApp',
+              e,
+            );
             return MaterialApp(
               home: Scaffold(
                 body: Center(child: Text('Splash Error: ${e.toString()}')),
@@ -1598,8 +1621,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         },
       );
     } catch (e, stacktrace) {
-      print('❌ [MyApp.build] ERROR: $e');
-      print('Stack: $stacktrace');
+      AppLogger.logError('❌ [MyApp.build] ERROR', e);
+      AppLogger.logDebug('Stack: $stacktrace');
       return MaterialApp(
         home: Scaffold(
           body: Center(
