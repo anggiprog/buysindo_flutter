@@ -323,7 +323,7 @@ Future<void> _fetchConfigAsync() async {
     dio.options.connectTimeout = const Duration(seconds: 10);
     dio.options.receiveTimeout = const Duration(seconds: 10);
 
-    // 
+    //
 
     final apiService = ApiService(dio);
     await appConfig
@@ -332,18 +332,18 @@ Future<void> _fetchConfigAsync() async {
           const Duration(seconds: 15),
           onTimeout: () {
             final msg = 'API config timeout after 15 seconds';
-            // 
+            //
             throw TimeoutException(msg);
           },
         );
-    // 
+    //
   } on TimeoutException catch (e) {
-    // 
+    //
     AppLogger.logError('ERROR: Config timeout', e);
   } catch (e) {
-    // 
+    //
     AppLogger.logError('ERROR: Config failed', e);
-    // 
+    //
   }
 }
 
@@ -580,7 +580,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final api = ApiService(Dio());
       final valid = await api.isAuthTokenValid(token);
       if (!valid) {
-        // 
+        //
         // Try to call logout endpoint (best-effort) but don't block on it
         try {
           await api.logout(token);
@@ -597,7 +597,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
       }
     } catch (e) {
-      // 
+      //
     }
   }
 
@@ -618,9 +618,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         // Show notification using local notifications plugin
         if (message.notification != null) {
           _displayNotification(message);
-        } else {
-          
-        }
+        } else {}
       });
 
       // 2. Handle notification tap when app is in foreground/background
@@ -629,7 +627,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         if (navigatorKey.currentState != null) {
           _handleNotificationTap(message.data);
         } else {
-          
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => _handleNotificationTap(message.data),
           );
@@ -646,7 +643,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             if (navigatorKey.currentState != null) {
               _handleNotificationTap(message.data);
             } else {
-              //   
+              //
               // try again next frame
               WidgetsBinding.instance.addPostFrameCallback(
                 (__) => _handleNotificationTap(message.data),
@@ -697,7 +694,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           >()
           ?.createNotificationChannel(channel);
 
-      // 
+      //
 
       // Initialize local notifications
       await flutterLocalNotificationsPlugin.initialize(
@@ -706,21 +703,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           try {
-            // 
+            //
             if (response.payload != null && response.payload!.isNotEmpty) {
               final Map<String, dynamic> data = jsonDecode(response.payload!);
               _handleNotificationTap(data);
             }
-          } catch (e) {
-            
-          }
+          } catch (e) {}
         },
       );
-
-      
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   /// Handle notification tap and navigate to appropriate screen
@@ -733,28 +724,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           data['click_action_activity'] ??
           'notifications';
 
-      
-      
-      
-      
-      
-
       // Handle topup history route (HistoryTopupActivity)
       if (route == 'topup_history' || route == 'HistoryTopupActivity') {
-        
-
         try {
           if (navigatorKey.currentState != null) {
-            
             navigatorKey.currentState!.pushNamed('/topup_history');
             return;
           }
-        } catch (e) {
-          
-        }
+        } catch (e) {}
 
         // Fallback: Wait for navigator to be ready
-        
+
         int retries = 0;
         while (retries < 50 && navigatorKey.currentState == null) {
           await Future.delayed(const Duration(milliseconds: 100));
@@ -763,11 +743,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         if (navigatorKey.currentState != null) {
           try {
-            
             navigatorKey.currentState!.pushNamed('/topup_history');
-          } catch (e) {
-            
-          }
+          } catch (e) {}
         }
         return;
       }
@@ -776,16 +753,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (route.toString().toLowerCase().contains('transaction') ||
           route == 'transaction_history' ||
           route == 'RiwayatPrabayarActivity') {
-        
-
         // Extract tab index if provided
         final tabIndex =
             int.tryParse(data['tab_index']?.toString() ?? '1') ?? 1;
-        
 
         try {
           if (navigatorKey.currentState != null) {
-            
             // Navigate to home with transaction history tab selected
             navigatorKey.currentState!.pushNamedAndRemoveUntil(
               '/home',
@@ -796,12 +769,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             );
             return;
           }
-        } catch (e) {
-          
-        }
+        } catch (e) {}
 
         // Fallback: Wait for navigator to be ready
-        
+
         int retries = 0;
         while (retries < 50 && navigatorKey.currentState == null) {
           await Future.delayed(const Duration(milliseconds: 100));
@@ -810,25 +781,18 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         if (navigatorKey.currentState != null) {
           try {
-            
             navigatorKey.currentState!.pushNamedAndRemoveUntil(
               '/home',
               (route) => false,
               arguments: {'initialTab': tabIndex},
             );
-          } catch (e) {
-            
-          }
+          } catch (e) {}
         }
         return;
       }
 
       // Handle pascabayar detail route
       if (route == 'pascabayar_detail') {
-        
-        
-        
-
         // Extract transaction data from notification
         final transactionId =
             int.tryParse(data['transaction_id']?.toString() ?? '0') ?? 0;
@@ -844,14 +808,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           if (navigatorKey.currentState != null) {
             try {
-              
-
               // Fetch full transaction data from API
               final token = await SessionManager.getToken();
-              
 
               if (token != null) {
-                
                 final apiService = ApiService(Dio());
                 final response = await apiService
                     .getTransactionDetailPascabayar(token);
@@ -860,9 +820,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   final transactions = TransactionPascabayarResponse.fromJson(
                     response.data,
                   );
-
-                  
-                  
 
                   // Find transaction by ID or ref_id
                   final transaction = transactions.data.firstWhere(
@@ -881,7 +838,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 }
               }
 
-              
               debugPrint(
                 '🛣️ [Pascabayar] Akan redirect ke tab Pascabayar (index 2)\n',
               );
@@ -892,8 +848,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 arguments: {'initialTab': 2}, // Pascabayar tab
               );
             } catch (e) {
-              
-              
               debugPrint('   Fallback: Navigating to history tab (index 2)');
               // Fallback to history tab on error
               navigatorKey.currentState!.pushNamedAndRemoveUntil(
@@ -904,7 +858,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
           }
         } else {
-          
           // Navigate to pascabayar history tab as fallback
           int retries = 0;
           while (retries < 50 && navigatorKey.currentState == null) {
@@ -925,28 +878,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle mutasi detail route
       if (route == 'mutasi_detail' || route == 'MutasiDetailActivity') {
-        
-        
-        
-
         // Extract transaction data from notification
         final trxId = data['trx_id']?.toString() ?? '';
-        final type = data['type']?.toString() ?? '';
-        final amount = int.tryParse(data['amount']?.toString() ?? '0') ?? 0;
-        final saldoAwal =
-            int.tryParse(data['saldo_awal']?.toString() ?? '0') ?? 0;
-        final saldoAkhir =
-            int.tryParse(data['saldo_akhir']?.toString() ?? '0') ?? 0;
-        final keterangan = data['keterangan']?.toString() ?? '';
-
-        
-        
-        
-        
-        
-        
-        
-        
 
         if (trxId.isNotEmpty) {
           // Wait for navigator to be ready
@@ -958,20 +891,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           if (navigatorKey.currentState != null) {
             try {
-              
-
               // Fetch full transaction data from API
               final token = await SessionManager.getToken();
-              
 
               if (token != null) {
-                
                 final apiService = ApiService(Dio());
                 final response = await apiService.getLogTransaksiMutasi(token);
-
-                
-                
-                
 
                 if (response.statusCode == 200 && response.data != null) {
                   final responseData = response.data;
@@ -979,8 +904,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       responseData['status'] == true ||
                       responseData['status'] == 'success';
                   final transactionList = responseData['data'] as List?;
-
-                  
 
                   if (isSuccess &&
                       transactionList != null &&
@@ -1008,7 +931,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 }
               }
 
-              
               debugPrint(
                 '🛣️ [Mutasi] Akan redirect ke tab Mutasi (index 3)\n',
               );
@@ -1019,8 +941,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 arguments: {'initialTab': 3}, // Mutasi tab
               );
             } catch (e) {
-              
-              
               debugPrint('   Fallback: Navigating to history tab (index 3)');
               // Fallback to history tab on error
               navigatorKey.currentState!.pushNamedAndRemoveUntil(
@@ -1031,7 +951,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
           }
         } else {
-          
           // Navigate to mutasi history tab as fallback
           int retries = 0;
           while (retries < 50 && navigatorKey.currentState == null) {
@@ -1052,22 +971,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle prabayar detail route
       if (route == 'prabayar_detail') {
-        
-        
-        
-
         // Extract transaction data from notification
         final transactionId = data['transaction_id']?.toString() ?? '';
         final refId = data['ref_id']?.toString() ?? '';
-        final trxId = data['trx_id']?.toString() ?? '';
-        final status = data['status']?.toString() ?? '';
-
-        
-        
-        
-        
-        
-        
 
         if (refId.isNotEmpty && transactionId.isNotEmpty) {
           // Wait for navigator to be ready
@@ -1079,9 +985,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           if (navigatorKey.currentState != null) {
             try {
-              
-              
-
               navigatorKey.currentState!.push(
                 MaterialPageRoute(
                   builder: (context) => TransactionDetailPage(
@@ -1092,8 +995,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               );
               return;
             } catch (e) {
-              
-              
               debugPrint('   Fallback: Navigating to history tab (index 1)');
               // Fallback to history tab on error
               navigatorKey.currentState!.pushNamedAndRemoveUntil(
@@ -1104,7 +1005,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
           }
         } else {
-          
           // Navigate to prabayar history tab as fallback
           int retries = 0;
           while (retries < 50 && navigatorKey.currentState == null) {
@@ -1127,24 +1027,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (route.toString().toLowerCase().contains('notification') ||
           route == 'NotificationListActivity' ||
           route == 'notifications') {
-        
-
         // Simple direct navigation - don't create page in builder
         // Just push to existing route
         try {
           if (navigatorKey.currentState != null) {
-            
             navigatorKey.currentState!.pushNamed('/notifications');
             return;
-          } else {
-            
-          }
-        } catch (e) {
-          
-        }
+          } else {}
+        } catch (e) {}
 
         // Fallback: Wait for navigator to be ready then navigate
-        
+
         int retries = 0;
         while (retries < 50 && navigatorKey.currentState == null) {
           await Future.delayed(const Duration(milliseconds: 100));
@@ -1153,18 +1046,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         if (navigatorKey.currentState != null) {
           try {
-            
             navigatorKey.currentState!.pushNamed('/notifications');
-          } catch (e) {
-            
-          }
-        } else {
-          
-        }
+          } catch (e) {}
+        } else {}
       }
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   // Cache path for the large icon file so we don't write it every time
@@ -1287,7 +1173,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   foregroundColor: appConfig.textColor,
                   elevation: 1,
                   toolbarHeight: kToolbarHeight,
-                  shadowColor: Colors.black.withOpacity(0.2),
+                  shadowColor: Colors.black.withValues(alpha: 0.2),
                   centerTitle: false,
                   titleTextStyle: TextStyle(
                     fontSize: 18,
@@ -1600,4 +1486,3 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 }
-

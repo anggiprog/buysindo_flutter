@@ -75,11 +75,6 @@ class WebHelperImpl {
 
   /// Detailed logging untuk debugging
   static void logDebugInfo() {
-    try {
-      final origin = html.window.location.origin;
-      final hostname = html.window.location.hostname;
-      final protocol = html.window.location.protocol;
-      final href = html.window.location.href;
-    } catch (e) {}
+    // Reserved for future debugging purposes
   }
 }

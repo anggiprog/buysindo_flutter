@@ -2255,16 +2255,6 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   amount: _billData?['tagihan'] ?? 0,
                 ),
                 const SizedBox(height: 8),
-                // Debug print for Admin calculation
-                Builder(
-                  builder: (context) {
-                    final adminFromApi = _billData?['admin'] ?? 0;
-                    final markupMember = widget.markupMember ?? 0;
-                    final adminTotal = adminFromApi + markupMember;
-
-                    return const SizedBox.shrink();
-                  },
-                ),
                 _buildCompactAmountRow(
                   label: 'Admin',
                   amount:

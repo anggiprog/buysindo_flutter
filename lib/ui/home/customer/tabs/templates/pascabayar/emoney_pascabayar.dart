@@ -27,7 +27,6 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
 
   // Products Data
   List<ProductPascabayar> _allProducts = [];
-  List<ProductPascabayar> _products = [];
   List<String> _availableBrands = [];
   ProductPascabayar? _selectedProduct;
   String _selectedBrand = '';
@@ -65,7 +64,6 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -98,10 +96,8 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      
       final response = await _apiService.getPascabayarProducts(token);
 
-      
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
@@ -111,8 +107,6 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         final emoneyProducts = productResponse.products
             .where((p) => _isEmoneyBrand(p.brand))
             .toList();
-
-        
 
         // Simpan ke cache
         await _saveToCache(emoneyProducts);
@@ -133,16 +127,11 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
               }
             });
           }
-
-          
         }
       } else {
-        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      
-      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -161,9 +150,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
             .map((json) => ProductPascabayar.fromJson(json))
             .toList();
       }
-    } catch (e) {
-      
-    }
+    } catch (e) {}
     return [];
   }
 
@@ -173,10 +160,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   // Refresh products from backend
@@ -461,8 +445,6 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    
-
     // Filter products berdasarkan product_name yang dipilih
     final brandProducts = _allProducts
         .where((p) => p.productName == productName)
@@ -471,29 +453,19 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
     if (brandProducts.isNotEmpty) {
       setState(() {
         _selectedBrand = productName;
-        _products = brandProducts;
         _selectedProduct = brandProducts.first; // Auto select pertama
       });
-
-      
-      
     }
   }
 
   // Cek Tagihan
   Future<void> _checkBill() async {
-    
-    
-    
-
     if (_selectedProduct == null) {
-      
       _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      
       _showSnackbar('Masukkan nomor HP terlebih dahulu', Colors.orange);
       return;
     }
@@ -503,12 +475,9 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [EMONEY] Admin User ID (from AppConfig): $adminUserId');
-      
-      
-      
 
       // Show bottom sheet cek tagihan
-      
+
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -521,16 +490,9 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      
-
       if (billData != null) {
-        
-      } else {
-        
-      }
+      } else {}
     } catch (e) {
-      
-      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1519,4 +1481,3 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

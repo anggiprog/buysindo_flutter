@@ -236,7 +236,7 @@ class _TopupTripayState extends State<TopupTripay> {
       appBar: AppBar(
         backgroundColor: widget.primaryColor,
         elevation: 0,
-        title: const Text('Pembayaran Tripay'),
+        title: const Text('Pembayaran Topup'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),

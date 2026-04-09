@@ -26,7 +26,6 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
 
   // Products Data
   List<ProductPascabayar> _allProducts = [];
-  List<ProductPascabayar> _products = [];
   List<String> _availableBrands = [];
   ProductPascabayar? _selectedProduct;
   String _selectedBrand = '';
@@ -57,7 +56,6 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -86,10 +84,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
         throw Exception('Token tidak ditemukan');
       }
 
-      
       final response = await _apiService.getPascabayarProducts(token);
-
-      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -104,8 +99,6 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
                   p.brand.toUpperCase().contains('KETENAGAKERJAAN'),
             )
             .toList();
-
-        
 
         // Simpan ke cache
         await _saveToCache(bpjsKetenagakerjaanProducts);
@@ -126,16 +119,11 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
               }
             });
           }
-
-          
         }
       } else {
-        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      
-      
       if (mounted) {
         _showSnackbar(
           'Error loading BPJS Ketenagakerjaan products: ${e.toString()}',
@@ -157,9 +145,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
             .map((json) => ProductPascabayar.fromJson(json))
             .toList();
       }
-    } catch (e) {
-      
-    }
+    } catch (e) {}
     return [];
   }
 
@@ -169,10 +155,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   // Refresh products from backend
@@ -460,8 +443,6 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    
-
     // Filter products berdasarkan product_name yang dipilih
     final brandProducts = _allProducts
         .where((p) => p.productName == productName)
@@ -470,29 +451,19 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
     if (brandProducts.isNotEmpty) {
       setState(() {
         _selectedBrand = productName;
-        _products = brandProducts;
         _selectedProduct = brandProducts.first; // Auto select pertama
       });
-
-      
-      
     }
   }
 
   // Cek Tagihan
   Future<void> _checkBill() async {
-    
-    
-    
-
     if (_selectedProduct == null) {
-      
       _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      
       _showSnackbar('Masukkan nomor terlebih dahulu', Colors.orange);
       return;
     }
@@ -502,12 +473,9 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [HP] Admin User ID (from AppConfig): $adminUserId');
-      
-      
-      
 
       // Show bottom sheet cek tagihan
-      
+
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -519,16 +487,9 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      
-
       if (billData != null) {
-        
-      } else {
-        
-      }
+      } else {}
     } catch (e) {
-      
-      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1481,4 +1442,3 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
