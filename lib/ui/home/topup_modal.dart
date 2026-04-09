@@ -69,7 +69,7 @@ class _TopupModalState extends State<TopupModal> {
         null,
         token,
       );
-      _minimalTopup = minimalResponse.minimalTopup ?? 50000;
+      _minimalTopup = minimalResponse.minimalTopup ?? 20000;
 
       // Try to fetch rekening and payment status, but don't fail if they error
       try {
@@ -78,7 +78,7 @@ class _TopupModalState extends State<TopupModal> {
         );
         _rekeningStatus = rekeningResponse.data?.status;
       } catch (e) {
-        // debugPrint('Error fetching rekening status: $e');
+        //
         _rekeningStatus = 'active'; // Default to active
       }
 
@@ -86,7 +86,7 @@ class _TopupModalState extends State<TopupModal> {
         final paymentResponse = await widget.apiService.getStatusPayment(token);
         _paymentStatus = paymentResponse.status;
       } catch (e) {
-        // debugPrint('Error fetching payment status: $e');
+        //
         _paymentStatus = 1; // Default to 1
       }
 
@@ -101,7 +101,7 @@ class _TopupModalState extends State<TopupModal> {
         setState(() => _isLoading = false);
       }
     } catch (e) {
-      // debugPrint('Error in _fetchTopupData: $e');
+      //
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -175,7 +175,7 @@ class _TopupModalState extends State<TopupModal> {
               return AlertDialog(
                 title: const Text('Nominal Tidak Mencukupi'),
                 content: Text(
-                  'Minimal top up adalah ${currencyFormatter.format(validationResponse.minimalTopup ?? _minimalTopup ?? 50000)}',
+                  'Minimal top up adalah ${currencyFormatter.format(validationResponse.minimalTopup ?? _minimalTopup ?? 20000)}',
                 ),
                 actions: [
                   TextButton(

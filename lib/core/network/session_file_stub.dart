@@ -6,3 +6,4 @@ class SessionFileHelper {
     // No-op on web
   }
 }
+

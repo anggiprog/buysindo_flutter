@@ -39,12 +39,12 @@ class _BluetoothPrinterDiscoveryPageState
     });
 
     try {
-      // debugPrint('🔍 Starting Bluetooth device discovery...');
-      // debugPrint('🔧 BluetoothPrinterService: $_printerService');
+      // 
+      // 
 
       // Request permissions if needed
       final hasPermission = await _printerService.requestPermissions();
-      // debugPrint('✅ Permissions granted: $hasPermission');
+      // 
 
       if (!hasPermission) {
         if (mounted) {
@@ -57,19 +57,19 @@ class _BluetoothPrinterDiscoveryPageState
       }
 
       // Get paired devices
-      // debugPrint('📱 Fetching paired devices...');
+      // 
       final devices = await _printerService.getPairedDevices();
 
       // debugPrint('📊 Devices retrieved: ${devices.length} device(s)');
       for (int i = 0; i < devices.length; i++) {
-        debugPrint('  Device $i: $devices[$i]');
+        
       }
 
       if (mounted) {
         setState(() {
           _discoveredDevices = devices;
           _isScanning = false;
-          debugPrint('✅ Found ${devices.length} devices');
+          
           if (devices.isEmpty) {
             _errorMessage =
                 'Tidak ada printer Bluetooth yang terpasang.\n\nJika printer Anda sudah dipasangkan, coba:\n1. Nyalakan ulang Bluetooth\n2. Periksa izin Bluetooth di Pengaturan\n3. Hubungkan manual dari Pengaturan Bluetooth';
@@ -77,8 +77,8 @@ class _BluetoothPrinterDiscoveryPageState
         });
       }
     } catch (e) {
-      debugPrint('❌ Discovery error: $e');
-      debugPrint('❌ Error type: ${e.runtimeType}');
+      
+      
       debugPrint('❌ Stack trace: ${e.toString()}');
 
       if (mounted) {
@@ -92,7 +92,7 @@ class _BluetoothPrinterDiscoveryPageState
   }
 
   void _selectDevice(dynamic device) {
-    debugPrint('✅ Device selected: $device');
+    
     Navigator.pop(context);
     widget.onDeviceSelected(device);
   }
@@ -376,3 +376,4 @@ class _BluetoothPrinterDiscoveryPageState
     );
   }
 }
+

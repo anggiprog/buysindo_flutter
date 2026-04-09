@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class MenuPrabayarItem {
   final int id;
   final int urutan;
@@ -97,9 +95,7 @@ class MenuPrabayarResponse {
           MenuPrabayarItem.fromJson(Map<String, dynamic>.from(json)),
         ];
       }
-    } catch (e) {
-      debugPrint('Error parsing MenuPrabayarResponse: $e');
-    }
+    } catch (e) {}
 
     return MenuPrabayarResponse(menus: menusList);
   }

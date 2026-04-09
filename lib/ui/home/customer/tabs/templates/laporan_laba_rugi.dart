@@ -114,7 +114,7 @@ class _LaporanLabaRugiState extends State<LaporanLabaRugi>
         });
       }
     } catch (e) {
-      debugPrint('❌ [LaporanLaba] Error loading data: $e');
+      
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -875,3 +875,4 @@ class _LaporanLabaRugiState extends State<LaporanLabaRugi>
     }
   }
 }
+

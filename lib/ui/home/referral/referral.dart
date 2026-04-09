@@ -62,7 +62,7 @@ class _ReferralPageState extends State<ReferralPage>
         // For complex data, consider using jsonEncode/jsonDecode
       }
     } catch (e) {
-      // debugPrint("Error loading from cache: $e");
+      // 
     }
   }
 
@@ -78,7 +78,7 @@ class _ReferralPageState extends State<ReferralPage>
       if (token == null) return;
 
       final response = await _apiService.getReferralCode(token);
-      // debugPrint('[Referral] Get referral code response: ${response.data}');
+      // 
 
       if (response.statusCode == 200 && response.data != null) {
         // Response format: {"referral_code": "anggi123"}
@@ -97,7 +97,7 @@ class _ReferralPageState extends State<ReferralPage>
         }
       }
     } catch (e) {
-      // debugPrint("Error fetch referral code: $e");
+      // 
     }
   }
 
@@ -107,7 +107,7 @@ class _ReferralPageState extends State<ReferralPage>
       if (token == null) return;
 
       final response = await _apiService.getReferralList(token);
-      // debugPrint('[Referral] Get referral list response: ${response.data}');
+      // 
 
       if (response.statusCode == 200 && response.data != null) {
         // Response format: {"status": true, "jumlah_referral": 1, "referrals": [...]}
@@ -119,7 +119,7 @@ class _ReferralPageState extends State<ReferralPage>
         }
       }
     } catch (e) {
-      // debugPrint("Error fetch referral list: $e");
+      // 
     }
   }
 
@@ -161,3 +161,4 @@ class _ReferralPageState extends State<ReferralPage>
     );
   }
 }
+

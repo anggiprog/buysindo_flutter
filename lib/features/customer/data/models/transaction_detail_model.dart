@@ -140,3 +140,4 @@ class TransactionDetail {
   // Check if transaction failed
   bool get isFailed => !isSuccess && !isPending;
 }
+

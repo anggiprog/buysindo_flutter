@@ -98,8 +98,8 @@ class _ByuPascabayarPageState extends State<ByuPascabayarPage> {
         final adminFee =
             int.tryParse(byuProduct['admin_fee']?.toString() ?? '0') ?? 0;
 
-        print('📝 [BYU] Markup Member: $markupMember');
-        print('📝 [BYU] Admin Fee: $adminFee');
+        
+        
 
         if (!mounted) return;
         await CekTagihanPascabayar.showCekTagihan(
@@ -290,3 +290,4 @@ class _ByuPascabayarPageState extends State<ByuPascabayarPage> {
     );
   }
 }
+

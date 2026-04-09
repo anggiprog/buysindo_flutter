@@ -15,3 +15,4 @@ class WebHelperImpl {
   /// Mobile bukan production web
   static bool isProduction() => false;
 }
+

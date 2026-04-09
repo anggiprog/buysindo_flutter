@@ -3,6 +3,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_service.dart';
 import '../../../core/network/session_manager.dart';
+import '../../../core/security/totp_service.dart';
 
 class TopupIpaymu extends StatefulWidget {
   final int amount;
@@ -53,6 +54,12 @@ class _TopupIpaymuState extends State<TopupIpaymu> {
         );
       }
 
+      // Generate TOTP token for admin authentication
+      final adminToken = TOTPService.getCurrentToken(
+        secretKey: 'Anggiprog@241288123_2026',
+        timeStep: 60,
+      );
+
       // Create payment transaction
       final response = await widget.apiService.createIpaymuTopup(
         token: token,
@@ -60,6 +67,7 @@ class _TopupIpaymuState extends State<TopupIpaymu> {
             ? adminUserId
             : int.parse(adminUserId.toString()),
         amount: widget.amount,
+        adminToken: adminToken,
       );
 
       // Validate response has URL

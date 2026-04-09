@@ -59,12 +59,6 @@ class _TransactionPascabayarDetailPageState
     final totalPembayaranAdmin = _transaction.totalPembayaranAdmin;
 
     // Debug logging
-    debugPrint('📊 [PascabayarDetail] adminBase: $adminBase');
-    debugPrint('📊 [PascabayarDetail] totalPembayaran: $totalPembayaran');
-    debugPrint('📊 [PascabayarDetail] markupMember: $markupMember');
-    debugPrint(
-      '📊 [PascabayarDetail] totalPembayaranAdmin: $totalPembayaranAdmin',
-    );
 
     // Admin field shows: admin + markupMember + totalPembayaranAdmin
     _currentAdminFee = adminBase + markupMember + totalPembayaranAdmin;
@@ -73,9 +67,6 @@ class _TransactionPascabayarDetailPageState
     // Total shows: totalPembayaran + markupMember
     // Note: totalPembayaranAdmin sudah termasuk dalam totalPembayaran
     _currentTotal = totalPembayaran + markupMember;
-
-    debugPrint('📊 [PascabayarDetail] _currentAdminFee: $_currentAdminFee');
-    debugPrint('📊 [PascabayarDetail] _currentTotal: $_currentTotal');
 
     _loadStoreInfo();
     _startStatusRefreshTimer();
@@ -100,16 +91,11 @@ class _TransactionPascabayarDetailPageState
         const Duration(seconds: 3),
         (_) => _refreshTransactionStatus(),
       );
-    } else {
-      debugPrint(
-        '✅ [StatusRefresh] Status is "$status", no auto-refresh needed',
-      );
-    }
+    } else {}
   }
 
   void _stopStatusRefreshTimer() {
     if (_statusRefreshTimer != null) {
-      debugPrint('🛑 [StatusRefresh] Stopping auto-refresh timer');
       _statusRefreshTimer?.cancel();
       _statusRefreshTimer = null;
     }
@@ -119,14 +105,10 @@ class _TransactionPascabayarDetailPageState
     if (_isRefreshingStatus || !mounted) return;
 
     _isRefreshingStatus = true;
-    debugPrint(
-      '🔄 [StatusRefresh] Refreshing transaction status for ref_id: ${_transaction.refId}',
-    );
 
     try {
       final token = await SessionManager.getToken();
       if (token == null) {
-        debugPrint('⚠️ [StatusRefresh] Token not found');
         _isRefreshingStatus = false;
         return;
       }
@@ -153,13 +135,7 @@ class _TransactionPascabayarDetailPageState
           final newStatus = matchingTrx['status']?.toString() ?? '';
           final oldStatus = _transaction.status;
 
-          debugPrint(
-            '🔄 [StatusRefresh] Old status: $oldStatus, New status: $newStatus',
-          );
-
           if (newStatus.toLowerCase() != oldStatus.toLowerCase()) {
-            debugPrint('✅ [StatusRefresh] Status changed! Updating UI...');
-
             // Update transaction with new status
             final updatedTransaction = TransactionPascabayar.fromJson(
               matchingTrx,
@@ -197,18 +173,11 @@ class _TransactionPascabayarDetailPageState
             // Stop timer if status is no longer pending
             if (newStatus.toLowerCase() != 'pending') {
               _stopStatusRefreshTimer();
-              debugPrint(
-                '✅ [StatusRefresh] Transaction completed, stopped auto-refresh',
-              );
             }
           }
-        } else {
-          debugPrint('⚠️ [StatusRefresh] Transaction not found in response');
-        }
+        } else {}
       }
-    } catch (e) {
-      debugPrint('❌ [StatusRefresh] Error: $e');
-    }
+    } catch (e) {}
 
     _isRefreshingStatus = false;
   }
@@ -246,19 +215,15 @@ class _TransactionPascabayarDetailPageState
     try {
       final String? token = await SessionManager.getToken();
       if (token == null) {
-        debugPrint('⚠️ Token not found');
         setState(() => _isLoading = false);
         return;
       }
 
-      debugPrint('🔐 Fetching store info for pascabayar...');
       final storeResponse = await _apiService.getUserStore(token);
-      debugPrint('🏪 Store Response: ${storeResponse.data}');
 
       if (storeResponse.statusCode == 200) {
         final storeData = storeResponse.data;
         String storeName = storeData['nama_toko']?.toString() ?? '';
-        debugPrint('🏪 Got store name: "$storeName"');
 
         if (storeName.isNotEmpty && mounted) {
           setState(() {
@@ -288,17 +253,13 @@ class _TransactionPascabayarDetailPageState
             );
             _isLoading = false;
           });
-          debugPrint('✅ Transaction updated with store name for pascabayar');
         } else {
           setState(() => _isLoading = false);
-          debugPrint('⚠️ Store name is empty');
         }
       } else {
         setState(() => _isLoading = false);
-        debugPrint('⚠️ Store API returned status: ${storeResponse.statusCode}');
       }
     } catch (e) {
-      debugPrint('❌ Error fetching store: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -328,7 +289,6 @@ class _TransactionPascabayarDetailPageState
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
       return pngBytes;
     } catch (e) {
-      debugPrint('❌ Error capturing receipt: $e');
       _showError('Gagal mengambil gambar struk');
       return null;
     }
@@ -358,7 +318,6 @@ class _TransactionPascabayarDetailPageState
         );
       }
     } catch (e) {
-      debugPrint('❌ Error sharing: $e');
       _showError('Gagal membagikan struk');
     }
   }
@@ -416,7 +375,6 @@ class _TransactionPascabayarDetailPageState
 
       await _connectAndPrint(selectedDevice);
     } catch (e) {
-      debugPrint('❌ Print error: $e');
       if (mounted) {
         setState(() => _isPrinting = false);
         _showError('Terjadi kesalahan saat mencetak');
@@ -475,7 +433,6 @@ class _TransactionPascabayarDetailPageState
       // Disconnect
       await _printerService.disconnect();
     } catch (e) {
-      debugPrint('❌ Connect and print error: $e');
       if (mounted) {
         setState(() => _isPrinting = false);
         _showError('Terjadi kesalahan saat mencetak');
@@ -616,7 +573,6 @@ Tanggal: ${_transaction.createdAt}
 Terima kasih telah bertransaksi dengan kami!''';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
-      debugPrint('❌ WhatsApp share error: $e');
       _showError('Gagal membagikan ke WhatsApp');
     }
   }
@@ -652,7 +608,6 @@ Tanggal: ${_transaction.createdAt}
 Terima kasih telah bertransaksi dengan kami!''';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
-      debugPrint('❌ Telegram share error: $e');
       _showError('Gagal membagikan ke Telegram');
     }
   }
@@ -688,7 +643,6 @@ Tanggal: ${_transaction.createdAt}
 Terima kasih telah bertransaksi dengan kami!''';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
-      debugPrint('❌ Default share error: $e');
       _showError('Gagal membagikan');
     }
   }
@@ -697,7 +651,6 @@ Terima kasih telah bertransaksi dengan kami!''';
     try {
       _showSuccess('Gambar berhasil disimpan ke galeri');
     } catch (e) {
-      debugPrint('❌ Save error: $e');
       _showError('Gagal menyimpan gambar');
     }
   }
@@ -707,7 +660,6 @@ Terima kasih telah bertransaksi dengan kami!''';
       await Clipboard.setData(ClipboardData(text: imagePath));
       _showSuccess('Path gambar tersalin ke clipboard');
     } catch (e) {
-      debugPrint('❌ Copy error: $e');
       _showError('Gagal menyalin path');
     }
   }
@@ -719,7 +671,6 @@ Terima kasih telah bertransaksi dengan kami!''';
       await Clipboard.setData(ClipboardData(text: referenceText));
       _showSuccess('Reference ID berhasil disalin ke clipboard');
     } catch (e) {
-      debugPrint('❌ Error copying reference: $e');
       _showError('Gagal menyalin reference ID');
     }
   }

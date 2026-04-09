@@ -57,7 +57,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [BPJS] Using cached products: ${cachedProducts.length}');
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -86,10 +86,10 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [BPJS] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [BPJS] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -105,9 +105,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
             )
             .toList();
 
-        print(
-          '📦 [BPJS] BPJS Ketenagakerjaan products fetched: ${bpjsKetenagakerjaanProducts.length}',
-        );
+        
 
         // Simpan ke cache
         await _saveToCache(bpjsKetenagakerjaanProducts);
@@ -129,17 +127,15 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
             });
           }
 
-          print(
-            '✅ [BPJS] BPJS Ketenagakerjaan products loaded: ${_availableBrands.length} brands',
-          );
+          
         }
       } else {
-        print('❌ [BPJS] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [BPJS] Error loading products: $e');
-      print('❌ [BPJS] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar(
           'Error loading BPJS Ketenagakerjaan products: ${e.toString()}',
@@ -162,7 +158,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [BPJS] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -173,9 +169,9 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [BPJS] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [BPJS] Error saving to cache: $e');
+      
     }
   }
 
@@ -464,7 +460,7 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    print('📌 [HP] Brand selected: $productName');
+    
 
     // Filter products berdasarkan product_name yang dipilih
     final brandProducts = _allProducts
@@ -478,27 +474,25 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
         _selectedProduct = brandProducts.first; // Auto select pertama
       });
 
-      print(
-        '✅ [HP] Selected: $_selectedBrand with ${_products.length} products',
-      );
-      print('✅ [HP] Auto-selected product: ${_selectedProduct!.buyerSkuCode}');
+      
+      
     }
   }
 
   // Cek Tagihan
   Future<void> _checkBill() async {
-    print('🔍 [HP] _checkBill called');
-    print('🔍 [HP] Selected Product: $_selectedProduct');
-    print('🔍 [HP] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [HP] No product selected');
+      
       _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [HP] Customer ID is empty');
+      
       _showSnackbar('Masukkan nomor terlebih dahulu', Colors.orange);
       return;
     }
@@ -508,12 +502,12 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [HP] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [HP] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [HP] Brand: ${_selectedProduct!.brand}');
-      print('📝 [HP] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [HP] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -525,16 +519,16 @@ class _BpjsKetenagakerjaanState extends State<BpjsKetenagakerjaan> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [HP] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [HP] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [HP] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [HP] Error in _checkBill: $e');
-      print('❌ [HP] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1487,3 +1481,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

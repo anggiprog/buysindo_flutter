@@ -255,3 +255,4 @@ class _PinValidationDialogState extends State<PinValidationDialog> {
     );
   }
 }
+

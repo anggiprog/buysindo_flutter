@@ -7,3 +7,4 @@ class PlatformHelper {
   static bool get isLinux => false;
   static bool get isWindows => false;
 }
+

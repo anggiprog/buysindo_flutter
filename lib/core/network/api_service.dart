@@ -47,9 +47,7 @@ class ApiService {
       if (response.statusCode == 200 && response.data['data'] != null) {
         return response.data['data'];
       }
-    } catch (e) {
-      debugPrint('[ApiService] hitungOngkir ERROR: $e');
-    }
+    } catch (e) {}
     return null;
   }
 
@@ -63,9 +61,7 @@ class ApiService {
       if (response.statusCode == 200 && response.data['data'] != null) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
-    } catch (e) {
-      debugPrint('[ApiService] getProvinsi ERROR: $e');
-    }
+    } catch (e) {}
     return [];
   }
 
@@ -82,9 +78,7 @@ class ApiService {
       if (response.statusCode == 200 && response.data['data'] != null) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
-    } catch (e) {
-      debugPrint('[ApiService] getKota ERROR: $e');
-    }
+    } catch (e) {}
     return [];
   }
 
@@ -101,9 +95,7 @@ class ApiService {
       if (response.statusCode == 200 && response.data['data'] != null) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
-    } catch (e) {
-      debugPrint('[ApiService] getKecamatan ERROR: $e');
-    }
+    } catch (e) {}
     return [];
   }
 
@@ -132,9 +124,7 @@ class ApiService {
           return response.data['html'] as String;
         }
       }
-    } catch (e) {
-      debugPrint('[ApiService] getCustomHtmlPage ERROR: $e');
-    }
+    } catch (e) {}
     return null;
   }
 
@@ -159,14 +149,8 @@ class ApiService {
           // Jika API kadang return string JSON
           return jsonDecode(response.data) as Map<String, dynamic>;
         }
-      } else {
-        debugPrint(
-          '[ApiService] getCustomTemplatePreview: status ${response.statusCode}, data: ${response.data}',
-        );
-      }
-    } catch (e) {
-      debugPrint('[ApiService] getCustomTemplatePreview ERROR: $e');
-    }
+      } else {}
+    } catch (e) {}
     return null;
   }
 
@@ -180,10 +164,8 @@ class ApiService {
         'api/user/chat',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      print(
-        '[ApiService] deleteAllChat: Status code: [32m${response.statusCode}[0m',
-      );
-      // print('[ApiService] deleteAllChat: Response: ${response.data}'); // Sembunyikan untuk keamanan
+
+      //  // Sembunyikan untuk keamanan
       return response.statusCode == 200;
     } catch (e) {
       AppLogger.logError('[ApiService] deleteAllChat: ERROR', e);
@@ -199,10 +181,8 @@ class ApiService {
         'api/user/chat',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      print(
-        '[ApiService] getChatMessages: Status code: [32m${response.statusCode}[0m',
-      );
-      // print('[ApiService] getChatMessages: Response: ${response.data}'); // Sembunyikan untuk keamanan
+
+      //  // Sembunyikan untuk keamanan
       if (response.statusCode == 200 && response.data != null) {
         if (response.data is Map<String, dynamic> &&
             response.data.containsKey('messages')) {
@@ -228,10 +208,8 @@ class ApiService {
         data: {'message': message},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      print(
-        '[ApiService] sendChatMessage: Status code: [32m${response.statusCode}[0m',
-      );
-      // print('[ApiService] sendChatMessage: Response: ${response.data}'); // Sembunyikan untuk keamanan
+
+      //  // Sembunyikan untuk keamanan
       return response.statusCode == 200;
     } catch (e) {
       AppLogger.logError('[ApiService] sendChatMessage: ERROR', e);
@@ -295,11 +273,7 @@ class ApiService {
   /// Get or create singleton ApiService instance with auto-detected base URL
   static ApiService get instance {
     if (_instanceCache == null) {
-      debugPrint(
-        '🔧 [ApiService] Creating ApiService singleton with auto-detection...',
-      );
       _instanceCache = ApiService.auto(Dio());
-      debugPrint('✅ [ApiService] ApiService singleton created');
     }
     return _instanceCache!;
   }
@@ -307,7 +281,6 @@ class ApiService {
   /// Reset singleton cache (useful for testing or URL changes)
   static void resetInstance() {
     _instanceCache = null;
-    debugPrint('🔧 [ApiService] Singleton cache cleared');
   }
 
   /// Check Telkomsel Omni Pascabayar bill
@@ -677,7 +650,7 @@ class ApiService {
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
         baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+    //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -686,19 +659,6 @@ class ApiService {
       'Content-Type': 'application/json',
     };
     _dio.options.validateStatus = (status) => status! < 500;
-
-    // Add LogInterceptor for debugging (hapus di production)
-    _dio.interceptors.add(
-      LogInterceptor(
-        request: true,
-        requestHeader: true,
-        requestBody: true,
-        responseHeader: false,
-        responseBody: true,
-        error: true,
-        logPrint: (obj) => debugPrint(obj.toString()),
-      ),
-    );
   }
 
   /// Getter untuk URL dasar Gambar
@@ -967,12 +927,10 @@ class ApiService {
               response.data['errors']?.toString() ??
               errorMsg;
         }
-        debugPrint('❌ [ApiService] verifyOtp failed: $errorMsg');
-        debugPrint('❌ [ApiService] Response data: ${response.data}');
+
         throw Exception('OTP verification failed: $errorMsg');
       }
     } on DioException catch (e) {
-      debugPrint('❌ [ApiService] verifyOtp DioException: ${e.response?.data}');
       throw _handleDioError(e);
     }
   }
@@ -980,19 +938,10 @@ class ApiService {
   /// Resend OTP to email
   Future<void> resendOtp(String email) async {
     try {
-      debugPrint('📤 [ApiService] resendOtp: Sending to email: $email');
-      debugPrint('📤 [ApiService] resendOtp: BaseURL: ${_dio.options.baseUrl}');
-      debugPrint('📤 [ApiService] resendOtp: Endpoint: api/resend-otp');
-
       final response = await _dio.post(
         'api/resend-otp',
         data: {'email': email},
       );
-
-      debugPrint(
-        '📥 [ApiService] resendOtp: Status code: ${response.statusCode}',
-      );
-      debugPrint('📥 [ApiService] resendOtp: Response: ${response.data}');
 
       if (response.statusCode != 200) {
         String errorMsg = response.statusMessage ?? 'Unknown error';
@@ -1000,15 +949,10 @@ class ApiService {
           errorMsg =
               response.data['message'] ?? response.data['error'] ?? errorMsg;
         }
-        debugPrint('❌ [ApiService] resendOtp failed: $errorMsg');
+
         throw Exception('Resend OTP failed: $errorMsg');
       }
-
-      debugPrint('✅ [ApiService] resendOtp: Success!');
     } on DioException catch (e) {
-      debugPrint('❌ [ApiService] resendOtp DioException: ${e.type}');
-      debugPrint('❌ [ApiService] resendOtp Error: ${e.message}');
-      debugPrint('❌ [ApiService] resendOtp Response: ${e.response?.data}');
       throw _handleDioError(e);
     }
   }
@@ -1325,6 +1269,7 @@ class ApiService {
     required int hargaJualMember,
     required String token,
     required String userId,
+    required String adminToken,
     String? zoneId,
   }) {
     final data = {
@@ -1348,7 +1293,12 @@ class ApiService {
     return _dio.post(
       'api/proses-trx-prabayar',
       data: data,
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          'X-Admin-Token': adminToken,
+        },
+      ),
     );
   }
 
@@ -1970,6 +1920,7 @@ class ApiService {
     required String token,
     required int adminUserId,
     required int amount,
+    required String adminToken,
   }) async {
     try {
       final response = await _dio.post(
@@ -1978,7 +1929,12 @@ class ApiService {
           'admin_user_id': adminUserId.toString(),
           'amount': amount.toString(),
         },
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'X-Admin-Token': adminToken,
+          },
+        ),
       );
 
       // Check if response is successful
@@ -2115,8 +2071,6 @@ class ApiService {
   /// Ambil daftar rekening bank untuk pembayaran manual
   Future<BankAccountResponse> getBankAccounts(String token) async {
     try {
-      print('🔍 [API] ===== FETCHING BANK ACCOUNTS START =====');
-      print('🔍 [API] Endpoint: api/rekening-bank');
       // print('🔍 [API] Token: ${token.substring(0, 20)}...'); // Sembunyikan untuk keamanan
 
       final response = await _dio.get(
@@ -2124,25 +2078,16 @@ class ApiService {
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
-      print('🔍 [API] Status Code: ${response.statusCode}');
-      // print('🔍 [API] Response Data: ${response.data}'); // Sembunyikan untuk keamanan
+      //  // Sembunyikan untuk keamanan
 
       final bankResponse = BankAccountResponse.fromJson(response.data);
-      print(
-        '🔍 [API] Parsed Bank Accounts Count: ${bankResponse.data?.length}',
-      );
+
       if (bankResponse.data != null) {
-        for (var i = 0; i < bankResponse.data!.length; i++) {
-          final bank = bankResponse.data![i];
-          print('🔍 [API]   [$i] ${bank.namaBank} - ${bank.nomorRekening}');
-        }
+        // Bank accounts loaded successfully
       }
-      print('🔍 [API] ===== FETCHING BANK ACCOUNTS END =====');
 
       return bankResponse;
     } catch (e) {
-      print('❌ [API] Error get bank accounts: $e');
-      print('❌ [API] Error type: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -2156,10 +2101,6 @@ class ApiService {
         'api/splash-screens',
         queryParameters: {'admin_user_id': adminUserId},
         options: Options(validateStatus: (status) => status! < 500),
-      );
-
-      debugPrint(
-        '🌊 [ApiService] getSplashScreen status=${response.statusCode} data=${response.data}',
       );
 
       if (response.statusCode == 200 && response.data != null) {
@@ -2253,6 +2194,7 @@ class ApiService {
     required String nomorRekening,
     required String namaRekening,
     required String userToken,
+    required String adminToken,
     required String adminUserId,
   }) async {
     try {
@@ -2261,48 +2203,16 @@ class ApiService {
       final nomorTransaksi =
           'TRX${adminUserId}${random.toString().padLeft(6, '0')}';
 
-      // Ambil admin token
-      final adminTokenResponse = await getAdminToken(adminUserId);
-      if (adminTokenResponse.statusCode != 200) {
-        throw Exception('Gagal mengambil admin token');
+      // Validate adminToken is provided
+      if (adminToken.isEmpty) {
+        throw Exception('Admin token harus disediakan');
       }
-
-      // Parse admin token dari struktur response: {status: "success", data: [{token: "..."}]}
-      String? adminToken;
-      try {
-        final responseData = adminTokenResponse.data;
-        // print('🔍 [API] Admin Token Response: $responseData'); // Sembunyikan untuk keamanan
-
-        if (responseData is Map) {
-          // Cek struktur: data['data'] adalah array
-          final dataArray = responseData['data'];
-          if (dataArray is List && dataArray.isNotEmpty) {
-            final firstItem = dataArray[0];
-            if (firstItem is Map) {
-              adminToken = firstItem['token'] as String?;
-            }
-          }
-          // Fallback: cek langsung di root level
-          if (adminToken == null || adminToken.isEmpty) {
-            adminToken = responseData['token'] as String?;
-          }
-        }
-      } catch (e) {
-        print('⚠️ [API] Error parsing admin token: $e');
-      }
-
-      if (adminToken == null || adminToken.isEmpty) {
-        throw Exception('Admin token kosong - gagal parse dari response');
-      }
-
-      // print('🔍 [API] Admin Token: ${adminToken.substring(0, 20)}...'); // Sembunyikan untuk keamanan
 
       // Hitung batas waktu (3 hari dari sekarang) - format: Y-m-d H:i:s
       final batasWaktuDateTime = DateTime.now().add(const Duration(days: 3));
       final batasWaktu =
           '${batasWaktuDateTime.year}-${batasWaktuDateTime.month.toString().padLeft(2, '0')}-${batasWaktuDateTime.day.toString().padLeft(2, '0')} '
           '${batasWaktuDateTime.hour.toString().padLeft(2, '0')}:${batasWaktuDateTime.minute.toString().padLeft(2, '0')}:${batasWaktuDateTime.second.toString().padLeft(2, '0')}';
-      print('🔍 [API] Batas Waktu: $batasWaktu');
 
       // Buat form data
       final formData = FormData.fromMap({
@@ -2326,26 +2236,17 @@ class ApiService {
         ),
       );
 
-      print('🔍 [API] Status Code: ${response.statusCode}');
-      // print('🔍 [API] Response Data: ${response.data}'); // Sembunyikan untuk keamanan
+      //  // Sembunyikan untuk keamanan
 
       final topupResponse = TopupResponse.fromJson(response.data);
-      print('🔍 [API] Transaction Number: $nomorTransaksi (for proof upload)');
-      print('🔍 [API] ===== TOP UP SALDO END =====');
 
-      // Return both response and the generated transaction number
       return TopupResponseWithTrxId(
         response: topupResponse,
         generatedTrxId: nomorTransaksi,
       );
-    } on DioException catch (e) {
-      print('❌ [API] DioException during topup: ${e.message}');
-      print('❌ [API] Response status: ${e.response?.statusCode}');
-      print('❌ [API] Response data: ${e.response?.data}');
+    } on DioException {
       rethrow;
     } catch (e) {
-      print('❌ [API] Error top up saldo: $e');
-      print('❌ [API] Error type: ${e.runtimeType}');
       rethrow;
     }
   }
@@ -2367,11 +2268,11 @@ class ApiService {
 
       if (photoBytes != null) {
         // Use provided bytes (web or already loaded)
-        print('🔍 [API] Converting bytes to base64...');
+
         base64Photo = base64Encode(photoBytes);
       } else if (!kIsWeb && photoPath != null && photoPath.isNotEmpty) {
         // Read file from path (mobile only - using conditional import)
-        print('🔍 [API] Reading file from path: $photoPath');
+
         final bytes = await readFileBytes(photoPath);
         base64Photo = base64Encode(bytes);
       } else {
@@ -2392,12 +2293,7 @@ class ApiService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ [API] Upload successful!');
-      } else {
-        print('⚠️ [API] Upload returned status ${response.statusCode}');
-      }
-
-      print('✅ [API] ===== UPLOAD PAYMENT PROOF END =====');
+      } else {}
 
       return response;
     } on DioException {
@@ -2568,6 +2464,7 @@ class ApiService {
     required String productName,
     required String buyerSkuCode,
     required String token,
+    required String adminToken,
     int? markupMember,
   }) {
     return _dio.post(
@@ -2587,7 +2484,12 @@ class ApiService {
         'buyer_sku_code': buyerSkuCode,
         if (markupMember != null) 'markup_member': markupMember,
       },
-      options: Options(headers: {'Authorization': 'Bearer $token'}),
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+          'X-Admin-Token': adminToken,
+        },
+      ),
     );
   }
 

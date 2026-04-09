@@ -350,3 +350,4 @@ class _PinPageState extends State<PinPage> {
     );
   }
 }
+

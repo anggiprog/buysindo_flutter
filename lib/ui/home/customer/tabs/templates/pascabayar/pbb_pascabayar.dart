@@ -56,7 +56,7 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [PBB] Using cached products: ${cachedProducts.length}');
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -85,10 +85,10 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [PBB] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [PBB] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -100,7 +100,7 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
             .where((p) => p.brand.toUpperCase().contains('PBB'))
             .toList();
 
-        print('📦 [PBB] PBB products fetched: ${pbbProducts.length}');
+        
 
         // Simpan ke cache
         await _saveToCache(pbbProducts);
@@ -122,15 +122,15 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
             });
           }
 
-          print('✅ [PBB] Products loaded: ${_availableBrands.length} brands');
+          
         }
       } else {
-        print('❌ [PBB] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [PBB] Error loading products: $e');
-      print('❌ [PBB] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -150,7 +150,7 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [PBB] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -161,9 +161,9 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [PBB] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [PBB] Error saving to cache: $e');
+      
     }
   }
 
@@ -527,7 +527,7 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
         }
       }
     } catch (e) {
-      print('❌ Error picking contact: $e');
+      
       if (mounted) {
         _showSnackbar('Gagal memilih kontak', Colors.red);
       }
@@ -638,14 +638,14 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
       // Get admin user ID
       final adminUserId = int.parse(appConfig.adminUserId);
 
-      print('📝 [PBB] Customer ID: $customerId');
+      
       print('📝 [PBB] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [PBB] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [PBB] Brand: ${_selectedProduct!.brand}');
-      print('📝 [PBB] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [PBB] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -657,15 +657,15 @@ class _PbbPascabayarState extends State<PbbPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [PBB] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [PBB] Bill data received from bottom sheet');
+        
       } else {
         print('❌ [PBB] Bill data is null (user might have cancelled)');
       }
     } catch (e) {
-      print('❌ [PBB] Error in _cekTagihan: $e');
+      
       if (mounted) {
         _showSnackbar('Terjadi kesalahan: ${e.toString()}', Colors.red);
       }
@@ -1335,3 +1335,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

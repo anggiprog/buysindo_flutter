@@ -102,9 +102,9 @@ class _TopupTripayState extends State<TopupTripay> {
           _isCreatingTransaction = false;
         });
 
-        // debugPrint('✅ Transaction created successfully');
-        // debugPrint('📋 Reference: ${_transactionData!["reference"]}');
-        // debugPrint('💰 Amount: ${_transactionData!["amount"]}');
+        // 
+        // 
+        // 
 
         // Start polling untuk check status pembayaran
         _startPaymentStatusPolling();
@@ -129,7 +129,7 @@ class _TopupTripayState extends State<TopupTripay> {
   }
 
   void _startPaymentStatusPolling() {
-    // debugPrint('🔄 Starting payment status polling...');
+    // 
     // Check status setiap 5 detik
     _paymentStatusTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       // debugPrint('⏰ Polling check at ${DateTime.now()}');
@@ -139,38 +139,38 @@ class _TopupTripayState extends State<TopupTripay> {
 
   Future<void> _checkPaymentStatus() async {
     if (_transactionData == null) {
-      // debugPrint('⚠️ Transaction data is null');
+      // 
       return;
     }
 
     try {
       final token = await SessionManager.getToken();
       if (token == null) {
-        // debugPrint('⚠️ Token is null');
+        // 
         return;
       }
 
       final reference = _transactionData!['reference'] ?? '';
       if (reference.isEmpty) {
-        // debugPrint('⚠️ Reference is empty');
+        // 
         return;
       }
 
-      // debugPrint('🔍 Checking payment status for: $reference');
+      // 
 
       final response = await widget.apiService.checkTripayPaymentStatus(
         token: token,
         reference: reference,
       );
 
-      // debugPrint('📥 Response: $response');
+      // 
 
       if (response['success'] == true && response['data'] != null) {
         final status = response['data']['status'];
-        // debugPrint('📋 Current status: $status');
+        // 
 
         if (status == 'PAID' && mounted) {
-          // debugPrint('✅ Payment PAID! Showing dialog...');
+          // 
           // Stop polling
           _paymentStatusTimer?.cancel();
 
@@ -221,11 +221,11 @@ class _TopupTripayState extends State<TopupTripay> {
           });
         }
       } else {
-        // debugPrint('⚠️ Response success=false or data is null');
+        // 
       }
     } catch (e) {
       // Silent error, akan retry di polling berikutnya
-      // debugPrint('❌ Error checking payment status: $e');
+      // 
     }
   }
 
@@ -710,3 +710,4 @@ class _TopupTripayState extends State<TopupTripay> {
     );
   }
 }
+

@@ -40,7 +40,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
 
   Future<void> _pickImageFromCamera() async {
     try {
-      print('🔍 [CONFIRM] Opening camera to capture proof...');
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.camera,
         imageQuality: 85,
@@ -49,12 +48,8 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
       );
 
       if (image != null) {
-        print('✅ [CONFIRM] Image captured: ${image.path}');
-        print('🔍 [CONFIRM] Image name: ${image.name}');
-
         // Read as bytes for both web and mobile
         final imageBytes = await image.readAsBytes();
-        print('✅ [CONFIRM] Image bytes loaded: ${imageBytes.length} bytes');
 
         if (mounted) {
           setState(() {
@@ -65,14 +60,9 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
               _selectedImageFile = File(image.path);
             }
           });
-          print('✅ [CONFIRM] Image preview updated');
         }
-      } else {
-        print('⚠️ [CONFIRM] No image selected from camera');
-      }
-    } catch (e, stackTrace) {
-      print('❌ [CONFIRM] Camera error: $e');
-      print('❌ [CONFIRM] StackTrace: $stackTrace');
+      } else {}
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -87,7 +77,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
 
   Future<void> _pickImageFromGallery() async {
     try {
-      print('🔍 [CONFIRM] Opening gallery to select proof...');
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 85,
@@ -96,12 +85,8 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
       );
 
       if (image != null) {
-        print('✅ [CONFIRM] Image selected: ${image.path}');
-        print('🔍 [CONFIRM] Image name: ${image.name}');
-
         // Read as bytes for both web and mobile
         final imageBytes = await image.readAsBytes();
-        print('✅ [CONFIRM] Image bytes loaded: ${imageBytes.length} bytes');
 
         if (mounted) {
           setState(() {
@@ -112,14 +97,9 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
               _selectedImageFile = File(image.path);
             }
           });
-          print('✅ [CONFIRM] Image preview updated');
         }
-      } else {
-        print('⚠️ [CONFIRM] No image selected from gallery');
-      }
-    } catch (e, stackTrace) {
-      print('❌ [CONFIRM] Gallery error: $e');
-      print('❌ [CONFIRM] StackTrace: $stackTrace');
+      } else {}
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -151,10 +131,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
         throw Exception('Token tidak ditemukan. Silakan login kembali.');
       }
 
-      print('🔍 [CONFIRM] Starting upload process...');
-      print('🔍 [CONFIRM] No. Transaksi: ${widget.nomorTransaksi}');
-      print('🔍 [CONFIRM] Image size: ${_selectedImageBytes!.length} bytes');
-
       final response = await widget.apiService.uploadPaymentProof(
         nomorTransaksi: widget.nomorTransaksi,
         photoPath: _selectedImageFile?.path,
@@ -162,9 +138,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
         photoFileName: _selectedImageFileName,
         userToken: token,
       );
-
-      print('✅ [CONFIRM] Upload response status: ${response.statusCode}');
-      print('✅ [CONFIRM] Response data: ${response.data}');
 
       // Validate response
       bool isSuccess = false;
@@ -179,9 +152,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
               status == 'true' ||
               status == 1 ||
               status == 'success';
-
-          print('✅ [CONFIRM] Response status field: $status');
-          print('✅ [CONFIRM] Is success: $isSuccess');
         } else {
           isSuccess = true; // Assume success if 200
         }
@@ -252,7 +222,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
         );
       }
     } catch (e) {
-      print('❌ [CONFIRM] Upload error: $e');
       if (mounted) {
         setState(() => _isUploading = false);
 
@@ -433,8 +402,6 @@ class _TopupKonfirmasiState extends State<TopupKonfirmasi> {
                                 return child;
                               },
                           errorBuilder: (context, error, stackTrace) {
-                            print('❌ [CONFIRM] Image display error: $error');
-                            print('❌ [CONFIRM] StackTrace: $stackTrace');
                             return Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,

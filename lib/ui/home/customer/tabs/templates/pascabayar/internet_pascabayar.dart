@@ -59,9 +59,7 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print(
-            '📦 [InternetPascabayar] Using cached products: ${cachedProducts.length}',
-          );
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -90,10 +88,10 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [InternetPascabayar] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [InternetPascabayar] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -109,9 +107,7 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
             )
             .toList();
 
-        print(
-          '📦 [InternetPascabayar] Internet Pascabayar products fetched: ${internetProducts.length}',
-        );
+        
 
         // Simpan ke cache
         await _saveToCache(internetProducts);
@@ -133,19 +129,15 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
             });
           }
 
-          print(
-            '✅ [InternetPascabayar] Products loaded: ${_availableBrands.length} brands',
-          );
+          
         }
       } else {
-        print(
-          '❌ [InternetPascabayar] Response status not 200: ${response.statusCode}',
-        );
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [InternetPascabayar] Error loading products: $e');
-      print('❌ [InternetPascabayar] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -165,7 +157,7 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [InternetPascabayar] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -176,11 +168,9 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print(
-        '💾 [InternetPascabayar] Saved ${products.length} products to cache',
-      );
+      
     } catch (e) {
-      print('⚠️ [InternetPascabayar] Error saving to cache: $e');
+      
     }
   }
 
@@ -469,7 +459,7 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    print('📌 [InternetPascabayar] Brand selected: $productName');
+    
 
     // Filter products berdasarkan product_name yang dipilih
     final brandProducts = _allProducts
@@ -483,29 +473,25 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
         _selectedProduct = brandProducts.first; // Auto select pertama
       });
 
-      print(
-        '✅ [InternetPascabayar] Selected: $_selectedBrand with ${_products.length} products',
-      );
-      print(
-        '✅ [InternetPascabayar] Auto-selected product: ${_selectedProduct!.buyerSkuCode}',
-      );
+      
+      
     }
   }
 
   // Cek Tagihan
   Future<void> _checkBill() async {
-    print('🔍 [InternetPascabayar] _checkBill called');
-    print('🔍 [InternetPascabayar] Selected Product: $_selectedProduct');
-    print('🔍 [InternetPascabayar] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [InternetPascabayar] No product selected');
+      
       _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [InternetPascabayar] Customer ID is empty');
+      
       _showSnackbar('Masukkan ID Pelanggan terlebih dahulu', Colors.orange);
       return;
     }
@@ -517,16 +503,12 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
       print(
         '📝 [InternetPascabayar] Admin User ID (from AppConfig): $adminUserId',
       );
-      print(
-        '📝 [InternetPascabayar] Product Name: ${_selectedProduct!.productName}',
-      );
-      print('📝 [InternetPascabayar] Brand: ${_selectedProduct!.brand}');
-      print(
-        '📝 [InternetPascabayar] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}',
-      );
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [InternetPascabayar] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -538,16 +520,16 @@ class _InternetPascabayarState extends State<InternetPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [InternetPascabayar] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [InternetPascabayar] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [InternetPascabayar] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [InternetPascabayar] Error in _checkBill: $e');
-      print('❌ [InternetPascabayar] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1497,3 +1479,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

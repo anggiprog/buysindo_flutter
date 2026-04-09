@@ -43,7 +43,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
         ).pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } catch (e) {
-      print('Error saving token: $e');
+      
       _startCountdown();
     }
   }
@@ -268,3 +268,4 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     );
   }
 }
+

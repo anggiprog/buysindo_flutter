@@ -402,15 +402,15 @@ class PopupManager {
       final token = await SessionManager.getToken();
 
       if (token == null || token.isEmpty) {
-        debugPrint('[PopupManager] No token available');
+        
         return null;
       }
 
-      debugPrint('[PopupManager] Fetching popup with token...');
+      
       final response = await apiService.getPopup(token);
 
-      debugPrint('[PopupManager] Response status: ${response.statusCode}');
-      debugPrint('[PopupManager] Response data: ${response.data}');
+      
+      
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
@@ -429,7 +429,7 @@ class PopupManager {
         }
       }
     } catch (e) {
-      debugPrint('[PopupManager] Error fetching popup: $e');
+      
     }
     return null;
   }
@@ -441,7 +441,7 @@ class PopupManager {
       final shouldShow = await shouldShowPopup();
 
       if (!shouldShow) {
-        debugPrint('[PopupManager] Popup not shown - within 1 hour interval');
+        
         return;
       }
 
@@ -453,7 +453,7 @@ class PopupManager {
         await PopupDialog.show(context, popupData);
       }
     } catch (e) {
-      debugPrint('[PopupManager] Error in checkAndShowPopup: $e');
+      
     }
   }
 
@@ -463,3 +463,4 @@ class PopupManager {
     await prefs.remove(_popupClosedTimeKey);
   }
 }
+

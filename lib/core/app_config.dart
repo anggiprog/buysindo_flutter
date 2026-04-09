@@ -128,14 +128,14 @@ class AppConfig with ChangeNotifier {
   // --- API INITIALIZATION ---
   Future<void> initializeApp(ApiService apiService) async {
     try {
-      // debugPrint('🔵 AppConfig.initializeApp START');
+      // 
 
       // 1. Cek subdomain dari window (Web)
       String subdomainFromWindow = '';
       if (kIsWeb) {
         subdomainFromWindow = _getSubdomainFromWindow();
         if (subdomainFromWindow.isNotEmpty) {
-          // debugPrint('📍 SUBDOMAIN FROM WINDOW: $subdomainFromWindow');
+          // 
         }
       }
 
@@ -158,7 +158,7 @@ class AppConfig with ChangeNotifier {
                 },
               );
 
-          // debugPrint('📨 API Response Status: ${response.statusCode}');
+          // 
 
           if (response.statusCode == 200 && response.data['data'] != null) {
             responseData = response.data['data'];
@@ -166,23 +166,21 @@ class AppConfig with ChangeNotifier {
             if (responseData is Map) {
               if (responseData.containsKey('admin_user_id')) {
                 apiAdminUserId = responseData['admin_user_id'].toString();
-                // debugPrint(
-                //   '✅ Admin User ID from subdomain endpoint: $apiAdminUserId',
-                // );
+                // 
               }
             }
           }
         } catch (e) {
-          // debugPrint('⚠️ Subdomain endpoint failed: $e, trying fallback...');
+          // 
           responseData = null;
         }
       }
 
       // 3. Fallback: Gunakan admin ID dari environment atau default
       if (responseData == null) {
-        // debugPrint('🔄 Using fallback getPublicConfig endpoint');
+        // 
         // debugPrint('  Admin ID (Default): $_adminId');
-        // debugPrint('  App Type: $_appType');
+        // 
 
         final response = await apiService
             .getPublicConfig(_adminId, _appType)
@@ -193,7 +191,7 @@ class AppConfig with ChangeNotifier {
               },
             );
 
-        // debugPrint('📨 API Response Status: ${response.statusCode}');
+        // 
 
         if (response.statusCode == 200 && response.data['data'] != null) {
           responseData = response.data['data'];
@@ -202,7 +200,7 @@ class AppConfig with ChangeNotifier {
 
       // 4. Parse response dan update config
       if (responseData != null) {
-        // debugPrint('✅ API response valid, parsing data...');
+        // 
         final model = AppConfigModel.fromApi(responseData);
 
         // STRICT RULE: Admin User ID determination
@@ -226,11 +224,11 @@ class AppConfig with ChangeNotifier {
           );
         }
 
-        // debugPrint('🔄 Updating AppConfig from model...');
+        // 
         updateFromModel(model);
 
         // 5. Simpan ke Local
-        // debugPrint('📋 Saving config to SharedPreferences...');
+        // 
         await _saveToLocal(model, adminUserId: _adminUserId);
         AppLogger.logDebug(
           '✅ [AppConfig] COMPLETE - adminUserId: $_adminUserId, subdomain: "$_subdomain"',
@@ -243,10 +241,10 @@ class AppConfig with ChangeNotifier {
         );
       }
     } on TimeoutException catch (_) {
-      // debugPrint('⏱️ AppConfig Initialize Timeout: $_');
+      // 
     } catch (_) {
-      // debugPrint('❌ AppConfig Initialize Error: $_');
-      // debugPrint('📋 Stack trace: ${StackTrace.current}');
+      // 
+      // 
     }
   }
 
@@ -266,16 +264,16 @@ class AppConfig with ChangeNotifier {
       _showNavbar = model.showNavbar;
 
       // DEBUG: Log tampilan value
-      // debugPrint('✅ AppConfig Updated:');
-      // debugPrint('  - App Name: $_appName');
+      // 
+      // 
       // debugPrint('  - Tampilan: $_tampilan (raw: "${model.tampilan}")');
-      // debugPrint('  - Template: ${model.template}');
-      // debugPrint('  - showAppbar: $_showAppbar');
-      // debugPrint('  - showNavbar: $_showNavbar');
+      // 
+      // 
+      // 
 
       notifyListeners();
     } catch (e) {
-      // debugPrint('Update Model Failed: $e');
+      // 
     }
   }
 
@@ -284,7 +282,7 @@ class AppConfig with ChangeNotifier {
     try {
       // Handle empty or null hex
       if (hex.isEmpty) {
-        // debugPrint('⚠️ Empty hex color, using default blue');
+        // 
         return const Color(0xFF0D6EFD);
       }
 
@@ -303,7 +301,7 @@ class AppConfig with ChangeNotifier {
 
       return parsedColor;
     } catch (e) {
-      // debugPrint('⚠️ Failed to parse color "$hex": $e, using default blue');
+      // 
       return const Color(0xFF0D6EFD); // Default Blue
     }
   }
@@ -331,16 +329,16 @@ class AppConfig with ChangeNotifier {
           // Validasi: subdomain harus alphanumeric dan tidak "www"
           if (subdomain != 'www' &&
               RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(subdomain)) {
-            // debugPrint('✅ Subdomain extracted from hostname: $subdomain');
+            // 
             return subdomain;
           }
         }
       }
 
-      // debugPrint('⚠️ No subdomain found - using default adminId');
+      // 
       return '';
     } catch (e) {
-      // debugPrint('❌ Error in _getSubdomainFromWindow: $e');
+      // 
       return '';
     }
   }
@@ -348,3 +346,4 @@ class AppConfig with ChangeNotifier {
 
 // Singleton instance
 final appConfig = AppConfig();
+

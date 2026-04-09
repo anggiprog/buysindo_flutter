@@ -135,3 +135,4 @@ class _BannerSliderWidgetState extends State<BannerSliderWidget> {
     );
   }
 }
+

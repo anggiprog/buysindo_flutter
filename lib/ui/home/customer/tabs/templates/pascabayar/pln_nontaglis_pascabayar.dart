@@ -41,7 +41,7 @@ class _PlnNontaglisPascabayarPageState
   }
 
   Future<void> _loadProducts() async {
-    print('🔄 [PLN NONTAGLIS] _loadProducts called');
+    
 
     setState(() => _isLoading = true);
 
@@ -53,22 +53,20 @@ class _PlnNontaglisPascabayarPageState
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [PLN NONTAGLIS] Calling getPascabayarProducts...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [PLN NONTAGLIS] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
         );
 
-        print(
-          '📦 [PLN NONTAGLIS] Total products: ${productResponse.products.length}',
-        );
+        
 
         // Print semua brand yang tersedia untuk debugging
-        print('📦 [PLN NONTAGLIS] Available brands:');
+        
         for (var p in productResponse.products) {
           if (p.brand.toUpperCase().contains('PLN NONTAGLIS')) {
             print('   - ${p.brand} (${p.buyerSkuCode})');
@@ -86,26 +84,14 @@ class _PlnNontaglisPascabayarPageState
               skuUpper.contains('PLNNONTAGLIS');
         }).toList();
 
-        print(
-          '📦 [PLN NONTAGLIS] Products after filter: ${nontaglisProducts.length}',
-        );
+        
 
         if (nontaglisProducts.isNotEmpty) {
-          print(
-            '📦 [PLN NONTAGLIS] First product: ${nontaglisProducts.first.productName}',
-          );
-          print(
-            '📦 [PLN NONTAGLIS] First product brand: ${nontaglisProducts.first.brand}',
-          );
-          print(
-            '📦 [PLN NONTAGLIS] buyerSkuCode: ${nontaglisProducts.first.buyerSkuCode}',
-          );
-          print(
-            '📦 [PLN NONTAGLIS] markupMember: ${nontaglisProducts.first.markupMember}',
-          );
-          print(
-            '📦 [PLN NONTAGLIS] adminFee: ${nontaglisProducts.first.adminFee}',
-          );
+          
+          
+          
+          
+          
         }
 
         if (mounted) {
@@ -115,13 +101,9 @@ class _PlnNontaglisPascabayarPageState
             // Auto select first product if available
             if (_products.isNotEmpty) {
               _selectedProduct = _products.first;
-              print(
-                '✅ [PLN NONTAGLIS] Auto-selected product: ${_selectedProduct!.productName}',
-              );
+              
             } else {
-              print(
-                '⚠️ [PLN NONTAGLIS] No PLN NONTAGLIS products found in API',
-              );
+              
               // Fallback: use hardcoded product if API doesn't return PLN NONTAGLIS
               _selectedProduct = ProductPascabayar(
                 productName: 'PLN Nontaglis',
@@ -142,19 +124,17 @@ class _PlnNontaglisPascabayarPageState
                 sellerProductStatus: true,
                 desc: 'PLN Nontaglis',
               );
-              print('⚠️ [PLN NONTAGLIS] Using fallback product');
+              
             }
           });
-          print('✅ [PLN NONTAGLIS] Products loaded successfully');
+          
         }
       } else {
-        print(
-          '❌ [PLN NONTAGLIS] Response status not 200: ${response.statusCode}',
-        );
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [PLN NONTAGLIS] Error loading products: $e');
+      
       if (mounted) {
         setState(() => _isLoading = false);
         _showSnackbar('Error: ${e.toString()}', Colors.red);
@@ -231,28 +211,26 @@ class _PlnNontaglisPascabayarPageState
   }
 
   Future<void> _checkBill() async {
-    print('🔍 [PLN NONTAGLIS] _checkBill called');
-    print('🔍 [PLN NONTAGLIS] Selected Product: $_selectedProduct');
-    print('🔍 [PLN NONTAGLIS] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [PLN NONTAGLIS] No product selected');
+      
       _showSnackbar('Produk PLN NONTAGLIS tidak ditemukan', Colors.orange);
       return;
     }
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [PLN NONTAGLIS] Customer ID is empty');
+      
       _showSnackbar('Masukkan ID pelanggan terlebih dahulu', Colors.orange);
       return;
     }
     try {
       final adminUserId = int.parse(appConfig.adminUserId);
 
-      print('🚀 [PLN NONTAGLIS] Showing CekTagihan bottom sheet...');
-      print(
-        '📝 [PLN NONTAGLIS] Markup Member: ${_selectedProduct!.markupMember}',
-      );
-      print('📝 [PLN NONTAGLIS] Admin Fee: ${_selectedProduct!.adminFee}');
+      
+      
+      
 
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
@@ -586,3 +564,4 @@ class _BarcodeScannerScreenState extends State<_BarcodeScannerScreen> {
     );
   }
 }
+

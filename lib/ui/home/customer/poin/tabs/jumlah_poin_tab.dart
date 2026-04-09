@@ -40,7 +40,7 @@ class _JumlahPoinTabState extends State<JumlahPoinTab> {
       if (token == null) return;
 
       final response = await _apiService.getPoinSummary(token);
-      debugPrint('[JumlahPoinTab] Response: ${response.data}');
+      
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
@@ -59,7 +59,7 @@ class _JumlahPoinTabState extends State<JumlahPoinTab> {
         }
       }
     } catch (e) {
-      debugPrint('[JumlahPoinTab] Error: $e');
+      
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -159,7 +159,7 @@ class _JumlahPoinTabState extends State<JumlahPoinTab> {
         _jumlahSaldo,
         _adminUserId,
       );
-      debugPrint('[JumlahPoinTab] Claim response: ${response.data}');
+      
 
       if (response.statusCode == 200 && response.data != null) {
         final message = response.data['message'] ?? '';
@@ -179,7 +179,7 @@ class _JumlahPoinTabState extends State<JumlahPoinTab> {
         }
       }
     } catch (e) {
-      debugPrint('[JumlahPoinTab] Error claiming: $e');
+      
       _showSnackBar('Terjadi kesalahan. Coba lagi.', isError: true);
     } finally {
       if (mounted) setState(() => _isClaiming = false);
@@ -857,3 +857,4 @@ class _JumlahPoinTabState extends State<JumlahPoinTab> {
     );
   }
 }
+

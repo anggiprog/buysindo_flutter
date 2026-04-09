@@ -20,7 +20,7 @@ class BluetoothPrinterService {
   /// Request Bluetooth permissions
   Future<bool> requestPermissions() async {
     try {
-      debugPrint('🔵 Bluetooth Permissions requested');
+      
 
       // For Android 12+, we need BLUETOOTH_CONNECT (critical)
       // BLUETOOTH_SCAN is for discovering devices
@@ -29,7 +29,7 @@ class BluetoothPrinterService {
         Permission.bluetoothScan,
       ].request();
 
-      debugPrint('📋 Requested statuses: $statuses');
+      
 
       // Check if at least the critical permission (BLUETOOTH_CONNECT) is granted
       final hasBluetoothConnect =
@@ -40,21 +40,17 @@ class BluetoothPrinterService {
       // We need at least one of these permissions to proceed
       final hasPermission = hasBluetoothConnect || hasBluetoothScan;
 
-      debugPrint(
-        '${hasPermission ? '✅' : '⚠️'} BLUETOOTH_CONNECT: $hasBluetoothConnect, BLUETOOTH_SCAN: $hasBluetoothScan',
-      );
+      
 
       // If permissions are denied, show a helpful message
       if (!hasPermission) {
-        debugPrint(
-          '❌ Critical Bluetooth permissions are denied. Please grant permissions in settings.',
-        );
+        
         return false;
       }
 
       return true;
     } catch (e) {
-      debugPrint('❌ Error requesting permissions: $e');
+      
       return false;
     }
   }
@@ -62,7 +58,7 @@ class BluetoothPrinterService {
   /// Get list of paired Bluetooth devices
   Future<List<BluetoothDevice>> getPairedDevices() async {
     try {
-      debugPrint('🔍 Getting paired devices...');
+      
 
       final List<dynamic> result =
           await platform.invokeMethod<List<dynamic>>('getPairedDevices') ?? [];
@@ -71,14 +67,14 @@ class BluetoothPrinterService {
           .map((device) => BluetoothDevice.fromMap(device as Map))
           .toList();
 
-      debugPrint('📱 Found ${devices.length} paired devices');
+      
       for (var device in devices) {
         debugPrint('  - ${device.name} (${device.address})');
       }
 
       return devices;
     } catch (e) {
-      debugPrint('❌ Error getting paired devices: $e');
+      
       return [];
     }
   }
@@ -96,14 +92,14 @@ class BluetoothPrinterService {
           false;
 
       if (result) {
-        debugPrint('✅ Connected to ${device.name}');
+        
       } else {
-        debugPrint('❌ Failed to connect to ${device.name}');
+        
       }
 
       return result;
     } catch (e) {
-      debugPrint('❌ Error connecting: $e');
+      
       return false;
     }
   }
@@ -112,9 +108,9 @@ class BluetoothPrinterService {
   Future<void> disconnect() async {
     try {
       await platform.invokeMethod<void>('disconnect');
-      debugPrint('✅ Disconnected from printer');
+      
     } catch (e) {
-      debugPrint('❌ Error disconnecting: $e');
+      
     }
   }
 
@@ -123,10 +119,10 @@ class BluetoothPrinterService {
     try {
       final bool result =
           await platform.invokeMethod<bool>('isConnected') ?? false;
-      debugPrint('${result ? '✅' : '❌'} Connected: $result');
+      
       return result;
     } catch (e) {
-      debugPrint('❌ Error checking connection: $e');
+      
       return false;
     }
   }
@@ -156,11 +152,11 @@ class BluetoothPrinterService {
     try {
       final connected = await isConnected();
       if (!connected) {
-        debugPrint('❌ Not connected to printer');
+        
         return false;
       }
 
-      debugPrint('🖨️ Starting print...');
+      
 
       // Build receipt data
       final receiptData = _generateReceiptText(
@@ -192,14 +188,14 @@ class BluetoothPrinterService {
           false;
 
       if (result) {
-        debugPrint('✅ Print completed');
+        
       } else {
-        debugPrint('❌ Print failed');
+        
       }
 
       return result;
     } catch (e) {
-      debugPrint('❌ Error printing: $e');
+      
       return false;
     }
   }
@@ -338,7 +334,7 @@ class BluetoothPrinterService {
     String? namaToko,
   }) async {
     try {
-      debugPrint('🖨️ Starting print mutasi...');
+      
 
       final receiptData = _generateMutasiReceiptText(
         trxId: trxId,
@@ -361,14 +357,14 @@ class BluetoothPrinterService {
           false;
 
       if (result) {
-        debugPrint('✅ Mutasi print completed');
+        
       } else {
-        debugPrint('❌ Mutasi print failed');
+        
       }
 
       return result;
     } catch (e) {
-      debugPrint('❌ Error printing mutasi: $e');
+      
       return false;
     }
   }
@@ -455,3 +451,4 @@ class BluetoothDevice {
   @override
   String toString() => 'BluetoothDevice($name, $address)';
 }
+

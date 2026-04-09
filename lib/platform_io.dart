@@ -9,3 +9,4 @@ class PlatformHelper {
   static bool get isLinux => Platform.isLinux;
   static bool get isWindows => Platform.isWindows;
 }
+

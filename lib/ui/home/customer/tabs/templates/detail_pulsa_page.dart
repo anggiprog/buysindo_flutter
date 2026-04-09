@@ -5,6 +5,7 @@ import '../../../../../features/customer/data/models/product_prabayar_model.dart
 import '../../../../../features/customer/data/models/transaction_response_model.dart';
 import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/session_manager.dart';
+import '../../../../../core/security/totp_service.dart';
 import '../../../pin.dart';
 import '../../../topup_modal.dart';
 import '../../../topup/topup_manual.dart';
@@ -59,13 +60,13 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
       _inputZoneId = null;
     }
 
-    // debugPrint('DetailPulsaPage initState:');
-    // debugPrint('  widget.userId: ${widget.userId}');
-    // debugPrint('  widget.zoneId: ${widget.zoneId}');
-    // debugPrint('  widget.phone: ${widget.phone}');
-    // debugPrint('  _inputUserId: $_inputUserId');
-    // debugPrint('  _inputZoneId: $_inputZoneId');
-    // debugPrint('  product.category: ${widget.product.category}');
+    //
+    //
+    //
+    //
+    //
+    //
+    //
     // debugPrint('  isGameProduct: ${_isGameProduct()}');
 
     _loadSaldo();
@@ -100,7 +101,7 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         }
       }
     } catch (e) {
-      // debugPrint('Error loading saldo: $e');
+      //
       if (mounted) setState(() => _isLoadingSaldo = false);
     }
   }
@@ -264,6 +265,12 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
 
   Future<void> _processTransaction(String pin, String token) async {
     try {
+      // Generate TOTP token for transaction security
+      final adminToken = TOTPService.getCurrentToken(
+        secretKey: 'Anggiprog@241288123_2026',
+        timeStep: 60,
+      );
+
       final response = await _apiService.processPrabayarTransaction(
         pin: pin,
         category: widget.product.category,
@@ -276,6 +283,7 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         hargaJualMember: widget.product.hargaJualMember,
         token: token,
         userId: _inputUserId ?? '',
+        adminToken: adminToken,
         zoneId: _inputZoneId,
       );
 

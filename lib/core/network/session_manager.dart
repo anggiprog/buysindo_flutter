@@ -16,12 +16,12 @@ class SessionManager {
 
     // 🔴 DEBUG ONLY: Jangan aktifkan di produksi agar token tidak bocor di log
     /*
-    print('═══════════════════════════════════════════════════');
-    print('✅ TOKEN DISIMPAN');
-    print('Token: $token');
-    print('Panjang Token: ${token.length}');
+    
+    
+    
+    
     print('Waktu: ${DateTime.now()}');
-    print('═══════════════════════════════════════════════════');
+    
     */
   }
 
@@ -30,11 +30,11 @@ class SessionManager {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_adminUserIdKey, adminUserId);
 
-    // print('═══════════════════════════════════════════════════');
-    //  print('✅ ADMIN USER ID DISIMPAN');
-    // print('Admin User ID: $adminUserId');
+    // 
+    //  
+    // 
     //  print('Waktu: ${DateTime.now()}');
-    // print('═══════════════════════════════════════════════════');
+    // 
   }
 
   // Mengambil admin_user_id
@@ -43,16 +43,16 @@ class SessionManager {
     final adminUserId = prefs.getInt(_adminUserIdKey);
 
     if (adminUserId != null) {
-      // print('═══════════════════════════════════════════════════');
-      // print('🔑 ADMIN USER ID DIAMBIL');
-      // print('Admin User ID: $adminUserId');
-      // print('Status: ✅ Ada');
-      // print('═══════════════════════════════════════════════════');
+      // 
+      // 
+      // 
+      // 
+      // 
     } else {
-      // print('═══════════════════════════════════════════════════');
-      // print('❌ ADMIN USER ID TIDAK DITEMUKAN');
-      // print('Status: Tidak tersimpan');
-      // print('═══════════════════════════════════════════════════');
+      // 
+      // 
+      // 
+      // 
     }
 
     return adminUserId;
@@ -66,17 +66,17 @@ class SessionManager {
     //// 🔴 DEBUG ONLY: Sembunyikan token di log untuk alasan keamanan
 
     if (token != null && token.isNotEmpty) {
-      ////  print('═══════════════════════════════════════════════════');
-     // print('🔑 TOKEN DIAMBIL');
-    //  print('Token: $token');
-     // print('Panjang Token: ${token.length}');
-     // print('Status: ✅ Ada');
-    //  print('═══════════════════════════════════════════════════');
+      ////  
+      // 
+      //  
+      // 
+      // 
+      //  
     } else {
-      // print('═══════════════════════════════════════════════════');
-      // print('❌ TOKEN TIDAK DITEMUKAN');
-      // print('Status: Token kosong atau tidak tersimpan');
-      // print('═══════════════════════════════════════════════════');
+      // 
+      // 
+      // 
+      // 
     }
 
     return token;
@@ -86,7 +86,6 @@ class SessionManager {
   static Future<void> savePendingOtpEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_pendingOtpEmailKey, email);
-    print('📧 Pending OTP email disimpan: $email');
   }
 
   // Ambil email yang pending OTP
@@ -99,7 +98,6 @@ class SessionManager {
   static Future<void> clearPendingOtpEmail() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_pendingOtpEmailKey);
-    print('✅ Pending OTP email dihapus');
   }
 
   // Menghapus token (Logout)
@@ -112,14 +110,14 @@ class SessionManager {
 
     // 🔴 DEBUG ONLY: Sembunyikan konfirmasi token dihapus jika mengandung data sensitif
     /*
-    print('═══════════════════════════════════════════════════');
+    
     print('🔴 TOKEN DIHAPUS (LOGOUT)');
     if (tokenBefore != null) {
-      print('Token sebelumnya: $tokenBefore');
+      
     }
-    print('Status: ✅ Cleared');
+    
     print('Waktu: ${DateTime.now()}');
-    print('═══════════════════════════════════════════════════');
+    
     */
   }
 
@@ -127,7 +125,7 @@ class SessionManager {
   static Future<bool> isTokenExist() async {
     final prefs = await SharedPreferences.getInstance();
     final exists = prefs.containsKey(_tokenKey);
-    // print('🔍 CEK TOKEN: ${exists ? "✅ Ada" : "❌ Tidak ada"}');
+    // 
     return exists;
   }
 
@@ -174,7 +172,7 @@ class SessionManager {
         await prefs.remove(k);
       }
 
-      // print('🧹 SharedPreferences cleared except token');
+      // 
       if (token != null && token.isNotEmpty) {
         // print('🔑 Token tetap disimpan (panjang ${token.length})');
       }
@@ -182,7 +180,8 @@ class SessionManager {
       // Delete cached files (splash) if exist in application documents
       await SessionFileHelper.deleteCachedSplash();
     } catch (e) {
-      // print('⚠️ Failed to clear cache except token: $e');
+      // 
     }
   }
 }
+

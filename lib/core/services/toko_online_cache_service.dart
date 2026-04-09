@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Cache service for Toko Online menus and products
@@ -35,10 +34,7 @@ class TokoOnlineCacheService {
         DateTime.now().millisecondsSinceEpoch,
       );
       _cachedMenus = menus;
-      debugPrint('TokoOnlineCache: Saved ${menus.length} menus');
-    } catch (e) {
-      debugPrint('TokoOnlineCache: Error saving menus: $e');
-    }
+    } catch (e) {}
   }
 
   /// Get menus from cache
@@ -58,7 +54,6 @@ class TokoOnlineCacheService {
       _cachedMenus = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
       return _cachedMenus;
     } catch (e) {
-      debugPrint('TokoOnlineCache: Error getting menus: $e');
       return null;
     }
   }
@@ -75,10 +70,7 @@ class TokoOnlineCacheService {
       );
       _cachedProducts = products;
       _buildProductIndex(products);
-      debugPrint('TokoOnlineCache: Saved ${products.length} products');
-    } catch (e) {
-      debugPrint('TokoOnlineCache: Error saving products: $e');
-    }
+    } catch (e) {}
   }
 
   /// Get products from cache
@@ -101,7 +93,6 @@ class TokoOnlineCacheService {
       _buildProductIndex(_cachedProducts!);
       return _cachedProducts;
     } catch (e) {
-      debugPrint('TokoOnlineCache: Error getting products: $e');
       return null;
     }
   }
@@ -205,10 +196,7 @@ class TokoOnlineCacheService {
       _cachedMenus = null;
       _cachedProducts = null;
       _productById = null;
-      debugPrint('TokoOnlineCache: Cache cleared');
-    } catch (e) {
-      debugPrint('TokoOnlineCache: Error clearing cache: $e');
-    }
+    } catch (e) {}
   }
 
   /// Force refresh - clear cache and memory

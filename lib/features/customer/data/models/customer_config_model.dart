@@ -37,10 +37,10 @@ class AppConfigModel {
 
   factory AppConfigModel.fromApi(Map<String, dynamic> json) {
     // Debug log untuk memastikan data mentah dari API terlihat
-    debugPrint('');
+    
     debugPrint('🔍 PARSING DATA API (RAW JSON):');
-    debugPrint('Full JSON: $json');
-    debugPrint('');
+    
+    
 
     // Ekstrak semua field dengan logging detail
     final id = json['id'] is int
@@ -80,13 +80,13 @@ class AppConfigModel {
     }
 
     debugPrint('🔴 FIELD TEMPLATE (CRITICAL):');
-    debugPrint('  - Nilai raw: $tampilanRaw');
-    debugPrint('  - Tipe: ${tampilanRaw.runtimeType}');
+    
+    
     debugPrint('  - Setelah toString(): "$tampilan"');
-    debugPrint('  - Panjang: ${tampilan.length}');
-    debugPrint('  - isEmpty: ${tampilan.isEmpty}');
-    debugPrint('  - Bytes: ${tampilan.codeUnits}');
-    debugPrint('');
+    
+    
+    
+    
 
     final showAppbar = json['show_appbar'] is int
         ? json['show_appbar']
@@ -96,8 +96,8 @@ class AppConfigModel {
         : int.tryParse(json['show_navbar']?.toString() ?? '1') ?? 1;
     final status = json['status']?.toString() ?? 'nonactive';
 
-    debugPrint('✅ SEMUA FIELD BERHASIL DI-EXTRACT');
-    debugPrint('');
+    
+    
 
     return AppConfigModel(
       id: id,
@@ -118,3 +118,4 @@ class AppConfigModel {
     );
   }
 }
+

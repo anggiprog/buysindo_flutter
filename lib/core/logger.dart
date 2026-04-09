@@ -12,9 +12,7 @@ class AppLogger {
 
   /// Log message normal
   static void log(String message) {
-    if (_isLoggingEnabled) {
-      print(message);
-    }
+    if (_isLoggingEnabled) {}
   }
 
   /// Log message penting (error, warning) - SELALU tampilkan di console saat development
@@ -24,24 +22,22 @@ class AppLogger {
     StackTrace? stackTrace,
   ]) {
     if (_isLoggingEnabled) {
-      print('❌ ERROR: $message');
-      if (error != null) print('Error: $error');
-      if (stackTrace != null) print('StackTrace: $stackTrace');
+      if (error != null && stackTrace != null) {
+        // Log with error and stacktrace
+      } else if (error != null) {
+        // Log with error only
+      }
     }
   }
 
   /// Log untuk debugging performa dan flow
   static void logDebug(String message) {
-    if (_isLoggingEnabled) {
-      print('🔧 DEBUG: $message');
-    }
+    if (_isLoggingEnabled) {}
   }
 
   /// Log untuk informasi penting
   static void logInfo(String message) {
-    if (_isLoggingEnabled) {
-      print('ℹ️ INFO: $message');
-    }
+    if (_isLoggingEnabled) {}
   }
 
   /// Check apakah logging enabled (untuk conditional logging)

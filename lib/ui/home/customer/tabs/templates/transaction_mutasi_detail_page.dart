@@ -317,7 +317,7 @@ class _TransactionMutasiDetailPageState
         ),
       );
     } catch (e) {
-      debugPrint('❌ Error copying reference: $e');
+      
       _showError('Gagal menyalin reference ID');
     }
   }
@@ -398,7 +398,7 @@ class _TransactionMutasiDetailPageState
       // Disconnect
       await _printerService.disconnect();
     } catch (e) {
-      debugPrint('❌ Print error: $e');
+      
       if (mounted) {
         _showError('Terjadi kesalahan saat mencetak: $e');
       }
@@ -411,3 +411,4 @@ class _TransactionMutasiDetailPageState
     );
   }
 }
+

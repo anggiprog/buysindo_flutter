@@ -122,7 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         address: _addressController.text,
       );
 
-      debugPrint('Update Response: $response');
+      
 
       if (!mounted) return;
 
@@ -170,7 +170,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
-      debugPrint('❌ Dio Error: ${e.message}');
+      
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -179,7 +179,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      debugPrint('❌ Error: $e');
+      
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -547,8 +547,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return DateFormat('dd-MM-yyyy').parse(dateString);
       }
     } catch (e) {
-      debugPrint('❌ Failed to parse date: $dateString - Error: $e');
+      
       return null;
     }
   }
 }
+

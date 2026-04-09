@@ -120,3 +120,4 @@ class TransactionMutasi {
 
   bool get isCredit => !isDebit;
 }
+

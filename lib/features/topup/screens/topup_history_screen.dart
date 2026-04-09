@@ -142,7 +142,7 @@ class _ManualHistoryTabState extends State<_ManualHistoryTab>
               return;
             } catch (e) {
               // Jika cache corrupt, lanjut ke API
-              print('Cache parsing error: $e');
+              
             }
           }
         }
@@ -213,7 +213,7 @@ class _ManualHistoryTabState extends State<_ManualHistoryTab>
           DateTime.now().millisecondsSinceEpoch,
         );
       } catch (e) {
-        print('Failed to cache data: $e');
+        
       }
     } catch (e) {
       if (mounted) {
@@ -695,7 +695,7 @@ class _OtomatisHistoryTabState extends State<_OtomatisHistoryTab>
               return;
             } catch (e) {
               // Jika cache corrupt, lanjut ke API
-              print('Cache parsing error: $e');
+              
             }
           }
         }
@@ -763,7 +763,7 @@ class _OtomatisHistoryTabState extends State<_OtomatisHistoryTab>
           DateTime.now().millisecondsSinceEpoch,
         );
       } catch (e) {
-        print('Failed to cache data: $e');
+        
       }
     } catch (e) {
       if (mounted) {
@@ -1090,3 +1090,4 @@ class _OtomatisHistoryCard extends StatelessWidget {
     );
   }
 }
+

@@ -65,7 +65,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         _menuList = cachedMenus;
         _isLoadingMenus = false;
       });
-      debugPrint('Loaded ${cachedMenus.length} menus from cache');
+      
     }
 
     if (cachedProducts != null && cachedProducts.isNotEmpty) {
@@ -73,7 +73,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         _productList = cachedProducts;
         _isLoadingProducts = false;
       });
-      debugPrint('Loaded ${cachedProducts.length} products from cache');
+      
     }
   }
 
@@ -97,7 +97,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
-      debugPrint('Error fetching banners: $e');
+      
       setState(() => _isLoadingBanners = false);
     }
   }
@@ -124,7 +124,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
           });
           // Save to cache
           await tokoOnlineCache.saveMenus(menus);
-          debugPrint('Menus updated and cached: ${menus.length}');
+          
         } else {
           setState(() => _isLoadingMenus = false);
         }
@@ -132,7 +132,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         setState(() => _isLoadingMenus = false);
       }
     } catch (e) {
-      debugPrint('Error fetching menus: $e');
+      
       setState(() => _isLoadingMenus = false);
     }
   }
@@ -165,7 +165,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
           });
           // Save to cache
           await tokoOnlineCache.saveProducts(products);
-          debugPrint('Products updated and cached: ${products.length}');
+          
         } else {
           setState(() => _isLoadingProducts = false);
         }
@@ -173,7 +173,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         setState(() => _isLoadingProducts = false);
       }
     } catch (e) {
-      debugPrint('Error fetching products: $e');
+      
       setState(() => _isLoadingProducts = false);
     }
   }
@@ -864,3 +864,4 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
     );
   }
 }
+

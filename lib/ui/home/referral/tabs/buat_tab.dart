@@ -57,7 +57,7 @@ class _BuatTabState extends State<BuatTab> {
       }
 
       final response = await _apiService.saveReferralCode(token, code);
-      // debugPrint('[BuatTab] Save referral response: ${response.data}');
+      // 
 
       if (!mounted) return;
 
@@ -112,7 +112,7 @@ class _BuatTabState extends State<BuatTab> {
         }
       }
     } catch (e) {
-      // debugPrint('[BuatTab] Error saving referral: $e');
+      // 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -271,3 +271,4 @@ Yuk, buruan download! Jangan sampai ketinggalan ya! 🚀
     );
   }
 }
+

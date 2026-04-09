@@ -39,7 +39,7 @@ class _ClaimTabState extends State<ClaimTab> {
       if (token == null) return;
 
       final response = await _apiService.getReferralSummary(token);
-      // debugPrint('[ClaimTab] Summary response: ${response.data}');
+      // 
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
@@ -54,7 +54,7 @@ class _ClaimTabState extends State<ClaimTab> {
         }
       }
     } catch (e) {
-      // debugPrint('[ClaimTab] Error fetching summary: $e');
+      // 
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -76,7 +76,7 @@ class _ClaimTabState extends State<ClaimTab> {
 
       // Backend akan menggunakan batas_poin sebagai jumlah yang diklaim
       final response = await _apiService.claimReferralPoin(token, _batasPoin);
-      // debugPrint('[ClaimTab] Claim poin response: ${response.data}');
+      // 
 
       if (response.statusCode == 200 && response.data != null) {
         final status = response.data['status'];
@@ -95,7 +95,7 @@ class _ClaimTabState extends State<ClaimTab> {
         }
       }
     } catch (e) {
-      // debugPrint('[ClaimTab] Error claiming poin: $e');
+      // 
       _showSnackBar('Terjadi kesalahan. Coba lagi.', isError: true);
     } finally {
       if (mounted) setState(() => _isClaimingPoin = false);
@@ -121,7 +121,7 @@ class _ClaimTabState extends State<ClaimTab> {
       if (token == null) return;
 
       final response = await _apiService.claimReferralSaldo(token);
-      // debugPrint('[ClaimTab] Claim saldo response: ${response.data}');
+      // 
 
       if (response.statusCode == 200 && response.data != null) {
         final status = response.data['status'];
@@ -143,7 +143,7 @@ class _ClaimTabState extends State<ClaimTab> {
         _showSnackBar(message, isError: true);
       }
     } catch (e) {
-      // debugPrint('[ClaimTab] Error claiming saldo: $e');
+      // 
       _showSnackBar('Terjadi kesalahan. Coba lagi.', isError: true);
     } finally {
       if (mounted) setState(() => _isClaimingSaldo = false);
@@ -736,3 +736,4 @@ class _ClaimTabState extends State<ClaimTab> {
     );
   }
 }
+

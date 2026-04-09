@@ -83,10 +83,10 @@ class _GasPageState extends State<GasPage> with TickerProviderStateMixin {
             );
           }
 
-          print('=== GAS DEBUG ===');
-          print('Total Products: ${_allProducts.length}');
-          print('Types: $_dynamicTypes');
-          print('==================');
+          
+          
+          
+          
         });
 
         if (forceRefresh && mounted) {
@@ -119,9 +119,9 @@ class _GasPageState extends State<GasPage> with TickerProviderStateMixin {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('products_cache');
       await prefs.remove('products_cache_timestamp');
-      print('Products cache cleared');
+      
     } catch (e) {
-      print('Error clearing cache: $e');
+      
     }
   }
 
@@ -1213,3 +1213,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

@@ -84,10 +84,10 @@ class _PLNPageState extends State<PLNPage> with TickerProviderStateMixin {
             );
           }
 
-          print('=== PLN DEBUG ===');
-          print('Total Products: ${_allProducts.length}');
-          print('Types: $_dynamicTypes');
-          print('==================');
+          
+          
+          
+          
         });
 
         if (forceRefresh && mounted) {
@@ -120,9 +120,9 @@ class _PLNPageState extends State<PLNPage> with TickerProviderStateMixin {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_products');
-      print('🗑️ Cache produk berhasil dihapus');
+      
     } catch (e) {
-      print('❌ Error clearing cache: $e');
+      
     }
   }
 
@@ -1232,3 +1232,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

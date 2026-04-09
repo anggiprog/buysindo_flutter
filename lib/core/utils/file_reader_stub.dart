@@ -6,3 +6,4 @@ Future<Uint8List> readFileBytes(String path) async {
     'File reading from path is not supported on web. Use photoBytes instead.',
   );
 }
+

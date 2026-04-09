@@ -14,9 +14,9 @@ class TransactionResponse {
   });
 
   factory TransactionResponse.fromJson(Map<String, dynamic> json) {
-    debugPrint('\n🔍 TransactionResponse.fromJson - Received JSON:');
+    
     debugPrint('   JSON keys: ${json.keys.toList()}');
-    debugPrint('   Full JSON: $json');
+    
 
     // Extract data dari nested 'data' object jika ada
     final Map<String, dynamic> dataObject = (json['data'] is Map)
@@ -37,7 +37,7 @@ class TransactionResponse {
         dataObject['referenceCode'] ??
         dataObject['ref_id'];
 
-    debugPrint('   ✅ Extracted - txId: $txId, refCode: $refCode');
+    
 
     return TransactionResponse(
       status: json['status'] ?? false,
@@ -98,3 +98,4 @@ class SaldoResponse {
     return SaldoResponse(status: json['status'] ?? false, saldo: parsedSaldo);
   }
 }
+

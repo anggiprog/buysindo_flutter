@@ -31,9 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkPendingOtp() async {
     final pendingEmail = await SessionManager.getPendingOtpEmail();
     if (pendingEmail != null && pendingEmail.isNotEmpty && mounted) {
-      debugPrint(
-        '📧 Found pending OTP for email: $pendingEmail - redirecting to OTP screen',
-      );
+      
       // Use pushReplacement to prevent going back to login
       Navigator.pushReplacement(
         context,
@@ -50,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
     // First check if there's a pending OTP - block login if so
     final pendingEmail = await SessionManager.getPendingOtpEmail();
     if (pendingEmail != null && pendingEmail.isNotEmpty) {
-      debugPrint('🔒 Login blocked - pending OTP exists for: $pendingEmail');
+      
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -75,22 +73,20 @@ class _LoginScreenState extends State<LoginScreen> {
       final dio = Dio();
       final apiService = ApiService(dio);
 
-      debugPrint('🔐 Attempting login with email: ${_emailController.text}');
+      
 
       final loginResponse = await apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      debugPrint(
-        '📋 Login Response: status=${loginResponse.status}, requireOtp=${loginResponse.requireOtp}, hasToken=${loginResponse.accessToken != null}',
-      );
+      
 
       if (!mounted) return;
 
       // Check if OTP is required
       if (loginResponse.requireOtp == true) {
-        debugPrint('🔑 OTP REQUIRED - Navigating to OTP Screen');
+        
         // Save pending OTP email so if user exits app, they'll be redirected back
         await SessionManager.savePendingOtpEmail(_emailController.text.trim());
         if (mounted) {
@@ -107,15 +103,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // If no OTP required and token is available, save and navigate
       if (loginResponse.status == true && loginResponse.accessToken != null) {
-        debugPrint(
-          '✅ Login successful, token received: ${loginResponse.accessToken}',
-        );
+        
 
         await SessionManager.saveToken(loginResponse.accessToken!);
-        debugPrint('✅ Token disimpan di SessionManager');
+        
 
         // Update device token di server
-        debugPrint('📱 Updating device token...');
+        
         try {
           await apiService.updateDeviceToken(loginResponse.accessToken!);
         } catch (e) {
@@ -126,22 +120,22 @@ class _LoginScreenState extends State<LoginScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
 
         if (!mounted) {
-          debugPrint('❌ Widget unmounted, cannot navigate');
+          
           return;
         }
 
-        debugPrint('🚀 Navigating to /home route...');
+        
         Navigator.of(context)
             .pushReplacementNamed('/home')
             .then((_) {
-              debugPrint('✅ Successfully navigated to /home');
+              
             })
             .catchError((e) {
-              debugPrint('❌ Navigation error: $e');
+              
             });
       } else {
         final errorMsg = loginResponse.message ?? 'Login gagal';
-        debugPrint('❌ Login failed: $errorMsg');
+        
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -155,8 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final errorMsg =
           e.response?.data?['message'] ??
           'Koneksi gagal. Periksa email dan password Anda.';
-      debugPrint('❌ Dio Error: ${e.message}');
-      debugPrint('❌ Response: ${e.response?.data}');
+      
+      
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
@@ -164,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      debugPrint('❌ Unexpected Error: $e');
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -487,3 +481,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

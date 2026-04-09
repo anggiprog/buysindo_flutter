@@ -28,14 +28,14 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
   Future<void> _loadTemplateFromApi() async {
     try {
       final token = await SessionManager.getToken();
-      debugPrint('[AppCustomTemplate] Token: $token');
+      
       // Ganti ke getCustomHtmlPage agar dapat HTML langsung
       final subdomain = appConfig.subdomain;
       final html = await ApiService.instance.getCustomHtmlPage(
         token: token ?? '',
         subdomain: subdomain,
       );
-      debugPrint('[AppCustomTemplate] HTML from backend:\n$html');
+      
       if (html != null && html.isNotEmpty) {
         // Inject CSS untuk hide scrollbar
         final htmlWithNoScrollbar = html.replaceFirst(
@@ -56,20 +56,18 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                   }
                 },
                 onWebResourceError: (error) {
-                  debugPrint("WebView Error: ${error.description}");
+                  
                 },
                 onNavigationRequest: (NavigationRequest request) {
                   final url = request.url;
-                  debugPrint('[AppCustomTemplate] 🔗 Navigation request: $url');
+                  
 
                   String? extractedPath;
 
                   // Handle custom app:// scheme
                   if (url.startsWith('app://')) {
                     extractedPath = url.replaceFirst('app://', '');
-                    debugPrint(
-                      '[AppCustomTemplate] 📱 Extracted from app:// scheme: "$extractedPath"',
-                    );
+                    
                   }
                   // Handle HTTP URLs with /act/ pattern (e.g., http://192.168.100.7/act/prabayar/pulsa)
                   else if (url.contains('/act/')) {
@@ -81,9 +79,7 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                       final type = match.group(1); // prabayar or pascabayar
                       final slug = match.group(2); // pulsa, pln, etc.
                       extractedPath = '$type/$slug';
-                      debugPrint(
-                        '[AppCustomTemplate] 📱 Extracted from HTTP /act/ URL: "$extractedPath"',
-                      );
+                      
                     }
                   }
 
@@ -112,9 +108,7 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                     // Cek link statis
                     if (linkPatterns.containsKey(extractedPath)) {
                       final route = linkPatterns[extractedPath]!;
-                      debugPrint(
-                        '[AppCustomTemplate] ✅ Static route matched: $route',
-                      );
+                      
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         Navigator.of(context).pushNamed(route);
                       });
@@ -159,14 +153,10 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
                       return NavigationDecision.prevent;
                     }
 
-                    debugPrint(
-                      '[AppCustomTemplate] ⚠️ No pattern matched for path: "$extractedPath"',
-                    );
+                    
                   }
 
-                  debugPrint(
-                    '[AppCustomTemplate] ➡️ Allowing navigation to: $url',
-                  );
+                  
                   return NavigationDecision.navigate;
                 },
               ),
@@ -178,7 +168,7 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
         _handleError("Gagal terhubung ke server atau data kosong.");
       }
     } catch (e) {
-      debugPrint("❌ Error AppCustomTemplate: $e");
+      
       _handleError("Terjadi kesalahan sistem.");
     }
   }
@@ -268,3 +258,4 @@ class _AppCustomTemplateState extends State<AppCustomTemplate> {
     );
   }
 }
+

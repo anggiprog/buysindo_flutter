@@ -323,7 +323,7 @@ Future<void> _fetchConfigAsync() async {
     dio.options.connectTimeout = const Duration(seconds: 10);
     dio.options.receiveTimeout = const Duration(seconds: 10);
 
-    // debugPrint('🚀 [_fetchConfigAsync] Starting API configuration fetch...');
+    // 
 
     final apiService = ApiService(dio);
     await appConfig
@@ -332,18 +332,18 @@ Future<void> _fetchConfigAsync() async {
           const Duration(seconds: 15),
           onTimeout: () {
             final msg = 'API config timeout after 15 seconds';
-            // debugPrint('⏱️ [_fetchConfigAsync] $msg');
+            // 
             throw TimeoutException(msg);
           },
         );
-    // debugPrint('✅ [_fetchConfigAsync] Successfully initialized AppConfig');
+    // 
   } on TimeoutException catch (e) {
-    // debugPrint('❌ [_fetchConfigAsync] TimeoutException: $e');
+    // 
     AppLogger.logError('ERROR: Config timeout', e);
   } catch (e) {
-    // debugPrint('❌ [_fetchConfigAsync] Exception: $e');
+    // 
     AppLogger.logError('ERROR: Config failed', e);
-    // debugPrint('📋 Stack trace: ${StackTrace.current}');
+    // 
   }
 }
 
@@ -580,7 +580,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final api = ApiService(Dio());
       final valid = await api.isAuthTokenValid(token);
       if (!valid) {
-        // debugPrint('⚠️ Auth token is invalid or expired. Forcing logout.');
+        // 
         // Try to call logout endpoint (best-effort) but don't block on it
         try {
           await api.logout(token);
@@ -597,7 +597,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
       }
     } catch (e) {
-      // debugPrint('⚠️ Error while validating auth token: $e');
+      // 
     }
   }
 
@@ -619,7 +619,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         if (message.notification != null) {
           _displayNotification(message);
         } else {
-          debugPrint('⚠️ [FCM] Tidak ada notification payload, hanya data');
+          
         }
       });
 
@@ -629,7 +629,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         if (navigatorKey.currentState != null) {
           _handleNotificationTap(message.data);
         } else {
-          debugPrint('⚠️ [FCM] Navigator belum ready, tunggu next frame');
+          
           WidgetsBinding.instance.addPostFrameCallback(
             (_) => _handleNotificationTap(message.data),
           );
@@ -646,7 +646,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             if (navigatorKey.currentState != null) {
               _handleNotificationTap(message.data);
             } else {
-              //   debugPrint('⚠️ [FCM] Navigator belum ready, coba next frame');
+              //   
               // try again next frame
               WidgetsBinding.instance.addPostFrameCallback(
                 (__) => _handleNotificationTap(message.data),
@@ -697,7 +697,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           >()
           ?.createNotificationChannel(channel);
 
-      // debugPrint('✅ Android notification channel created');
+      // 
 
       // Initialize local notifications
       await flutterLocalNotificationsPlugin.initialize(
@@ -706,20 +706,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           try {
-            // debugPrint('📲 Local notification tapped: ${response.payload}');
+            // 
             if (response.payload != null && response.payload!.isNotEmpty) {
               final Map<String, dynamic> data = jsonDecode(response.payload!);
               _handleNotificationTap(data);
             }
           } catch (e) {
-            debugPrint('❌ Error handling local notification tap: $e');
+            
           }
         },
       );
 
-      debugPrint('✅ Local notifications initialized');
+      
     } catch (e) {
-      debugPrint('❌ Error initializing local notifications: $e');
+      
     }
   }
 
@@ -733,30 +733,28 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           data['click_action_activity'] ??
           'notifications';
 
-      debugPrint('📍 Route extracted: $route');
-      debugPrint('📍 Activity: ${data['click_action_activity'] ?? "N/A"}');
-      debugPrint('📍 Transaction ID: ${data['transaction_id'] ?? "N/A"}');
-      debugPrint('📍 Ref ID: ${data['ref_id'] ?? "N/A"}');
-      debugPrint('========================================\n');
+      
+      
+      
+      
+      
 
       // Handle topup history route (HistoryTopupActivity)
       if (route == 'topup_history' || route == 'HistoryTopupActivity') {
-        debugPrint('✅ Topup history route confirmed');
+        
 
         try {
           if (navigatorKey.currentState != null) {
-            debugPrint(
-              '✅ Navigator state available - navigating to topup history',
-            );
+            
             navigatorKey.currentState!.pushNamed('/topup_history');
             return;
           }
         } catch (e) {
-          debugPrint('⚠️ Direct navigation failed: $e');
+          
         }
 
         // Fallback: Wait for navigator to be ready
-        debugPrint('⚠️ Using fallback navigation method for topup history');
+        
         int retries = 0;
         while (retries < 50 && navigatorKey.currentState == null) {
           await Future.delayed(const Duration(milliseconds: 100));
@@ -765,12 +763,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         if (navigatorKey.currentState != null) {
           try {
-            debugPrint(
-              '✅ Navigator ready after ${retries * 100}ms - navigating to topup history',
-            );
+            
             navigatorKey.currentState!.pushNamed('/topup_history');
           } catch (e) {
-            debugPrint('❌ Navigation failed even after waiting: $e');
+            
           }
         }
         return;
@@ -780,18 +776,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (route.toString().toLowerCase().contains('transaction') ||
           route == 'transaction_history' ||
           route == 'RiwayatPrabayarActivity') {
-        debugPrint('✅ Transaction history route confirmed');
+        
 
         // Extract tab index if provided
         final tabIndex =
             int.tryParse(data['tab_index']?.toString() ?? '1') ?? 1;
-        debugPrint('📲 Main tab index: $tabIndex');
+        
 
         try {
           if (navigatorKey.currentState != null) {
-            debugPrint(
-              '✅ Navigator state available - navigating to home with transaction tab',
-            );
+            
             // Navigate to home with transaction history tab selected
             navigatorKey.currentState!.pushNamedAndRemoveUntil(
               '/home',
@@ -803,13 +797,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             return;
           }
         } catch (e) {
-          debugPrint('⚠️ Direct navigation failed: $e');
+          
         }
 
         // Fallback: Wait for navigator to be ready
-        debugPrint(
-          '⚠️ Using fallback navigation method for transaction history',
-        );
+        
         int retries = 0;
         while (retries < 50 && navigatorKey.currentState == null) {
           await Future.delayed(const Duration(milliseconds: 100));
@@ -818,16 +810,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         if (navigatorKey.currentState != null) {
           try {
-            debugPrint(
-              '✅ Navigator ready after ${retries * 100}ms - navigating to transaction history',
-            );
+            
             navigatorKey.currentState!.pushNamedAndRemoveUntil(
               '/home',
               (route) => false,
               arguments: {'initialTab': tabIndex},
             );
           } catch (e) {
-            debugPrint('❌ Navigation failed even after waiting: $e');
+            
           }
         }
         return;
@@ -835,9 +825,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle pascabayar detail route
       if (route == 'pascabayar_detail') {
-        debugPrint('\n========================================');
-        debugPrint('✅ [Routing] PASCABAYAR DETAIL ROUTE');
-        debugPrint('========================================');
+        
+        
+        
 
         // Extract transaction data from notification
         final transactionId =
@@ -854,20 +844,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           if (navigatorKey.currentState != null) {
             try {
-              debugPrint(
-                '✅ [Pascabayar] Navigator ready - fetching transaction data...',
-              );
+              
 
               // Fetch full transaction data from API
               final token = await SessionManager.getToken();
-              debugPrint(
-                '🔑 [Pascabayar] Token: ${token != null ? "Available" : "NULL"}',
-              );
+              
 
               if (token != null) {
-                debugPrint(
-                  '🌐 [Pascabayar] Calling API getTransactionDetailPascabayar...',
-                );
+                
                 final apiService = ApiService(Dio());
                 final response = await apiService
                     .getTransactionDetailPascabayar(token);
@@ -877,12 +861,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     response.data,
                   );
 
-                  debugPrint(
-                    '📋 [Pascabayar] Total transaksi: ${transactions.data.length}',
-                  );
-                  debugPrint(
-                    '🔍 [Pascabayar] Mencari transaction dengan ID=$transactionId atau RefID=$refId',
-                  );
+                  
+                  
 
                   // Find transaction by ID or ref_id
                   final transaction = transactions.data.firstWhere(
@@ -901,9 +881,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 }
               }
 
-              debugPrint(
-                '\n⚠️ [Pascabayar] Failed to fetch transaction - navigating to history tab',
-              );
+              
               debugPrint(
                 '🛣️ [Pascabayar] Akan redirect ke tab Pascabayar (index 2)\n',
               );
@@ -914,8 +892,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 arguments: {'initialTab': 2}, // Pascabayar tab
               );
             } catch (e) {
-              debugPrint('❌ [Pascabayar] Error loading transaction detail:');
-              debugPrint('   Error: $e');
+              
+              
               debugPrint('   Fallback: Navigating to history tab (index 2)');
               // Fallback to history tab on error
               navigatorKey.currentState!.pushNamedAndRemoveUntil(
@@ -926,7 +904,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
           }
         } else {
-          debugPrint('⚠️ No transaction ID - navigating to history tab');
+          
           // Navigate to pascabayar history tab as fallback
           int retries = 0;
           while (retries < 50 && navigatorKey.currentState == null) {
@@ -947,9 +925,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle mutasi detail route
       if (route == 'mutasi_detail' || route == 'MutasiDetailActivity') {
-        debugPrint('\n========================================');
-        debugPrint('✅ [Routing] MUTASI DETAIL ROUTE');
-        debugPrint('========================================');
+        
+        
+        
 
         // Extract transaction data from notification
         final trxId = data['trx_id']?.toString() ?? '';
@@ -961,14 +939,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             int.tryParse(data['saldo_akhir']?.toString() ?? '0') ?? 0;
         final keterangan = data['keterangan']?.toString() ?? '';
 
-        debugPrint('📦 [Mutasi] Transaction Data:');
-        debugPrint('   - Trx ID: $trxId');
-        debugPrint('   - Type: $type');
-        debugPrint('   - Amount: $amount');
-        debugPrint('   - Saldo Awal: $saldoAwal');
-        debugPrint('   - Saldo Akhir: $saldoAkhir');
-        debugPrint('   - Keterangan: $keterangan');
-        debugPrint('========================================\n');
+        
+        
+        
+        
+        
+        
+        
+        
 
         if (trxId.isNotEmpty) {
           // Wait for navigator to be ready
@@ -980,24 +958,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           if (navigatorKey.currentState != null) {
             try {
-              debugPrint(
-                '✅ [Mutasi] Navigator ready - fetching transaction data...',
-              );
+              
 
               // Fetch full transaction data from API
               final token = await SessionManager.getToken();
-              debugPrint(
-                '🔑 [Mutasi] Token: ${token != null ? "Available" : "NULL"}',
-              );
+              
 
               if (token != null) {
-                debugPrint('🌐 [Mutasi] Calling API getLogTransaksiMutasi...');
+                
                 final apiService = ApiService(Dio());
                 final response = await apiService.getLogTransaksiMutasi(token);
 
-                debugPrint('📥 [Mutasi] API Response:');
-                debugPrint('   - Status Code: ${response.statusCode}');
-                debugPrint('   - Has Data: ${response.data != null}');
+                
+                
+                
 
                 if (response.statusCode == 200 && response.data != null) {
                   final responseData = response.data;
@@ -1006,9 +980,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                       responseData['status'] == 'success';
                   final transactionList = responseData['data'] as List?;
 
-                  debugPrint(
-                    '📋 [Mutasi] Total transaksi: ${transactionList?.length ?? 0}',
-                  );
+                  
 
                   if (isSuccess &&
                       transactionList != null &&
@@ -1036,9 +1008,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 }
               }
 
-              debugPrint(
-                '\n⚠️ [Mutasi] Failed to fetch transaction - navigating to history tab',
-              );
+              
               debugPrint(
                 '🛣️ [Mutasi] Akan redirect ke tab Mutasi (index 3)\n',
               );
@@ -1049,8 +1019,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 arguments: {'initialTab': 3}, // Mutasi tab
               );
             } catch (e) {
-              debugPrint('❌ [Mutasi] Error loading transaction detail:');
-              debugPrint('   Error: $e');
+              
+              
               debugPrint('   Fallback: Navigating to history tab (index 3)');
               // Fallback to history tab on error
               navigatorKey.currentState!.pushNamedAndRemoveUntil(
@@ -1061,7 +1031,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
           }
         } else {
-          debugPrint('⚠️ No trx_id - navigating to history tab');
+          
           // Navigate to mutasi history tab as fallback
           int retries = 0;
           while (retries < 50 && navigatorKey.currentState == null) {
@@ -1082,9 +1052,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       // Handle prabayar detail route
       if (route == 'prabayar_detail') {
-        debugPrint('\n========================================');
-        debugPrint('✅ [Routing] PRABAYAR DETAIL ROUTE');
-        debugPrint('========================================');
+        
+        
+        
 
         // Extract transaction data from notification
         final transactionId = data['transaction_id']?.toString() ?? '';
@@ -1092,12 +1062,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         final trxId = data['trx_id']?.toString() ?? '';
         final status = data['status']?.toString() ?? '';
 
-        debugPrint('📦 [Prabayar] Transaction Data:');
-        debugPrint('   - Transaction ID: $transactionId');
-        debugPrint('   - Ref ID: $refId');
-        debugPrint('   - Trx ID: $trxId');
-        debugPrint('   - Status: $status');
-        debugPrint('========================================\n');
+        
+        
+        
+        
+        
+        
 
         if (refId.isNotEmpty && transactionId.isNotEmpty) {
           // Wait for navigator to be ready
@@ -1109,12 +1079,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
           if (navigatorKey.currentState != null) {
             try {
-              debugPrint(
-                '✅ [Prabayar] Navigator ready - navigating to detail page...',
-              );
-              debugPrint(
-                '🛣️ [Prabayar] Opening TransactionDetailPage with refId=$refId, transactionId=$transactionId',
-              );
+              
+              
 
               navigatorKey.currentState!.push(
                 MaterialPageRoute(
@@ -1126,8 +1092,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               );
               return;
             } catch (e) {
-              debugPrint('❌ [Prabayar] Error navigating to detail page:');
-              debugPrint('   Error: $e');
+              
+              
               debugPrint('   Fallback: Navigating to history tab (index 1)');
               // Fallback to history tab on error
               navigatorKey.currentState!.pushNamedAndRemoveUntil(
@@ -1138,9 +1104,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
           }
         } else {
-          debugPrint(
-            '⚠️ [Prabayar] No ref_id or transaction_id - navigating to history tab',
-          );
+          
           // Navigate to prabayar history tab as fallback
           int retries = 0;
           while (retries < 50 && navigatorKey.currentState == null) {
@@ -1163,24 +1127,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (route.toString().toLowerCase().contains('notification') ||
           route == 'NotificationListActivity' ||
           route == 'notifications') {
-        debugPrint('✅ Notification route confirmed');
+        
 
         // Simple direct navigation - don't create page in builder
         // Just push to existing route
         try {
           if (navigatorKey.currentState != null) {
-            debugPrint('✅ Navigator state available - pushing route');
+            
             navigatorKey.currentState!.pushNamed('/notifications');
             return;
           } else {
-            debugPrint('⚠️ Navigator state is null, queueing navigation');
+            
           }
         } catch (e) {
-          debugPrint('⚠️ Named route push failed: $e');
+          
         }
 
         // Fallback: Wait for navigator to be ready then navigate
-        debugPrint('⚠️ Using fallback navigation method');
+        
         int retries = 0;
         while (retries < 50 && navigatorKey.currentState == null) {
           await Future.delayed(const Duration(milliseconds: 100));
@@ -1189,21 +1153,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
         if (navigatorKey.currentState != null) {
           try {
-            debugPrint(
-              '✅ Navigator ready after ${retries * 100}ms - navigating',
-            );
+            
             navigatorKey.currentState!.pushNamed('/notifications');
           } catch (e) {
-            debugPrint('❌ Navigation failed even after waiting: $e');
+            
           }
         } else {
-          debugPrint('❌ Navigator still not ready after 5 seconds');
+          
         }
       }
     } catch (e) {
-      debugPrint(
-        '❌ Error in _handleNotificationTap: $e\n${StackTrace.current}',
-      );
+      
     }
   }
 
@@ -1640,3 +1600,4 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 }
+

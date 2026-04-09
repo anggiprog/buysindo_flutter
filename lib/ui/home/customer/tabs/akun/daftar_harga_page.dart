@@ -1525,3 +1525,4 @@ class _DaftarHargaPageState extends State<DaftarHargaPage>
     );
   }
 }
+

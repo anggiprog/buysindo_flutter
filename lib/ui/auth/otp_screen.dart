@@ -55,14 +55,14 @@ class _OtpScreenState extends State<OtpScreen> {
       final response = await api.verifyOtp(widget.email, pin);
 
       if (response.status == true) {
-        debugPrint('✅ OTP verification successful');
+        
 
         // Clear pending OTP email since verification is complete
         await SessionManager.clearPendingOtpEmail();
 
         // Update device token di server
         if (response.token != null && response.token!.isNotEmpty) {
-          debugPrint('📱 Updating device token after OTP verification...');
+          
           try {
             await api.updateDeviceToken(response.token!);
           } catch (e) {
@@ -78,7 +78,7 @@ class _OtpScreenState extends State<OtpScreen> {
         _showError(response.message ?? 'Verifikasi Gagal');
       }
     } catch (e) {
-      debugPrint('❌ OTP verification error: $e');
+      
       _showError('Terjadi kesalahan koneksi');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -328,3 +328,4 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 }
+

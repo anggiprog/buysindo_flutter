@@ -79,7 +79,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           selectedAddress = Map<String, String>.from(decoded);
         });
       } catch (e) {
-        // debugPrint('Error parsing address: $e');
+        // 
       }
     }
   }
@@ -99,7 +99,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     if (token == null || token.isEmpty) {
-      debugPrint('Token kosong! User harus login ulang.');
+      
       // Tampilkan dialog atau pesan error di UI
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -117,7 +117,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     if (token == null || token.isEmpty) {
-      debugPrint('Token kosong! User harus login ulang.');
+      
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -134,7 +134,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
     if (token == null || token.isEmpty) {
-      debugPrint('Token kosong! User harus login ulang.');
+      
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -778,3 +778,4 @@ class _CheckoutPageState extends State<CheckoutPage> {
     // Tampilkan pilihan Transfer, COD, E-Wallet dsb
   }
 }
+

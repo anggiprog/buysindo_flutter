@@ -24,9 +24,7 @@ class TransactionHistoryTab extends StatefulWidget {
   /// Call this static method after successful transaction to trigger refresh
   static void triggerRefresh() {
     refreshNotifier.value++;
-    debugPrint(
-      '🔄 [TransactionHistoryTab] Refresh triggered: ${refreshNotifier.value}',
-    );
+    
   }
 
   /// Clear cache for prabayar transactions
@@ -34,7 +32,7 @@ class TransactionHistoryTab extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('transaction_history_cache');
     await prefs.remove('transaction_history_timestamp');
-    // debugPrint('🗑️ [TransactionHistoryTab] Prabayar cache cleared');
+    // 
   }
 
   /// Clear cache for pascabayar transactions
@@ -42,7 +40,7 @@ class TransactionHistoryTab extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('transaction_pascabayar_cache');
     await prefs.remove('transaction_pascabayar_timestamp');
-    // debugPrint('🗑️ [TransactionHistoryTab] Pascabayar cache cleared');
+    // 
   }
 
   /// Clear all transaction caches
@@ -54,7 +52,7 @@ class TransactionHistoryTab extends StatefulWidget {
     await prefs.remove('transaction_pascabayar_timestamp');
     await prefs.remove('transaction_mutasi_cache');
     await prefs.remove('transaction_mutasi_timestamp');
-    // debugPrint('🗑️ [TransactionHistoryTab] All caches cleared');
+    // 
   }
 
   @override
@@ -105,9 +103,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
       vsync: this,
       initialIndex: initialIndex,
     );
-    debugPrint(
-      '🎯 TransactionHistoryTab initialized with sub-tab index: $initialIndex',
-    );
+    
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -139,9 +135,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   }
 
   void _onRefreshTriggered() {
-    // debugPrint(
-    //   '🔄 [TransactionHistoryTab] Refresh received, reloading current tab...',
-    // );
+    // 
     // Force refresh based on current tab
     if (_tabController.index == 0) {
       _loadTransactionHistory(forceRefresh: true);
@@ -413,8 +407,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
       // 3. Fetch from API
       final response = await _apiService.getTransactionDetailPrabayar(token);
 
-      // debugPrint('🔍 API Response Status Code: ${response.statusCode}');
-      // debugPrint('🔍 API Response Data: ${response.data}');
+      // 
+      // 
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -425,17 +419,13 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
             data['status'] == 'Sukses' ||
             data['status'] == true);
 
-        debugPrint(
-          '🔍 Status Check: ${data['status']} -> isSuccess: $isSuccess',
-        );
+        
 
         if (isSuccess) {
           // Parse response
           final transactionData = data['data'] as List?;
 
-          debugPrint(
-            '🔍 Transaction Data Length: ${transactionData?.length ?? 0}',
-          );
+          
 
           if (transactionData != null) {
             if (transactionData.isNotEmpty) {
@@ -447,9 +437,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                   )
                   .toList();
 
-              debugPrint(
-                '✅ Loaded ${_allTransactions.length} transactions from API',
-              );
+              
 
               // Sort by date (newest first)
               _allTransactions.sort(
@@ -459,10 +447,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
               // 4. Fetch store name and attach to transactions
               try {
                 final storeResponse = await _apiService.getUserStore(token);
-                debugPrint(
-                  '🏪 Store Response Status: ${storeResponse.statusCode}',
-                );
-                debugPrint('🏪 Store Response Data: ${storeResponse.data}');
+                
+                
 
                 if (storeResponse.statusCode == 200) {
                   final storeData = storeResponse.data;
@@ -499,33 +485,29 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                         namaToko: storeName,
                       );
                     }
-                    debugPrint(
-                      '✅ Attached store name to ${_allTransactions.length} transactions',
-                    );
+                    
                   } else {
-                    debugPrint('⚠️ Store name is empty!');
+                    
                   }
                 } else {
-                  debugPrint(
-                    '⚠️ Store API returned status: ${storeResponse.statusCode}',
-                  );
+                  
                 }
               } catch (e) {
-                debugPrint('⚠️ Error fetching store name: $e');
-                debugPrint('⚠️ Stack trace: ${StackTrace.current}');
+                
+                
               }
 
               // Save to cache
               await _saveToCache();
             } else {
-              debugPrint('⚠️ Empty transaction list');
+              
               _allTransactions = [];
             }
 
             // Apply filters
             _applyFilters();
           } else {
-            debugPrint('⚠️ Transaction data is null');
+            
             _allTransactions = [];
             _applyFilters();
           }
@@ -536,7 +518,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _setError('Gagal mengambil data (${response.statusCode})');
       }
     } catch (e) {
-      debugPrint('Error loading transaction history: $e');
+      
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -569,10 +551,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           )
           .toList();
 
-      debugPrint('✅ Loaded transaction history from cache');
+      
       return true;
     } catch (e) {
-      debugPrint('⚠️ Error loading from cache: $e');
+      
       return false;
     }
   }
@@ -607,9 +589,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _cacheTimestampKey,
         DateTime.now().millisecondsSinceEpoch,
       );
-      debugPrint('💾 Transaction history saved to cache');
+      
     } catch (e) {
-      debugPrint('⚠️ Error saving to cache: $e');
+      
     }
   }
 
@@ -688,10 +670,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
       // 3. Fetch from API
       final response = await _apiService.getTransactionDetailPascabayar(token);
 
-      debugPrint(
-        '🔍 Pascabayar API Response Status Code: ${response.statusCode}',
-      );
-      debugPrint('🔍 Pascabayar API Response Data: ${response.data}');
+      
+      
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -702,17 +682,13 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
             data['status'] == 'Sukses' ||
             data['status'] == true);
 
-        debugPrint(
-          '🔍 Status Check: ${data['status']} -> isSuccess: $isSuccess',
-        );
+        
 
         if (isSuccess) {
           // Parse response
           final transactionData = data['data'] as List?;
 
-          debugPrint(
-            '🔍 Pascabayar Transaction Data Length: ${transactionData?.length ?? 0}',
-          );
+          
 
           if (transactionData != null) {
             if (transactionData.isNotEmpty) {
@@ -724,9 +700,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                   )
                   .toList();
 
-              debugPrint(
-                '✅ Loaded ${_allPascabayarTransactions.length} Pascabayar transactions from API',
-              );
+              
 
               // Sort by date (newest first)
               _allPascabayarTransactions.sort(
@@ -788,11 +762,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                         namaToko: storeName,
                       );
                     }
-                    debugPrint(
-                      '✅ Attached store name to ${_allPascabayarTransactions.length} Pascabayar transactions',
-                    );
+                    
                   } else {
-                    debugPrint('⚠️ Store name is empty for Pascabayar!');
+                    
                   }
                 } else {
                   debugPrint(
@@ -800,21 +772,21 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                   );
                 }
               } catch (e) {
-                debugPrint('⚠️ Error fetching store name for Pascabayar: $e');
-                debugPrint('⚠️ Stack trace: ${StackTrace.current}');
+                
+                
               }
 
               // Save to cache
               await _savePascabayarToCache();
             } else {
-              debugPrint('⚠️ Empty Pascabayar transaction list');
+              
               _allPascabayarTransactions = [];
             }
 
             // Apply filters
             _applyPascabayarFilters();
           } else {
-            debugPrint('⚠️ Pascabayar transaction data is null');
+            
             _allPascabayarTransactions = [];
             _applyPascabayarFilters();
           }
@@ -825,7 +797,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _setError('Gagal mengambil data (${response.statusCode})');
       }
     } catch (e) {
-      debugPrint('Error loading Pascabayar transaction history: $e');
+      
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -859,10 +831,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           )
           .toList();
 
-      debugPrint('✅ Loaded Pascabayar transaction history from cache');
+      
       return true;
     } catch (e) {
-      debugPrint('⚠️ Error loading Pascabayar from cache: $e');
+      
       return false;
     }
   }
@@ -906,9 +878,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _cachePascabayarTimestampKey,
         DateTime.now().millisecondsSinceEpoch,
       );
-      debugPrint('💾 Pascabayar transaction history saved to cache');
+      
     } catch (e) {
-      debugPrint('⚠️ Error saving Pascabayar to cache: $e');
+      
     }
   }
 
@@ -1457,8 +1429,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
       // 3. Fetch from API
       final response = await _apiService.getLogTransaksiMutasi(token);
 
-      debugPrint('🔍 Mutasi API Response Status Code: ${response.statusCode}');
-      debugPrint('🔍 Mutasi API Response Data: ${response.data}');
+      
+      
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -1467,17 +1439,13 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         final bool isSuccess =
             (data['status'] == true || data['status'] == 'success');
 
-        debugPrint(
-          '🔍 Status Check: ${data['status']} -> isSuccess: $isSuccess',
-        );
+        
 
         if (isSuccess) {
           // Parse response
           final transactionData = data['data'] as List?;
 
-          debugPrint(
-            '🔍 Mutasi Transaction Data Length: ${transactionData?.length ?? 0}',
-          );
+          
 
           if (transactionData != null && transactionData.isNotEmpty) {
             _allMutasiTransactions = transactionData
@@ -1487,9 +1455,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                 )
                 .toList();
 
-            debugPrint(
-              '✅ Loaded ${_allMutasiTransactions.length} Mutasi transactions from API',
-            );
+            
 
             // Sort by date (newest first)
             _allMutasiTransactions.sort(
@@ -1530,20 +1496,18 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                       namaToko: storeName,
                     );
                   }
-                  debugPrint(
-                    '✅ Attached store name to ${_allMutasiTransactions.length} Mutasi transactions',
-                  );
+                  
                 }
               }
             } catch (e) {
-              debugPrint('⚠️ Error fetching store name for Mutasi: $e');
+              
             }
 
             // Save to cache
             await _saveMutasiToCache();
             _applyMutasiFilters();
           } else {
-            debugPrint('⚠️ Empty Mutasi transaction list');
+            
             _allMutasiTransactions = [];
             _applyMutasiFilters();
           }
@@ -1554,7 +1518,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _setError('Gagal mengambil data (${response.statusCode})');
       }
     } catch (e) {
-      debugPrint('Error loading Mutasi transaction history: $e');
+      
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -1583,10 +1547,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           )
           .toList();
 
-      debugPrint('✅ Loaded Mutasi transaction history from cache');
+      
       return true;
     } catch (e) {
-      debugPrint('⚠️ Error loading Mutasi from cache: $e');
+      
       return false;
     }
   }
@@ -1604,9 +1568,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _cacheMutasiTimestampKey,
         DateTime.now().millisecondsSinceEpoch,
       );
-      debugPrint('💾 Mutasi transaction history saved to cache');
+      
     } catch (e) {
-      debugPrint('⚠️ Error saving Mutasi to cache: $e');
+      
     }
   }
 
@@ -1814,3 +1778,4 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
     );
   }
 }
+

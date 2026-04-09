@@ -40,7 +40,7 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
 
   // Load pascabayar products from API
   Future<void> _loadProducts() async {
-    print('🔄 [BPJS] _loadProducts called');
+    
 
     try {
       final token = await SessionManager.getToken();
@@ -50,18 +50,18 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [BPJS] Calling getPascabayarProducts...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [BPJS] Response status: ${response.statusCode}');
-      print('📥 [BPJS] Response data: ${response.data}');
+      
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
         );
 
-        print('📦 [BPJS] Total products: ${productResponse.products.length}');
+        
 
         // Filter hanya produk BPJS KESEHATAN
         final bpjsProducts = productResponse.products
@@ -72,10 +72,10 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
             )
             .toList();
 
-        print('📦 [BPJS] BPJS products after filter: ${bpjsProducts.length}');
+        
         if (bpjsProducts.isNotEmpty) {
-          print('📦 [BPJS] First product: ${bpjsProducts.first.productName}');
-          print('📦 [BPJS] First product brand: ${bpjsProducts.first.brand}');
+          
+          
         }
 
         if (mounted) {
@@ -84,22 +84,20 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
             // Auto select first product if available
             if (_products.isNotEmpty) {
               _selectedProduct = _products.first;
-              print(
-                '✅ [BPJS] Auto-selected product: ${_selectedProduct!.productName}',
-              );
+              
             } else {
-              print('⚠️ [BPJS] No BPJS products found');
+              
             }
           });
-          print('✅ [BPJS] Products loaded successfully');
+          
         }
       } else {
-        print('❌ [BPJS] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [BPJS] Error loading products: $e');
-      print('❌ [BPJS] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -108,18 +106,18 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
 
   // Cek Tagihan menggunakan widget global
   Future<void> _checkBill() async {
-    print('🔍 [BPJS] _checkBill called');
-    print('🔍 [BPJS] Selected Product: $_selectedProduct');
-    print('🔍 [BPJS] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [BPJS] No product selected');
+      
       _showSnackbar('Pilih produk terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [BPJS] Customer ID is empty');
+      
       _showSnackbar('Masukkan nomor VA BPJS terlebih dahulu', Colors.orange);
       return;
     }
@@ -129,14 +127,14 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [BPJS] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [BPJS] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [BPJS] Brand: ${_selectedProduct!.brand}');
-      print('📝 [BPJS] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
-      print('📝 [BPJS] Markup Member: ${_selectedProduct!.markupMember}');
-      print('📝 [BPJS] Admin Fee: ${_selectedProduct!.adminFee}');
+      
+      
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [BPJS] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -148,17 +146,17 @@ class _BpjsKesehatanPageState extends State<BpjsKesehatanPage> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [BPJS] Bill Data Response: $billData');
+      
 
       // Bottom sheet ditutup, tidak perlu action lagi di sini
       if (billData != null) {
-        print('✅ [BPJS] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [BPJS] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [BPJS] Error in _checkBill: $e');
-      print('❌ [BPJS] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -891,3 +889,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

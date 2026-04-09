@@ -17,3 +17,4 @@ class FormatUtil {
     return NumberFormat('#,###', 'id_ID').format(value.toInt());
   }
 }
+

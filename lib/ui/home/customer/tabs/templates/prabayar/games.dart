@@ -106,11 +106,11 @@ class _GamesPageState extends State<GamesPage> with TickerProviderStateMixin {
           _isLoading = false;
 
           // Debug log
-          print('=== GAMES DEBUG ===');
-          print('Total Products: ${_allProducts.length}');
-          print('Total Brands: ${_availableBrands.length}');
-          print('Brands: $_availableBrands');
-          print('==================');
+          
+          
+          
+          
+          
         });
 
         // Tampilkan notifikasi jika refresh
@@ -147,9 +147,9 @@ class _GamesPageState extends State<GamesPage> with TickerProviderStateMixin {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('cached_products');
-      print('🗑️ Cache produk berhasil dihapus');
+      
     } catch (e) {
-      print('❌ Error clearing cache: $e');
+      
     }
   }
 
@@ -1156,3 +1156,4 @@ class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
     return false;
   }
 }
+

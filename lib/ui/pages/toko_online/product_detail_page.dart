@@ -532,3 +532,4 @@ class ProductCheckoutPage extends StatelessWidget {
     );
   }
 }
+

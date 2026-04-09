@@ -40,7 +40,7 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
 
   // Load pascabayar products from API
   Future<void> _loadProducts() async {
-    print('🔄 [PLN] _loadProducts called');
+    
 
     try {
       final token = await SessionManager.getToken();
@@ -50,18 +50,18 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [PLN] Calling getPascabayarProducts...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [PLN] Response status: ${response.statusCode}');
-      print('📥 [PLN] Response data: ${response.data}');
+      
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
         );
 
-        print('📦 [PLN] Total products: ${productResponse.products.length}');
+        
 
         // Filter hanya produk PLN PASCABAYAR (bukan PLN NONTAGLIS)
         final plnProducts = productResponse.products
@@ -72,10 +72,10 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
             )
             .toList();
 
-        print('📦 [PLN] PLN products after filter: ${plnProducts.length}');
+        
         if (plnProducts.isNotEmpty) {
-          print('📦 [PLN] First product: ${plnProducts.first.productName}');
-          print('📦 [PLN] First product brand: ${plnProducts.first.brand}');
+          
+          
         }
 
         if (mounted) {
@@ -84,22 +84,20 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
             // Auto select first product if available
             if (_products.isNotEmpty) {
               _selectedProduct = _products.first;
-              print(
-                '✅ [PLN] Auto-selected product: ${_selectedProduct!.productName}',
-              );
+              
             } else {
-              print('⚠️ [PLN] No PLN products found');
+              
             }
           });
-          print('✅ [PLN] Products loaded successfully');
+          
         }
       } else {
-        print('❌ [PLN] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [PLN] Error loading products: $e');
-      print('❌ [PLN] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -108,18 +106,18 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
 
   // Cek Tagihan menggunakan widget global
   Future<void> _checkBill() async {
-    print('🔍 [PLN] _checkBill called');
-    print('🔍 [PLN] Selected Product: $_selectedProduct');
-    print('🔍 [PLN] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [PLN] No product selected');
+      
       _showSnackbar('Pilih produk terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [PLN] Customer ID is empty');
+      
       _showSnackbar('Masukkan ID pelanggan terlebih dahulu', Colors.orange);
       return;
     }
@@ -129,14 +127,14 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [PLN] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [PLN] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [PLN] Brand: ${_selectedProduct!.brand}');
-      print('📝 [PLN] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [PLN] Showing CekTagihan bottom sheet...');
-      print('📝 [PLN] Markup Member: ${_selectedProduct!.markupMember}');
-      print('📝 [PLN] Admin Fee: ${_selectedProduct!.adminFee}');
+      
+      
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -148,17 +146,17 @@ class _PlnPascabayarPageState extends State<PlnPascabayarPage> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [PLN] Bill Data Response: $billData');
+      
 
       // Bottom sheet ditutup, tidak perlu action lagi di sini
       if (billData != null) {
-        print('✅ [PLN] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [PLN] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [PLN] Error in _checkBill: $e');
-      print('❌ [PLN] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -887,3 +885,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

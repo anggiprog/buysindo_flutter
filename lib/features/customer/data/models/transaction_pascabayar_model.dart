@@ -74,7 +74,7 @@ class TransactionPascabayar {
     final markupMemberRaw = json['markup_member'];
     final totalPembayaranAdminRaw = json['total_pembayaran_admin'];
 
-    debugPrint('📋 [TransactionPascabayar.fromJson] id: ${json['id']}');
+    
     debugPrint(
       '📋 [TransactionPascabayar.fromJson] markup_member raw: $markupMemberRaw (${markupMemberRaw.runtimeType})',
     );
@@ -218,3 +218,4 @@ class TransactionPascabayar {
   bool get isFailed =>
       status.toUpperCase() == 'GAGAL' || status.toUpperCase() == 'FAILED';
 }
+

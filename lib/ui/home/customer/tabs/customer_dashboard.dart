@@ -66,7 +66,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
         }
       }
     } catch (e) {
-      debugPrint('❌ [UpdateCheck] Error: $e');
+      
     }
   }
 
@@ -118,7 +118,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
       final count = await ApiService.instance.getAdminNotificationCount(token);
       if (mounted) setState(() => _adminNotifCount = count);
     } catch (e) {
-      debugPrint('❌ Notif Count Error: $e');
+      
     }
   }
 
@@ -247,3 +247,4 @@ class _CustomerDashboardState extends State<CustomerDashboard>
     );
   }
 }
+

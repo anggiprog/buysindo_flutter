@@ -89,7 +89,7 @@ class _ChatPageState extends State<ChatPage> {
             }
           }
         } catch (apiError) {
-          debugPrint('Error fetch profile: $apiError');
+          
         }
       }
 
@@ -99,7 +99,7 @@ class _ChatPageState extends State<ChatPage> {
 
       if (mounted) setState(() => _loadingStatus = "Siap");
     } catch (e) {
-      debugPrint('Fatal error _loadUserId: $e');
+      
       if (mounted) {
         setState(() {
           _userId = -1;
@@ -141,7 +141,7 @@ class _ChatPageState extends State<ChatPage> {
 
       return parsed;
     } catch (e) {
-      debugPrint('Error fetching messages: $e');
+      
 
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -300,7 +300,7 @@ class _ChatPageState extends State<ChatPage> {
         );
       }
     } catch (e) {
-      debugPrint('Error deleting chat: $e');
+      
     }
   }
 
@@ -478,7 +478,8 @@ class _ChatPageState extends State<ChatPage> {
         });
       }
     } catch (e) {
-      debugPrint('Error sending message: $e');
+      
     }
   }
 }
+

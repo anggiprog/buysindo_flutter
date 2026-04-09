@@ -56,7 +56,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [PDAM] Using cached products: ${cachedProducts.length}');
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -85,10 +85,10 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [PDAM] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [PDAM] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -100,7 +100,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
             .where((p) => p.brand.toUpperCase().contains('PDAM'))
             .toList();
 
-        print('📦 [PDAM] PDAM products fetched: ${pdamProducts.length}');
+        
 
         // Simpan ke cache
         await _saveToCache(pdamProducts);
@@ -122,15 +122,15 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
             });
           }
 
-          print('✅ [PDAM] Products loaded: ${_availableBrands.length} brands');
+          
         }
       } else {
-        print('❌ [PDAM] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [PDAM] Error loading products: $e');
-      print('❌ [PDAM] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -150,7 +150,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [PDAM] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -161,9 +161,9 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [PDAM] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [PDAM] Error saving to cache: $e');
+      
     }
   }
 
@@ -449,7 +449,7 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    print('🏢 [PDAM] Brand selected: $productName');
+    
 
     setState(() {
       _selectedBrand = productName;
@@ -460,27 +460,25 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       // Auto select first product
       if (_products.isNotEmpty) {
         _selectedProduct = _products.first;
-        print(
-          '✅ [PDAM] Auto-selected product: ${_selectedProduct!.productName}',
-        );
+        
       }
     });
   }
 
   // Cek Tagihan menggunakan widget global
   Future<void> _checkBill() async {
-    print('🔍 [PDAM] _checkBill called');
-    print('🔍 [PDAM] Selected Product: $_selectedProduct');
-    print('🔍 [PDAM] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [PDAM] No product selected');
+      
       _showSnackbar('Pilih PDAM terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [PDAM] Customer ID is empty');
+      
       _showSnackbar('Masukkan ID pelanggan terlebih dahulu', Colors.orange);
       return;
     }
@@ -490,12 +488,12 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [PDAM] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [PDAM] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [PDAM] Brand: ${_selectedProduct!.brand}');
-      print('📝 [PDAM] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan (gunakan widget global)
-      print('🚀 [PDAM] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -507,17 +505,17 @@ class _PdamPascabayarState extends State<PdamPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [PDAM] Bill Data Response: $billData');
+      
 
       // Bottom sheet ditutup, tidak perlu action lagi di sini
       if (billData != null) {
-        print('✅ [PDAM] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [PDAM] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [PDAM] Error in _checkBill: $e');
-      print('❌ [PDAM] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1263,3 +1261,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

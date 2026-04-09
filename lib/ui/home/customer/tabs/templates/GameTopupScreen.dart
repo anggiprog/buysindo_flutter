@@ -143,7 +143,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
         if (mounted) setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
-      // debugPrint('Error fetching banners: $e');
+      // 
       if (mounted) setState(() => _isLoadingBanners = false);
     }
   }
@@ -289,7 +289,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingProducts = false);
-      // debugPrint('Error loading games: $e');
+      // 
     }
   }
 
@@ -308,7 +308,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
         setState(() => _isLoadingProducts = true);
       }
     } catch (e) {
-      // debugPrint('Error loading games from cache: $e');
+      // 
       setState(() => _isLoadingProducts = true);
     }
   }
@@ -352,7 +352,7 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
       final productsJson = jsonEncode(products.map((p) => p.toJson()).toList());
       await _prefs.setString('cached_games_products', productsJson);
     } catch (e) {
-      // debugPrint('Error caching games products: $e');
+      // 
     }
   }
 
@@ -392,10 +392,8 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
   }
 
   void _showUserIdZoneDialogBeforeCheckout(ProductPrabayar product) {
-    // debugPrint(
-    //   'GameTopupScreen - Dialog akan ditampilkan untuk: ${product.productName}',
-    // );
-    // debugPrint('  Brand: ${product.brand}');
+    // 
+    // 
     // debugPrint('  needsZoneId: ${_productNeedsZoneId(product.brand)}');
 
     showDialog(
@@ -406,16 +404,16 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
         productBrand: product.brand,
         needsZoneId: _productNeedsZoneId(product.brand),
         onSubmit: (userId, zoneId) {
-          debugPrint('GameTopupScreen - Dialog onSubmit:');
-          debugPrint('  userId: $userId');
-          debugPrint('  zoneId: $zoneId');
+          
+          
+          
 
           // Gabungkan userId dan zoneId tanpa separator (087800001233)
           final fullPlayerId = zoneId != null && zoneId.isNotEmpty
               ? '$userId$zoneId'
               : userId;
 
-          debugPrint('  fullPlayerId: $fullPlayerId');
+          
 
           // Navigate to DetailPulsaPage dengan phone parameter (backward compatible)
           Navigator.push(
@@ -1172,3 +1170,4 @@ class _GameTopupScreenState extends State<GameTopupScreen> {
     );
   }
 }
+

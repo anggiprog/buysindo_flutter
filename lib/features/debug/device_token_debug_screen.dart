@@ -25,9 +25,9 @@ class _DeviceTokenDebugScreenState extends State<DeviceTokenDebugScreen> {
     setState(() => _isLoading = true);
     try {
       final result = await apiService.diagnosticFcmStatus();
-      print('=== FCM DIAGNOSTIC RESULT ===');
+      
       result.forEach((key, value) {
-        print('$key: $value');
+        
       });
 
       setState(() {
@@ -238,3 +238,4 @@ ${result['is_mock_token'] == true ? '⚠️ MOCK TOKEN - FCM not working!' : '�
     );
   }
 }
+

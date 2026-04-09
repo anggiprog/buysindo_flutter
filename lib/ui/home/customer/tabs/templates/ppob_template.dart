@@ -124,15 +124,13 @@ class _PpobTemplateState extends State<PpobTemplate> {
       setState(() {
         // Load banners dari cache
         final cachedBanners = _prefs.getStringList('cached_banners');
-        print('📚 [Cache] Cached banners: $cachedBanners');
+        
         if (cachedBanners != null && cachedBanners.isNotEmpty) {
           _bannerList = cachedBanners;
           _isLoadingBanners = false;
-          print('📚 [Cache] Loaded ${cachedBanners.length} banners from cache');
+          
         } else {
-          print(
-            '📚 [Cache] No cached banners found, will show loading shimmer',
-          );
+          
         }
 
         // Load menu prabayar dari cache
@@ -144,11 +142,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
                 .map((item) => MenuPrabayarItem.fromJson(item))
                 .toList();
             _isLoadingMenu = false;
-            print(
-              '📚 [Cache] Loaded ${_menuList.length} menu prabayar from cache',
-            );
+            
           } catch (e) {
-            print('❌ [Cache] Error loading menu prabayar: $e');
+            
           }
         }
 
@@ -292,19 +288,17 @@ class _PpobTemplateState extends State<PpobTemplate> {
       String adminId = appConfig.adminUserId;
       String subdomain = appConfig.subdomain;
 
-      print(
-        '📌 [Banner] Initial - adminUserId: "$adminId", subdomain: "$subdomain"',
-      );
+      
 
       // RULE 1: If no subdomain (testing via IP), MUST use default 1050
       if (subdomain.isEmpty) {
         adminId = appConfig.adminId;
-        print('📌 [Banner] No subdomain - FORCE default adminId: $adminId');
+        
       }
       // RULE 2: If adminId empty or zero, fallback
       else if (adminId.isEmpty || adminId == '0') {
         adminId = appConfig.adminId;
-        print('📌 [Banner] adminUserId empty/zero - fallback to: $adminId');
+        
       }
       // RULE 3: If adminId looks like old cache (very large number), reset to 1050
       else if (int.tryParse(adminId) != null) {
@@ -324,8 +318,8 @@ class _PpobTemplateState extends State<PpobTemplate> {
 
       final response = await apiService.getBanners(adminId);
 
-      print('📌 [Banner] Response status: ${response.statusCode}');
-      print('📌 [Banner] Response data: ${response.data}');
+      
+      
 
       if (response.statusCode == 200 && response.data != null) {
         // Handle both nested and non-nested response structures
@@ -336,21 +330,21 @@ class _PpobTemplateState extends State<PpobTemplate> {
             responseData.containsKey('data') &&
             responseData['data'] is Map) {
           responseData = responseData['data'];
-          print('📌 [Banner] Extracted data from nested structure');
+          
         }
 
-        print('📌 [Banner] Processing banners data: $responseData');
+        
 
         // Parsing data menggunakan model
         final data = BannerResponse.fromJson(responseData);
 
-        print('📌 [Banner] Parsed banners count: ${data.banners.length}');
-        print('📌 [Banner] Banners: ${data.banners}');
+        
+        
 
         // Get current cached banners to compare
         final cachedBanners = _prefs.getStringList('cached_banners') ?? [];
 
-        print('📌 [Banner] Cached banners count: ${cachedBanners.length}');
+        
 
         // Check if banners have changed
         bool bannersChanged = cachedBanners.length != data.banners.length;
@@ -364,31 +358,31 @@ class _PpobTemplateState extends State<PpobTemplate> {
           }
         }
 
-        print('📌 [Banner] Banners changed: $bannersChanged');
+        
 
         // Only update and cache if banners changed
         if (bannersChanged) {
           await _prefs.setStringList('cached_banners', data.banners);
-          print('📌 [Banner] Saved ${data.banners.length} banners to cache');
+          
 
           if (mounted) {
             setState(() {
               _bannerList = data.banners;
               _isLoadingBanners = false;
             });
-            print('📌 [Banner] Updated UI with new banners');
+            
           }
         } else {
           // Data unchanged, just update loading state
-          print('📌 [Banner] Banners unchanged, keeping cached data');
+          
           if (mounted) setState(() => _isLoadingBanners = false);
         }
       } else {
-        print('❌ [Banner] Failed to fetch - Status: ${response.statusCode}');
+        
         if (mounted) setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
-      print('❌ [Banner] Error fetching banners: $e');
+      
       if (mounted) setState(() => _isLoadingBanners = false);
     }
   }
@@ -1360,3 +1354,4 @@ class _PpobTemplateState extends State<PpobTemplate> {
     );
   }
 }
+

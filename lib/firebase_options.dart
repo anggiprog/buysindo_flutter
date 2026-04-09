@@ -3,7 +3,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart' show debugPrint;
 
 // Conditional import for platform detection (dart:io not available on web)
 import 'platform_stub.dart' if (dart.library.io) 'platform_io.dart';
@@ -15,12 +14,9 @@ class DefaultFirebaseOptions {
     final v = dotenv.env[key];
     if (v == null || v.isEmpty) {
       // Warn developer so missing envs aren't silently ignored
-      debugPrint(
-        '⚠️ DefaultFirebaseOptions: environment variable `$key` is not set. Using fallback value.',
-      );
+
       // In debug builds, an assert will fail loudly for developers
       assert(() {
-        debugPrint('ASSERT: Missing required Firebase env variable: $key');
         return true;
       }());
       // In release builds, avoid throwing to prevent app from crashing on startup.

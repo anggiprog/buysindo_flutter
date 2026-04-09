@@ -166,7 +166,7 @@ class TopupResponse {
   TopupResponse({this.status, this.message, this.data});
 
   factory TopupResponse.fromJson(Map<String, dynamic> json) {
-    print('🔍 [TOPUP_RESPONSE] Full response JSON: $json');
+    
 
     // Parse status - can be bool or string
     bool? parsedStatus;
@@ -187,8 +187,8 @@ class TopupResponse {
       parsedStatus = false;
     }
 
-    print('🔍 [TOPUP_RESPONSE] Parsed status: $parsedStatus');
-    print('🔍 [TOPUP_RESPONSE] Data from response: ${json['data']}');
+    
+    
 
     return TopupResponse(
       status: parsedStatus,
@@ -228,12 +228,12 @@ class TopupData {
   });
 
   factory TopupData.fromJson(Map<String, dynamic> json) {
-    print('🔍 [TOPUP_DATA] Parsing TopupData from: $json');
+    
 
     // Backend returns 'trx_id' but we also check 'nomor_transaksi' for compatibility
     final nomorTransaksi =
         (json['nomor_transaksi'] ?? json['trx_id']) as String?;
-    print('🔍 [TOPUP_DATA] nomorTransaksi extracted: $nomorTransaksi');
+    
     print('🔍 [TOPUP_DATA] Available keys: ${json.keys.toList()}');
 
     return TopupData(
@@ -251,3 +251,4 @@ class TopupData {
     );
   }
 }
+

@@ -56,7 +56,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [TV] Using cached products: ${cachedProducts.length}');
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -85,10 +85,10 @@ class _TvPascabayarState extends State<TvPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [TV] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [TV] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -104,7 +104,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
             )
             .toList();
 
-        print('📦 [TV] TV products fetched: ${tvProducts.length}');
+        
 
         // Simpan ke cache
         await _saveToCache(tvProducts);
@@ -126,15 +126,15 @@ class _TvPascabayarState extends State<TvPascabayar> {
             });
           }
 
-          print('✅ [TV] Products loaded: ${_availableBrands.length} brands');
+          
         }
       } else {
-        print('❌ [TV] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [TV] Error loading products: $e');
-      print('❌ [TV] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -154,7 +154,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [TV] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -165,9 +165,9 @@ class _TvPascabayarState extends State<TvPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [TV] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [TV] Error saving to cache: $e');
+      
     }
   }
 
@@ -531,7 +531,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
         }
       }
     } catch (e) {
-      print('❌ Error picking contact: $e');
+      
       if (mounted) {
         _showSnackbar('Gagal memilih kontak', Colors.red);
       }
@@ -592,7 +592,7 @@ class _TvPascabayarState extends State<TvPascabayar> {
         _showSnackbar('Barcode berhasil dipindai', Colors.green);
       }
     } catch (e) {
-      print('❌ Error scanning barcode: $e');
+      
       if (mounted) {
         _showSnackbar('Gagal scan barcode', Colors.red);
       }
@@ -616,14 +616,14 @@ class _TvPascabayarState extends State<TvPascabayar> {
       // Get admin user ID
       final adminUserId = int.parse(appConfig.adminUserId);
 
-      print('📝 [TV] Customer ID: $customerId');
+      
       print('📝 [TV] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [TV] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [TV] Brand: ${_selectedProduct!.brand}');
-      print('📝 [TV] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [TV] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -635,15 +635,15 @@ class _TvPascabayarState extends State<TvPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [TV] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [TV] Bill data received from bottom sheet');
+        
       } else {
         print('❌ [TV] Bill data is null (user might have cancelled)');
       }
     } catch (e) {
-      print('❌ [TV] Error in _cekTagihan: $e');
+      
       if (mounted) {
         _showSnackbar('Terjadi kesalahan: ${e.toString()}', Colors.red);
       }
@@ -1312,3 +1312,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

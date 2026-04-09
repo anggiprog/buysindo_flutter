@@ -10,9 +10,10 @@ class SessionFileHelper {
       final dir = await getApplicationDocumentsDirectory();
       final f = File('${dir.path}/cached_splash.png');
       if (await f.exists()) await f.delete();
-      print('🗑️ Cached splash file removed from filesystem if it existed');
+      
     } catch (e) {
-      print('⚠️ Failed to remove cached splash file: $e');
+      
     }
   }
 }
+

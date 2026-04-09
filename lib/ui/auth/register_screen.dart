@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/app_config.dart';
 import '../../core/network/api_service.dart';
+import '../../core/security/totp_service.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -16,14 +17,12 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   bool _isObscure = true;
   bool _isLoading = false;
-  bool _isFetchingToken = true;
   // Password requirement flags
   bool _pwHasMin8 = false;
   bool _pwHasDigit = false;
   bool _pwHasSpecial = false;
   String? _errorMessage;
   String? _existingUserWarning;
-  String? _adminToken;
 
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -37,75 +36,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchAdminToken();
-  }
-
-  Future<void> _fetchAdminToken() async {
-    try {
-      final dio = Dio();
-      final apiService = ApiService(dio);
-
-      debugPrint('🔐 Fetching admin token...');
-
-      // ⚠️ IMPORTANT: Wait for appConfig to be fully initialized with subdomain-based admin_user_id
-      // This ensures user gets registered to the correct store (admin), not the default 1050
-      String adminUserId = appConfig.adminUserId;
-      int retries = 0;
-      const maxRetries = 10;
-      const retryDelayMs = 500;
-
-      // Poll until we get a subdomain-based config (or timeout after ~5 seconds)
-      while (adminUserId == '1050' && retries < maxRetries) {
-        debugPrint(
-          '⏳ Waiting for subdomain config... (retry ${retries + 1}/$maxRetries)',
-        );
-        await Future.delayed(const Duration(milliseconds: retryDelayMs));
-        adminUserId = appConfig.adminUserId;
-        retries++;
-      }
-
-      if (adminUserId == '1050' && retries >= maxRetries) {
-        debugPrint(
-          '⚠️  Config still default (1050) after waiting. Using it anyway.',
-        );
-      } else if (adminUserId != '1050') {
-        debugPrint('✅ Got subdomain-based adminUserId: $adminUserId');
-      }
-
-      debugPrint('   Using adminUserId: $adminUserId (subdomain-based)');
-
-      final response = await apiService.getAdminToken(adminUserId);
-
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data['status'] == 'success' &&
-            data['data'] != null &&
-            data['data'].isNotEmpty) {
-          setState(() {
-            _adminToken = data['data'][0]['token'];
-            _isFetchingToken = false;
-          });
-          debugPrint('✅ Admin token fetched successfully');
-        } else {
-          setState(() {
-            _errorMessage = 'Token admin tidak ditemukan';
-            _isFetchingToken = false;
-          });
-        }
-      } else {
-        setState(() {
-          _errorMessage =
-              'Gagal mengambil token admin. Status: ${response.statusCode}';
-          _isFetchingToken = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ Error fetching admin token: $e');
-      setState(() {
-        _errorMessage = 'Gagal mengambil token admin: ${e.toString()}';
-        _isFetchingToken = false;
-      });
-    }
   }
 
   @override
@@ -140,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         setState(() => _existingUserWarning = null);
       }
     } catch (e) {
-      debugPrint('Error checking existing user: $e');
+      // Silent fail
     }
   }
 
@@ -166,40 +96,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      if (_adminToken == null) {
-        setState(() {
-          _errorMessage =
-              'Token admin tidak tersedia. Silakan refresh halaman.';
-        });
-        return;
-      }
-
       final dio = Dio();
       final apiService = ApiService(dio);
 
-      debugPrint(
-        '📝 Attempting registration with email: ${_emailController.text}',
+      // --- [1] Generate TOTP token otomatis ---
+      const String secretKey = 'Anggiprog@241288123_2026';
+      const int timeStep = 60;
+      final adminToken = TOTPService.getCurrentToken(
+        secretKey: secretKey,
+        timeStep: timeStep,
       );
 
-      // Ensure username sanitized (no spaces, lowercase)
+      // --- [2] Sanitize username ---
       final sanitizedUsername = _usernameController.text
           .replaceAll(RegExp(r'\s+'), '')
           .toLowerCase();
 
-      final response = await apiService.registerV2(
-        adminToken: _adminToken!,
-        username: sanitizedUsername,
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        fullName: _fullNameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        referralCode: _referralCodeController.text.trim(),
-        deviceToken: 'flutter-app',
+      // --- [3] Call registerV2 dengan token di header ---
+      final url = '${apiService.baseUrl}api/registerV2';
+
+      final response = await dio.post(
+        url,
+        data: {
+          'username': sanitizedUsername,
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+          'full_name': _fullNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'referral_code': _referralCodeController.text.trim(),
+          'device_token':
+              'flutter-app-${DateTime.now().millisecondsSinceEpoch}',
+        },
+        options: Options(
+          headers: {
+            'X-Admin-Token': adminToken,
+            'X-Admin-User-ID': appConfig.adminUserId,
+            'Content-Type': 'application/json',
+          },
+        ),
       );
 
-      debugPrint(
-        '📋 Register Response: ${response.statusCode} - ${response.data}',
-      );
+      // Process response
 
       if (!mounted) return;
 
@@ -253,7 +190,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else if (response.statusCode == 403) {
         // Token admin tidak valid
         setState(() {
-          _errorMessage = 'Token admin tidak valid. Hubungi administrator.';
+          _errorMessage =
+              response.data['message'] ??
+              'Token admin tidak valid. Hubungi administrator.';
         });
       } else if (response.statusCode == 500) {
         setState(() {
@@ -265,7 +204,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Register Error: $e');
       setState(() {
         _errorMessage = 'Terjadi kesalahan: ${e.toString()}';
       });
@@ -278,33 +216,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isFetchingToken) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  appConfig.primaryColor,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Mempersiapkan form registrasi...',
-                style: TextStyle(
-                  color: appConfig.primaryColor,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -757,3 +668,4 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+

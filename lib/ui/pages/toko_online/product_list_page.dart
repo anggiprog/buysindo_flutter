@@ -53,7 +53,7 @@ class _ProductListPageState extends State<ProductListPage> {
         _productList = cachedProducts;
         _isLoading = false;
       });
-      // debugPrint('Loaded ${cachedProducts.length} products from cache');
+      // 
     }
 
     // Fetch fresh data from API
@@ -126,7 +126,7 @@ class _ProductListPageState extends State<ProductListPage> {
         });
       }
     } catch (e) {
-      // debugPrint('Error fetching products: $e');
+      // 
       setState(() {
         _isLoading = false;
         _isLoadingMore = false;
@@ -455,3 +455,4 @@ class _ProductListPageState extends State<ProductListPage> {
     );
   }
 }
+

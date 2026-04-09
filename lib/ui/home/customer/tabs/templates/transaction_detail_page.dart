@@ -82,11 +82,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         // 2. Fetch store name separately
         try {
           final storeResponse = await _apiService.getUserStore(token);
-          // debugPrint('🟢 Store Response: ${storeResponse.data}');
+          // 
           if (storeResponse.statusCode == 200) {
             final storeData = storeResponse.data;
             String storeName = storeData['nama_toko']?.toString() ?? '';
-            // debugPrint('🟢 Got store name: "$storeName"');
+            // 
 
             // Attach store name to transaction
             if (storeName.isNotEmpty) {
@@ -107,11 +107,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
                 tanggalTransaksi: transaction.tanggalTransaksi,
                 namaToko: storeName,
               );
-              // debugPrint('✅ Transaction updated with store name');
+              // 
             }
           }
         } catch (e) {
-          // debugPrint('⚠️ Error fetching store: $e');
+          // 
         }
 
         if (mounted) {
@@ -127,13 +127,11 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
             _currentTotal = transaction.hargaJualMember;
             _hargaController.text = _currentHarga.toString();
           });
-          debugPrint(
-            '✅ Transaction loaded: namaToko=${_transaction!.namaToko}',
-          );
+          
         }
       }
     } catch (e) {
-      // debugPrint('❌ Error: $e');
+      // 
       if (mounted) {
         setState(() => _isLoading = false);
         _showError('Gagal memuat detail transaksi');
@@ -313,7 +311,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       final Uint8List pngBytes = byteData!.buffer.asUint8List();
       return pngBytes;
     } catch (e) {
-      // debugPrint('❌ Error capturing receipt: $e');
+      // 
       _showError('Gagal mengambil gambar struk');
       return null;
     }
@@ -343,7 +341,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
         );
       }
     } catch (e) {
-      // debugPrint('❌ Error sharing: $e');
+      // 
       _showError('Gagal membagikan struk');
     }
   }
@@ -459,7 +457,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: $statusText\nTotal: Rp ${_formatCurrency(_currentTotal)}';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
-      // debugPrint('❌ WhatsApp share error: $e');
+      // 
       _showError('Gagal membagikan ke WhatsApp');
     }
   }
@@ -473,7 +471,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
           'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: $statusText\nTotal: Rp ${_formatCurrency(_currentTotal)}';
       await Share.shareXFiles([XFile(imagePath)], text: message);
     } catch (e) {
-      // debugPrint('❌ Telegram share error: $e');
+      // 
       _showError('Gagal membagikan ke Telegram');
     }
   }
@@ -489,7 +487,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
             'Struk Transaksi Prabayar\nRef ID: ${_transaction!.refId}\nStatus: $statusText',
       );
     } catch (e) {
-      // debugPrint('❌ Default share error: $e');
+      // 
       _showError('Gagal membagikan');
     }
   }
@@ -498,7 +496,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
     try {
       _showSuccess('Gambar berhasil disimpan ke galeri');
     } catch (e) {
-      // debugPrint('❌ Save error: $e');
+      // 
       _showError('Gagal menyimpan gambar');
     }
   }
@@ -508,7 +506,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       await Clipboard.setData(ClipboardData(text: imagePath));
       _showSuccess('Path gambar tersalin ke clipboard');
     } catch (e) {
-      // debugPrint('❌ Copy error: $e');
+      // 
       _showError('Gagal menyalin path');
     }
   }
@@ -524,7 +522,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       await Clipboard.setData(ClipboardData(text: referenceText));
       _showSuccess('Reference ID berhasil disalin ke clipboard');
     } catch (e) {
-      // debugPrint('❌ Error copying reference: $e');
+      // 
       _showError('Gagal menyalin reference ID');
     }
   }
@@ -614,7 +612,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
       // Disconnect
       await _printerService.disconnect();
     } catch (e) {
-      // debugPrint('❌ Print error: $e');
+      // 
       if (mounted) {
         setState(() => _isPrinting = false);
         _showError('Terjadi kesalahan saat mencetak');
@@ -965,3 +963,4 @@ class DottedLine extends StatelessWidget {
     );
   }
 }
+

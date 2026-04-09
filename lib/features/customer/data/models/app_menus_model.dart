@@ -76,3 +76,4 @@ class AppMenusModel extends Equatable {
     htmlFilename,
   ];
 }
+

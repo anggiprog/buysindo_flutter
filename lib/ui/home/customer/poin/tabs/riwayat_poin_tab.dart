@@ -31,7 +31,7 @@ class _RiwayatPoinTabState extends State<RiwayatPoinTab> {
       if (token == null) return;
 
       final response = await _apiService.getRiwayatPoin(token);
-      debugPrint('[RiwayatPoinTab] Response: ${response.data}');
+      
 
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
@@ -43,7 +43,7 @@ class _RiwayatPoinTabState extends State<RiwayatPoinTab> {
         if (mounted) setState(() {});
       }
     } catch (e) {
-      debugPrint('[RiwayatPoinTab] Error: $e');
+      
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -344,3 +344,4 @@ class _RiwayatPoinTabState extends State<RiwayatPoinTab> {
     }
   }
 }
+

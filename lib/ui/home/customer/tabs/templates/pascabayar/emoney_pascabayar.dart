@@ -65,7 +65,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [EMONEY] Using cached products: ${cachedProducts.length}');
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -98,10 +98,10 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [EMONEY] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [EMONEY] Response status: ${response.statusCode}');
+      
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
           response.data,
@@ -112,7 +112,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
             .where((p) => _isEmoneyBrand(p.brand))
             .toList();
 
-        print('📦 [EMONEY] E-MONEY products fetched: ${emoneyProducts.length}');
+        
 
         // Simpan ke cache
         await _saveToCache(emoneyProducts);
@@ -134,17 +134,15 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
             });
           }
 
-          print(
-            '✅ [EMONEY] Products loaded: ${_availableBrands.length} brands',
-          );
+          
         }
       } else {
-        print('❌ [EMONEY] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [EMONEY] Error loading products: $e');
-      print('❌ [EMONEY] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -164,7 +162,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [EMONEY] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -175,9 +173,9 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [EMONEY] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [EMONEY] Error saving to cache: $e');
+      
     }
   }
 
@@ -463,7 +461,7 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    print('📌 [EMONEY] Brand selected: $productName');
+    
 
     // Filter products berdasarkan product_name yang dipilih
     final brandProducts = _allProducts
@@ -477,29 +475,25 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         _selectedProduct = brandProducts.first; // Auto select pertama
       });
 
-      print(
-        '✅ [EMONEY] Selected: $_selectedBrand with ${_products.length} products',
-      );
-      print(
-        '✅ [EMONEY] Auto-selected product: ${_selectedProduct!.buyerSkuCode}',
-      );
+      
+      
     }
   }
 
   // Cek Tagihan
   Future<void> _checkBill() async {
-    print('🔍 [EMONEY] _checkBill called');
-    print('🔍 [EMONEY] Selected Product: $_selectedProduct');
-    print('🔍 [EMONEY] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [EMONEY] No product selected');
+      
       _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [EMONEY] Customer ID is empty');
+      
       _showSnackbar('Masukkan nomor HP terlebih dahulu', Colors.orange);
       return;
     }
@@ -509,12 +503,12 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [EMONEY] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [EMONEY] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [EMONEY] Brand: ${_selectedProduct!.brand}');
-      print('📝 [EMONEY] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [EMONEY] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -527,16 +521,16 @@ class _EmoneyPascabayarState extends State<EmoneyPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [EMONEY] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [EMONEY] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [EMONEY] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [EMONEY] Error in _checkBill: $e');
-      print('❌ [EMONEY] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1525,3 +1519,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

@@ -58,9 +58,7 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print(
-            '📦 [MULTIFINANCE] Using cached products: ${cachedProducts.length}',
-          );
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -89,10 +87,10 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [MULTIFINANCE] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [MULTIFINANCE] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -104,9 +102,7 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
             .where((p) => p.brand.toUpperCase().contains('MULTIFINANCE'))
             .toList();
 
-        print(
-          '📦 [MULTIFINANCE] Multifinance products fetched: ${multifinanceProducts.length}',
-        );
+        
 
         // Simpan ke cache
         await _saveToCache(multifinanceProducts);
@@ -128,19 +124,15 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
             });
           }
 
-          print(
-            '✅ [MULTIFINANCE] Products loaded: ${_availableBrands.length} brands',
-          );
+          
         }
       } else {
-        print(
-          '❌ [MULTIFINANCE] Response status not 200: ${response.statusCode}',
-        );
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [MULTIFINANCE] Error loading products: $e');
-      print('❌ [MULTIFINANCE] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -160,7 +152,7 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [MULTIFINANCE] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -171,9 +163,9 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [MULTIFINANCE] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [MULTIFINANCE] Error saving to cache: $e');
+      
     }
   }
 
@@ -537,7 +529,7 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
         }
       }
     } catch (e) {
-      print('❌ Error picking contact: $e');
+      
       if (mounted) {
         _showSnackbar('Gagal memilih kontak', Colors.red);
       }
@@ -598,7 +590,7 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
         _showSnackbar('Barcode berhasil dipindai', Colors.green);
       }
     } catch (e) {
-      print('❌ Error scanning barcode: $e');
+      
       if (mounted) {
         _showSnackbar('Gagal scan barcode', Colors.red);
       }
@@ -622,16 +614,14 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
       // Get admin user ID
       final adminUserId = int.parse(appConfig.adminUserId);
 
-      print('📝 [MULTIFINANCE] Customer ID: $customerId');
+      
       print('📝 [MULTIFINANCE] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [MULTIFINANCE] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [MULTIFINANCE] Brand: ${_selectedProduct!.brand}');
-      print(
-        '📝 [MULTIFINANCE] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}',
-      );
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [MULTIFINANCE] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -643,15 +633,15 @@ class _MultifinancePascabayarState extends State<MultifinancePascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [MULTIFINANCE] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [MULTIFINANCE] Bill data received from bottom sheet');
+        
       } else {
         print('❌ [MULTIFINANCE] Bill data is null (user might have cancelled)');
       }
     } catch (e) {
-      print('❌ [MULTIFINANCE] Error in _cekTagihan: $e');
+      
       if (mounted) {
         _showSnackbar('Terjadi kesalahan: ${e.toString()}', Colors.red);
       }
@@ -1315,3 +1305,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

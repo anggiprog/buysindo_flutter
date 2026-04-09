@@ -227,15 +227,15 @@ class _NotificationsPageState extends State<NotificationsPage>
 
         for (final id in selectedList) {
           try {
-            print('\n📤 Attempting to delete notification ID: $id');
+            
             final response = await _apiService.deleteNotification(
               id: id,
               token: token,
             );
 
-            print('📥 Response status: ${response.statusCode}');
-            print('📥 Response data: ${response.data}');
-            print('📥 Response headers: ${response.headers}');
+            
+            
+            
 
             // Check if response indicates success
             bool isSuccess = false;
@@ -253,15 +253,15 @@ class _NotificationsPageState extends State<NotificationsPage>
             }
 
             if (isSuccess) {
-              print('✅ Notification $id deleted successfully');
+              
               successCount++;
             } else {
-              print('❌ Notification $id delete returned unexpected response');
+              
               failCount++;
               failedIds.add(id);
             }
           } catch (e) {
-            print('❌ Error deleting notification $id: $e');
+            
             failCount++;
             failedIds.add(id);
           }
@@ -305,12 +305,12 @@ class _NotificationsPageState extends State<NotificationsPage>
       } else {
         // Delete all notifications via single endpoint
         try {
-          print('\n📤 Attempting to delete ALL notifications');
+          
           final response = await _apiService.deleteAllUserNotifications(token);
 
-          print('📥 Response status: ${response.statusCode}');
-          print('📥 Response data: ${response.data}');
-          print('📥 Response headers: ${response.headers}');
+          
+          
+          
 
           bool isSuccess = false;
 
@@ -351,7 +351,7 @@ class _NotificationsPageState extends State<NotificationsPage>
             }
           }
         } catch (e) {
-          print('❌ Error deleting all notifications: $e');
+          
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -643,3 +643,4 @@ class _NotificationsPageState extends State<NotificationsPage>
     }
   }
 }
+

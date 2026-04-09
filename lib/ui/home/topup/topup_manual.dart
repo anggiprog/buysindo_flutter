@@ -5,6 +5,7 @@ import 'dart:math';
 import '../../../core/network/api_service.dart';
 import '../../../core/network/session_manager.dart';
 import '../../../core/app_config.dart';
+import '../../../core/security/totp_service.dart';
 import '../../../features/topup/models/topup_response_models.dart';
 import 'topup_konfirmasi.dart';
 
@@ -54,16 +55,11 @@ class _TopupManualState extends State<TopupManual> {
 
   Future<void> _fetchAdminFeeAndBankAccounts() async {
     try {
-      print(
-        '🔍 [TOPUP] ===== FETCHING ADMIN FEE AND BANK ACCOUNTS START =====',
-      );
       print('🔍 [TOPUP] Time: ${DateTime.now()}');
-      print('🔍 [TOPUP] Widget mounted: $mounted');
 
       // Get token from SessionManager
       final token = await SessionManager.getToken();
       if (token == null) {
-        print('⚠️ [TOPUP] Token is null, using defaults');
         if (mounted) {
           setState(() {
             _adminFee = 0;
@@ -77,49 +73,28 @@ class _TopupManualState extends State<TopupManual> {
       print('🔍 [TOPUP] Token retrieved: ${token.substring(0, 20)}...');
 
       // Fetch admin fee
-      print('🔍 [TOPUP] Fetching admin fee...');
+
       final adminFeeResponse = await widget.apiService.getAdminFee(token);
       final adminFeeValue = adminFeeResponse.biayaAdminManual ?? 0;
       // Add unique code to total amount (e.g., if amount is 100000, admin fee is 2000, code is 452, total becomes 102452)
       final totalValue = widget.amount + adminFeeValue + _uniqueCode;
-      print('🔍 [TOPUP] Admin fee received: $adminFeeValue');
-      print('🔍 [TOPUP] Unique code: $_uniqueCode');
-      print('🔍 [TOPUP] Total with unique code: $totalValue');
 
       // Fetch bank accounts
-      print('🔍 [TOPUP] Fetching bank accounts...');
+
       final bankAccountsResponse = await widget.apiService.getBankAccounts(
         token,
       );
       final bankAccounts = bankAccountsResponse.data ?? [];
-      print(
-        '🔍 [TOPUP] Bank accounts received: ${bankAccounts.length} accounts',
-      );
-
-      print('🔍 [TOPUP] ===== API RESPONSES RECEIVED =====');
-      print('🔍 [TOPUP] Admin Fee: $adminFeeValue');
-      print('🔍 [TOPUP] Total: $totalValue');
-      print('🔍 [TOPUP] Bank Accounts Count: ${bankAccounts.length}');
 
       if (mounted) {
-        print('🔍 [TOPUP] Widget mounted, calling setState');
         setState(() {
           _adminFee = adminFeeValue;
           _totalAmount = totalValue;
           _bankAccounts = bankAccounts;
           _isLoading = false;
-          print('🔍 [TOPUP] ===== SETSTATE COMPLETE =====');
-          print('🔍 [TOPUP] _bankAccounts.length: ${_bankAccounts.length}');
         });
-      } else {
-        print('❌ [TOPUP] Widget not mounted!');
-      }
-    } catch (e, stackTrace) {
-      print('❌ [TOPUP] ===== ERROR IN _fetchAdminFeeAndBankAccounts =====');
-      print('❌ [TOPUP] Error type: ${e.runtimeType}');
-      print('❌ [TOPUP] Error message: $e');
-      print('❌ [TOPUP] StackTrace: $stackTrace');
-
+      } else {}
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -127,7 +102,6 @@ class _TopupManualState extends State<TopupManual> {
         setState(() => _isLoading = false);
       }
     }
-    print('🔍 [TOPUP] ===== FETCHING END =====\n');
   }
 
   String get _nominalWithCode {
@@ -145,8 +119,6 @@ class _TopupManualState extends State<TopupManual> {
   void _copyToClipboard() {
     // Copy total transfer to clipboard without Rp prefix and spaces
     final textToCopy = _totalWithCode.replaceAll('Rp ', '').trim();
-    print('🔍 Copying total transfer to clipboard: $textToCopy');
-    print('🔍 Full total: $_totalWithCode');
 
     Clipboard.setData(ClipboardData(text: textToCopy))
         .then((_) {
@@ -159,7 +131,6 @@ class _TopupManualState extends State<TopupManual> {
           );
         })
         .catchError((e) {
-          print('❌ ERROR copying to clipboard: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Gagal menyalin ke clipboard'),
@@ -425,9 +396,6 @@ class _TopupManualState extends State<TopupManual> {
                                   setState(() {
                                     _selectedBank = selectedBank;
                                   });
-                                  print(
-                                    '✅ [TOPUP] Bank selected: ${selectedBank.namaBank}',
-                                  );
                                 },
                               );
                             },
@@ -500,12 +468,6 @@ class _TopupManualState extends State<TopupManual> {
                       ),
                     ),
                     onPressed: () async {
-                      print('🔍 [TOPUP] Saya Sudah Transfer button pressed');
-                      print('🔍 [TOPUP] Total Amount: $_totalAmount');
-                      print(
-                        '🔍 [TOPUP] Selected Bank: ${_selectedBank?.namaBank}',
-                      );
-
                       if (_selectedBank == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -523,29 +485,24 @@ class _TopupManualState extends State<TopupManual> {
                           throw Exception('Token tidak ditemukan');
                         }
 
-                        print(
-                          '🔍 [TOPUP] User Token: ${userToken.substring(0, 20)}...',
+                        // 1.5 Generate TOTP admin token for this request
+                        const String secretKey = 'Anggiprog@241288123_2026';
+                        const int timeStep = 60;
+                        final adminToken = TOTPService.getCurrentToken(
+                          secretKey: secretKey,
+                          timeStep: timeStep,
                         );
 
                         // 2. Call topUpSaldo API to create transaction in database
-                        print('🔍 [TOPUP] Calling topUpSaldo API...');
+
                         final topupResult = await widget.apiService.topUpSaldo(
                           amount: _totalAmount.toString(),
                           bankName: _selectedBank!.namaBank ?? '',
                           nomorRekening: _selectedBank!.nomorRekening ?? '',
                           namaRekening: _selectedBank!.atasNamaRekening ?? '',
                           userToken: userToken,
+                          adminToken: adminToken,
                           adminUserId: AppConfig().adminId,
-                        );
-
-                        print(
-                          '🔍 [TOPUP] API Response Status: ${topupResult.response.status}',
-                        );
-                        print(
-                          '🔍 [TOPUP] Message: ${topupResult.response.message}',
-                        );
-                        print(
-                          '🔍 [TOPUP] Generated Transaction ID: ${topupResult.generatedTrxId}',
                         );
 
                         // Check if transaction creation was successful
@@ -558,9 +515,6 @@ class _TopupManualState extends State<TopupManual> {
 
                         // 3. Use the client-generated transaction number (backend accepted it)
                         final nomorTransaksi = topupResult.generatedTrxId;
-                        print('✅ [TOPUP] Transaction created successfully!');
-                        print('✅ [TOPUP] No. Transaksi: $nomorTransaksi');
-                        print('✅ [TOPUP] Navigating to confirmation page...');
 
                         if (!mounted) return;
 
@@ -577,7 +531,6 @@ class _TopupManualState extends State<TopupManual> {
                           ),
                         );
                       } catch (e) {
-                        print('❌ [TOPUP] Error: $e');
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
@@ -647,10 +600,8 @@ class _BankDetailCard extends StatelessWidget {
   });
 
   void _copyToClipboard(BuildContext context, String text, String label) {
-    print('🔍 [BANK] Copying to clipboard: $label = $text');
     Clipboard.setData(ClipboardData(text: text))
         .then((_) {
-          print('✅ [BANK] Successfully copied: $label');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('$label disalin ke clipboard'),
@@ -660,7 +611,6 @@ class _BankDetailCard extends StatelessWidget {
           );
         })
         .catchError((e) {
-          print('❌ ERROR copying to clipboard: $e');
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Gagal menyalin ke clipboard'),
@@ -671,7 +621,6 @@ class _BankDetailCard extends StatelessWidget {
   }
 
   void _showLogoPreview(BuildContext context, String logoUrl, String bankName) {
-    print('🔍 [BANK] Opening logo preview: $logoUrl');
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -747,7 +696,6 @@ class _BankDetailCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        print('🔍 [BANK] Bank selected: ${bank.namaBank}');
         onSelected?.call(bank);
       },
       child: Container(

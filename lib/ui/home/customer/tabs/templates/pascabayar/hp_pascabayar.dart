@@ -57,7 +57,7 @@ class _HpPascabayarState extends State<HpPascabayar> {
       if (!forceRefresh) {
         final cachedProducts = await _loadFromCache();
         if (cachedProducts.isNotEmpty) {
-          print('📦 [HP] Using cached products: ${cachedProducts.length}');
+          
           if (mounted) {
             setState(() {
               _allProducts = cachedProducts;
@@ -86,10 +86,10 @@ class _HpPascabayarState extends State<HpPascabayar> {
         throw Exception('Token tidak ditemukan');
       }
 
-      print('🌐 [HP] Fetching from API...');
+      
       final response = await _apiService.getPascabayarProducts(token);
 
-      print('📥 [HP] Response status: ${response.statusCode}');
+      
 
       if (response.statusCode == 200) {
         final productResponse = ProductPascabayarResponse.fromJson(
@@ -105,7 +105,7 @@ class _HpPascabayarState extends State<HpPascabayar> {
             )
             .toList();
 
-        print('📦 [HP] HP products fetched: ${hpProducts.length}');
+        
 
         // Simpan ke cache
         await _saveToCache(hpProducts);
@@ -127,15 +127,15 @@ class _HpPascabayarState extends State<HpPascabayar> {
             });
           }
 
-          print('✅ [HP] Products loaded: ${_availableBrands.length} brands');
+          
         }
       } else {
-        print('❌ [HP] Response status not 200: ${response.statusCode}');
+        
         throw Exception('Gagal mengambil data produk');
       }
     } catch (e) {
-      print('❌ [HP] Error loading products: $e');
-      print('❌ [HP] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error loading products: ${e.toString()}', Colors.red);
       }
@@ -155,7 +155,7 @@ class _HpPascabayarState extends State<HpPascabayar> {
             .toList();
       }
     } catch (e) {
-      print('⚠️ [HP] Error loading from cache: $e');
+      
     }
     return [];
   }
@@ -166,9 +166,9 @@ class _HpPascabayarState extends State<HpPascabayar> {
       final prefs = await SharedPreferences.getInstance();
       final jsonList = products.map((p) => p.toJson()).toList();
       await prefs.setString(_cacheKey, json.encode(jsonList));
-      print('💾 [HP] Saved ${products.length} products to cache');
+      
     } catch (e) {
-      print('⚠️ [HP] Error saving to cache: $e');
+      
     }
   }
 
@@ -454,7 +454,7 @@ class _HpPascabayarState extends State<HpPascabayar> {
 
   // Select brand and filter products
   void _selectBrand(String productName) {
-    print('📌 [HP] Brand selected: $productName');
+    
 
     // Filter products berdasarkan product_name yang dipilih
     final brandProducts = _allProducts
@@ -468,27 +468,25 @@ class _HpPascabayarState extends State<HpPascabayar> {
         _selectedProduct = brandProducts.first; // Auto select pertama
       });
 
-      print(
-        '✅ [HP] Selected: $_selectedBrand with ${_products.length} products',
-      );
-      print('✅ [HP] Auto-selected product: ${_selectedProduct!.buyerSkuCode}');
+      
+      
     }
   }
 
   // Cek Tagihan
   Future<void> _checkBill() async {
-    print('🔍 [HP] _checkBill called');
-    print('🔍 [HP] Selected Product: $_selectedProduct');
-    print('🔍 [HP] Customer ID: ${_customerIdController.text}');
+    
+    
+    
 
     if (_selectedProduct == null) {
-      print('⚠️ [HP] No product selected');
+      
       _showSnackbar('Pilih provider terlebih dahulu', Colors.orange);
       return;
     }
 
     if (_customerIdController.text.isEmpty) {
-      print('⚠️ [HP] Customer ID is empty');
+      
       _showSnackbar('Masukkan nomor HP terlebih dahulu', Colors.orange);
       return;
     }
@@ -498,12 +496,12 @@ class _HpPascabayarState extends State<HpPascabayar> {
       final adminUserId = int.parse(appConfig.adminUserId);
 
       print('📝 [HP] Admin User ID (from AppConfig): $adminUserId');
-      print('📝 [HP] Product Name: ${_selectedProduct!.productName}');
-      print('📝 [HP] Brand: ${_selectedProduct!.brand}');
-      print('📝 [HP] Buyer SKU Code: ${_selectedProduct!.buyerSkuCode}');
+      
+      
+      
 
       // Show bottom sheet cek tagihan
-      print('🚀 [HP] Showing CekTagihan bottom sheet...');
+      
       final billData = await CekTagihanPascabayar.showCekTagihan(
         context: context,
         productName: _selectedProduct!.productName,
@@ -515,16 +513,16 @@ class _HpPascabayarState extends State<HpPascabayar> {
         adminFee: int.tryParse(_selectedProduct!.adminFee) ?? 0,
       );
 
-      print('📥 [HP] Bill Data Response: $billData');
+      
 
       if (billData != null) {
-        print('✅ [HP] Bill data received from bottom sheet');
+        
       } else {
-        print('ℹ️ [HP] User cancelled the bill check');
+        
       }
     } catch (e) {
-      print('❌ [HP] Error in _checkBill: $e');
-      print('❌ [HP] Error type: ${e.runtimeType}');
+      
+      
       if (mounted) {
         _showSnackbar('Error: ${e.toString()}', Colors.red);
       }
@@ -1478,3 +1476,4 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
