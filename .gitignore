@@ -58,6 +58,9 @@ android/app/src/main/res/mipmap*/*.png
 android/app/src/main/res/values/*.xml
 assets/images/logo.png
 
+# Abaikan Google Play Store registration ID file yang digenerate otomatis saat build
+assets/adi-registration.properties
+
 # Abaikan file lock
 pubspec.lockandroid/build/
 
