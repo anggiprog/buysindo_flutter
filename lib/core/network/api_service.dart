@@ -1,5 +1,7 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
+import 'package:crypto/crypto.dart'; // ✅ For HMAC-SHA256
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -643,14 +645,14 @@ class ApiService {
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.10/');
+           baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+      //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -1256,7 +1258,29 @@ class ApiService {
   // TRANSACTION ENDPOINTS
   // ===========================================================================
 
-  /// Proses transaksi prabayar
+  /// 🔐 Proses transaksi prabayar (Hybrid HMAC Security)
+  ///
+  /// MODE 1: USER MODE (JWT Auth) - untuk regular mobile users
+  ///   - Gunakan: processPrabayarTransaction(token: jwtToken, ...)
+  ///   - Tidak perlu userId, adminToken, hmacSecret
+  ///
+  /// MODE 2: ADMIN MODE (HMAC Auth) - untuk server-to-server integration
+  ///   - Gunakan: processPrabayarTransaction(token: '', userId: '123', hmacSecret: 'xxx', ...)
+  ///   - Memerlukan: userId, hmacSecret, optionally hmacApiKey, hmacAdminId
+  ///
+  /// Backend endpoint: POST /api/transaksi/prabayar
+  ///
+  /// Expected fields in request body:
+  /// - pin: required|string|min:6|max:6
+  /// - category: required|string
+  /// - sku: required|string
+  /// - nama_produk: required|string
+  /// - no_handphone: required|string
+  /// - diskon: required|integer
+  /// - total: required|integer|min:1|max:1000000
+  /// - markup_member: nullable|integer
+  /// - harga_jual_member: nullable|integer
+  /// - user_id: required (for admin mode)
   Future<Response> processPrabayarTransaction({
     required String pin,
     required String category,
@@ -1267,11 +1291,22 @@ class ApiService {
     required int total,
     required int markupMember,
     required int hargaJualMember,
-    required String token,
-    required String userId,
-    required String adminToken,
+    required String token, // JWT token for user mode (empty for admin mode)
+    String userId = '', // Required for admin mode
+    String? hmacSecret, // Required for admin mode (API Secret)
+    String? hmacApiKey, // Optional for admin mode (API Key)
+    String? hmacAdminId, // Optional for admin mode (Admin ID)
     String? zoneId,
   }) {
+   // print('📤 [API Request] processPrabayarTransaction:');
+   // print('   - Category: $category');
+   // print('   - SKU: $sku');
+   // print('   - Product: $productName');
+   // print('   - Phone: $phoneNumber');
+   // print('   - Total: $total');
+   // print('   - Token: ${token.isNotEmpty ? '✓' : '✗'}');
+   // print('   - Zone ID: $zoneId');
+
     final data = {
       'pin': pin,
       'category': category,
@@ -1282,7 +1317,7 @@ class ApiService {
       'total': total,
       'markup_member': markupMember,
       'harga_jual_member': hargaJualMember,
-      'user_id': userId,
+      if (userId.isNotEmpty) 'user_id': userId, // Only for admin mode
     };
 
     // Add zone_id only if provided
@@ -1290,16 +1325,69 @@ class ApiService {
       data['zone_id'] = zoneId;
     }
 
-    return _dio.post(
-      'api/proses-trx-prabayar',
-      data: data,
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $token',
-          'X-Admin-Token': adminToken,
-        },
-      ),
-    );
+    // ============================================================
+    // Build headers based on authentication mode
+    // ============================================================
+    final headers = <String, String>{};
+
+    if (token.isNotEmpty) {
+      // JWT identifies the logged-in user.
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    if (hmacSecret != null && hmacSecret.isNotEmpty) {
+      // HMAC signs the exact transaction body. It can be combined with JWT
+      // for mobile user mode, or used with user_id for admin/server mode.
+      final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000)
+          .toString();
+      final sortedData = SplayTreeMap<String, dynamic>.from(data);
+      final jsonBody = jsonEncode(sortedData);
+
+      // Generate HMAC-SHA256 signature
+      // Format: signature = HMAC-SHA256(timestamp.jsonbody, secret)
+      final signaturePayload = '$timestamp.$jsonBody';
+      final signature = Hmac(
+        sha256,
+        utf8.encode(hmacSecret),
+      ).convert(utf8.encode(signaturePayload)).toString();
+
+      headers['X-API-KEY'] = hmacApiKey ?? '';
+      headers['X-SIGNATURE'] = signature;
+      headers['X-TIMESTAMP'] = timestamp;
+      headers['X-ADMIN-ID'] = hmacAdminId ?? '';
+      headers['Content-Type'] = 'application/json';
+      headers['Accept'] = 'application/json';
+
+      // Optional: Add nonce for extra security
+      // headers['X-Nonce'] = const Uuid().v4();
+
+      _noopLog('🔐 [API] Admin mode HMAC request:');
+      _noopLog('   - Timestamp: $timestamp');
+      _noopLog('   - Signature: ${signature.substring(0, 20)}...');
+      _noopLog('   - Admin ID: $hmacAdminId');
+      print('   - HMAC: ✓');
+    } else if (token.isEmpty) {
+      _noopLog('⚠️ [API] Warning: No auth credentials provided!');
+    }
+
+    return _dio
+        .post(
+          'api/proses-trx-prabayar', // ✅ Correct backend endpoint
+          data: data,
+          options: Options(headers: headers),
+        )
+        .then((response) {
+          print('✅ [API Response] proses-trx-prabayar: ${response.statusCode}');
+          print('✅ [API Response] Data: ${response.data}');
+          return response;
+        })
+        .catchError((error) {
+          print('❌ [API Error] proses-trx-prabayar: $error');
+          if (error is DioException) {
+            print('❌ [API Error] Response: ${error.response?.data}');
+          }
+          throw error;
+        });
   }
 
   /// Ambil detail transaksi prabayar (untuk history)
@@ -1430,7 +1518,8 @@ class ApiService {
   }
 
   /// Registrasi user baru dengan verifikasi email
-  /// Memerlukan X-Admin-Token di header
+  /// IMPROVED: Menggunakan token format yang lebih aman: TOTP:base64(admin_user_id)
+  /// Memerlukan X-Admin-Token di header dengan format yang sudah secure
   Future<Response> registerV2({
     required String adminToken,
     required String username,
@@ -1441,6 +1530,9 @@ class ApiService {
     String? referralCode,
     String? deviceToken,
   }) {
+    // PENTING: adminToken harus sudah dalam format TOTP:base64(admin_user_id)
+    // Jangan construct di sini, harus dari backend via method getSecureAdminToken()
+
     return _dio.post(
       'api/registerV2',
       data: {
@@ -1456,13 +1548,36 @@ class ApiService {
       },
       options: Options(
         headers: {
-          'X-Admin-Token': adminToken,
+          'X-Admin-Token': adminToken, // Format: TOTP:base64(admin_user_id)
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         validateStatus: (status) => status! < 500,
       ),
     );
+  }
+
+  /// IMPROVED: Dapatkan secure admin token dari backend
+  /// Endpoint returns: {"admin_token": "TOTP:base64(admin_user_id)"}
+  Future<String> getSecureAdminToken() async {
+    try {
+      final response = await _dio.get(
+        'api/secure-admin-token',
+        options: Options(validateStatus: (status) => status! < 500),
+      );
+
+      if (response.statusCode == 200 && response.data['admin_token'] != null) {
+        final adminToken = response.data['admin_token'] as String;
+        _noopLog('🔐 [ApiService] Secure admin token obtained');
+        return adminToken;
+      } else {
+        throw Exception(
+          response.data['message'] ?? 'Gagal mendapatkan admin token',
+        );
+      }
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    }
   }
 
   /// Verifikasi email user

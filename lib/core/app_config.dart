@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../features/customer/data/models/customer_config_model.dart';
 import 'network/api_service.dart';
 import 'logger.dart';
+import 'security/credential_loader.dart';
 
 class AppConfig with ChangeNotifier {
   int _showAppbar = 1;
@@ -37,6 +38,34 @@ class AppConfig with ChangeNotifier {
     defaultValue:
         'your-admin-token-here', // Ganti dengan token asli saat build/release
   );
+
+  /// API Key untuk signature authentication
+  /// Dapatkan dari admin users table di database
+  static const String apiKey = String.fromEnvironment(
+    'API_KEY',
+    defaultValue: 'p66uUssUy6jagkT78UsiZcWMxLWR5D70',
+  );
+
+  /// API Secret untuk signature authentication
+  /// Dapatkan dari admin users table di database
+  static const String apiSecret = String.fromEnvironment(
+    'API_SECRET',
+    defaultValue:
+        'VnYFeBtB409q8AQqjIiQqKsemMnOVN11OiBiUFnxWlZJC7c37emAY3obfaN2mdtW',
+  );
+
+  // --- DYNAMIC CREDENTIALS (loaded at runtime) ---
+  static String _runtimeApiKey = '';
+  static String _runtimeApiSecret = '';
+  static String _runtimeCredentialSource = 'static';
+
+  static String get runtimeApiKey => _runtimeApiKey.isNotEmpty
+      ? _runtimeApiKey
+      : apiKey; // Fallback to static const
+  static String get runtimeApiSecret => _runtimeApiSecret.isNotEmpty
+      ? _runtimeApiSecret
+      : apiSecret; // Fallback to static const
+  static String get runtimeCredentialSource => _runtimeCredentialSource;
 
   // --- STATE VARIABLES ---
   String _appName = "Apk Customer";
@@ -125,17 +154,41 @@ class AppConfig with ChangeNotifier {
     }
   }
 
+  // --- LOAD API CREDENTIALS ---
+  static Future<void> loadCredentials() async {
+    try {
+      final credentials = await CredentialLoader.loadCredentials();
+      _runtimeApiKey = credentials['apiKey'] ?? '';
+      _runtimeApiSecret = credentials['apiSecret'] ?? '';
+      _runtimeCredentialSource = credentials['source'] ?? 'unknown';
+
+      AppLogger.logInfo(
+        '✅ [AppConfig.loadCredentials] Successfully loaded credentials from ${credentials['source']} | Key: ${_runtimeApiKey.substring(0, 20)}... | Secret: ${_runtimeApiSecret.substring(0, 20)}...',
+      );
+
+      // Verify credentials
+      await CredentialLoader.verifyCredentials(
+        apiKey: _runtimeApiKey,
+        apiSecret: _runtimeApiSecret,
+      );
+    } catch (e) {
+      AppLogger.logError('[AppConfig.loadCredentials] Error: $e');
+      _runtimeCredentialSource = 'static';
+      // Fallback to static const values - already handled by getter
+    }
+  }
+
   // --- API INITIALIZATION ---
   Future<void> initializeApp(ApiService apiService) async {
     try {
-      // 
+      //
 
       // 1. Cek subdomain dari window (Web)
       String subdomainFromWindow = '';
       if (kIsWeb) {
         subdomainFromWindow = _getSubdomainFromWindow();
         if (subdomainFromWindow.isNotEmpty) {
-          // 
+          //
         }
       }
 
@@ -158,7 +211,7 @@ class AppConfig with ChangeNotifier {
                 },
               );
 
-          // 
+          //
 
           if (response.statusCode == 200 && response.data['data'] != null) {
             responseData = response.data['data'];
@@ -166,21 +219,21 @@ class AppConfig with ChangeNotifier {
             if (responseData is Map) {
               if (responseData.containsKey('admin_user_id')) {
                 apiAdminUserId = responseData['admin_user_id'].toString();
-                // 
+                //
               }
             }
           }
         } catch (e) {
-          // 
+          //
           responseData = null;
         }
       }
 
       // 3. Fallback: Gunakan admin ID dari environment atau default
       if (responseData == null) {
-        // 
+        //
         // debugPrint('  Admin ID (Default): $_adminId');
-        // 
+        //
 
         final response = await apiService
             .getPublicConfig(_adminId, _appType)
@@ -191,7 +244,7 @@ class AppConfig with ChangeNotifier {
               },
             );
 
-        // 
+        //
 
         if (response.statusCode == 200 && response.data['data'] != null) {
           responseData = response.data['data'];
@@ -200,7 +253,7 @@ class AppConfig with ChangeNotifier {
 
       // 4. Parse response dan update config
       if (responseData != null) {
-        // 
+        //
         final model = AppConfigModel.fromApi(responseData);
 
         // STRICT RULE: Admin User ID determination
@@ -224,11 +277,11 @@ class AppConfig with ChangeNotifier {
           );
         }
 
-        // 
+        //
         updateFromModel(model);
 
         // 5. Simpan ke Local
-        // 
+        //
         await _saveToLocal(model, adminUserId: _adminUserId);
         AppLogger.logDebug(
           '✅ [AppConfig] COMPLETE - adminUserId: $_adminUserId, subdomain: "$_subdomain"',
@@ -241,10 +294,10 @@ class AppConfig with ChangeNotifier {
         );
       }
     } on TimeoutException catch (_) {
-      // 
+      //
     } catch (_) {
-      // 
-      // 
+      //
+      //
     }
   }
 
@@ -264,16 +317,16 @@ class AppConfig with ChangeNotifier {
       _showNavbar = model.showNavbar;
 
       // DEBUG: Log tampilan value
-      // 
-      // 
+      //
+      //
       // debugPrint('  - Tampilan: $_tampilan (raw: "${model.tampilan}")');
-      // 
-      // 
-      // 
+      //
+      //
+      //
 
       notifyListeners();
     } catch (e) {
-      // 
+      //
     }
   }
 
@@ -282,7 +335,7 @@ class AppConfig with ChangeNotifier {
     try {
       // Handle empty or null hex
       if (hex.isEmpty) {
-        // 
+        //
         return const Color(0xFF0D6EFD);
       }
 
@@ -301,7 +354,7 @@ class AppConfig with ChangeNotifier {
 
       return parsedColor;
     } catch (e) {
-      // 
+      //
       return const Color(0xFF0D6EFD); // Default Blue
     }
   }
@@ -329,16 +382,16 @@ class AppConfig with ChangeNotifier {
           // Validasi: subdomain harus alphanumeric dan tidak "www"
           if (subdomain != 'www' &&
               RegExp(r'^[a-zA-Z0-9_-]+$').hasMatch(subdomain)) {
-            // 
+            //
             return subdomain;
           }
         }
       }
 
-      // 
+      //
       return '';
     } catch (e) {
-      // 
+      //
       return '';
     }
   }
@@ -346,4 +399,3 @@ class AppConfig with ChangeNotifier {
 
 // Singleton instance
 final appConfig = AppConfig();
-

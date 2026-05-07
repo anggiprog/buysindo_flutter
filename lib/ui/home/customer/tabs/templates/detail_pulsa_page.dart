@@ -5,7 +5,6 @@ import '../../../../../features/customer/data/models/product_prabayar_model.dart
 import '../../../../../features/customer/data/models/transaction_response_model.dart';
 import '../../../../../core/network/api_service.dart';
 import '../../../../../core/network/session_manager.dart';
-import '../../../../../core/security/totp_service.dart';
 import '../../../pin.dart';
 import '../../../topup_modal.dart';
 import '../../../topup/topup_manual.dart';
@@ -42,6 +41,8 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
   // User ID and Zone ID state
   String? _inputUserId;
   String? _inputZoneId;
+
+  int get _totalBayar => widget.product.hargaJualMember;
 
   @override
   void initState() {
@@ -95,7 +96,7 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         if (mounted) {
           setState(() {
             _userSaldo = saldoResponse.saldo;
-            _isSaldoCukup = _userSaldo >= widget.product.totalHarga;
+            _isSaldoCukup = _userSaldo >= _totalBayar;
             _isLoadingSaldo = false;
           });
         }
@@ -265,11 +266,7 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
 
   Future<void> _processTransaction(String pin, String token) async {
     try {
-      // Generate TOTP token for transaction security
-      final adminToken = TOTPService.getCurrentToken(
-        secretKey: 'Anggiprog@241288123_2026',
-        timeStep: 60,
-      );
+      // Hybrid mode: JWT identifies the user, HMAC signs the transaction body.
 
       final response = await _apiService.processPrabayarTransaction(
         pin: pin,
@@ -278,12 +275,13 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
         productName: widget.product.productName,
         phoneNumber: widget.phone,
         discount: widget.product.produkDiskon,
-        total: widget.product.totalHarga,
+        total: _totalBayar,
         markupMember: widget.product.markupMember,
         hargaJualMember: widget.product.hargaJualMember,
         token: token,
-        userId: _inputUserId ?? '',
-        adminToken: adminToken,
+        hmacApiKey: AppConfig.runtimeApiKey,
+        hmacSecret: AppConfig.runtimeApiSecret,
+        hmacAdminId: appConfig.adminUserId,
         zoneId: _inputZoneId,
       );
 
@@ -312,7 +310,47 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
           _showError(transaction.message);
         }
       } else {
-        _showError(response.data['message'] ?? 'Gagal memproses transaksi');
+        // ✅ Improved error handling for different status codes
+        String errorMessage = 'Gagal memproses transaksi';
+
+        // Log response untuk debugging
+        print('❌ [Transaction Error] Status: ${response.statusCode}');
+        print('❌ [Transaction Error] Response: ${response.data}');
+
+        switch (response.statusCode) {
+          case 401:
+            errorMessage = 'Sesi habis, silakan login kembali';
+            break;
+          case 403:
+            errorMessage = 'Akses ditolak atau akun tidak aktif';
+            break;
+          case 422:
+            // Validation error (price manipulation, invalid PIN, etc.)
+            if (response.data is Map) {
+              if (response.data.containsKey('errors')) {
+                // Laravel validation errors
+                errorMessage =
+                    'Validasi data gagal: ${response.data['errors']}';
+              } else {
+                errorMessage =
+                    response.data['message'] ?? 'Data transaksi tidak valid';
+              }
+            } else {
+              errorMessage = 'Data transaksi tidak valid';
+            }
+            break;
+          case 429:
+            // Rate limit or transaction already processing
+            errorMessage = 'Transaksi sedang diproses, tunggu beberapa detik';
+            break;
+          default:
+            errorMessage =
+                response.data is Map && response.data['message'] != null
+                ? response.data['message']
+                : errorMessage;
+        }
+
+        _showError(errorMessage);
       }
     } catch (e) {
       _showError('Terjadi kesalahan saat proses transaksi: $e');
@@ -444,7 +482,7 @@ class _DetailPulsaPageState extends State<DetailPulsaPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Anda membutuhkan Rp ${widget.product.totalHarga - _userSaldo} lagi',
+                                  'Anda membutuhkan Rp ${_totalBayar - _userSaldo} lagi',
                                   style: TextStyle(
                                     color: Colors.red[700],
                                     fontSize: 11,

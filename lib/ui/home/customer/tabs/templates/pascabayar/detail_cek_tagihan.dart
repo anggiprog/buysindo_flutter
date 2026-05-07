@@ -343,7 +343,8 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             final price = billResponseData['price'] ?? 0;
             final admin = billResponseData['admin'] ?? 0;
             final totalTagihan =
-                billResponseData['selling_price'] ?? (price + admin);
+                price +
+                admin; // Always calculate: price + admin (NOT selling_price)
 
             final billData = {
               'customer_name': billResponseData['customer_name'],
@@ -396,7 +397,8 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
             final price = billResponseData['price'] ?? 0;
             final admin = billResponseData['admin'] ?? 0;
             final totalTagihan =
-                billResponseData['selling_price'] ?? (price + admin);
+                price +
+                admin; // Always calculate: price + admin (NOT selling_price)
 
             final billData = {
               'customer_name': billResponseData['customer_name'],
@@ -789,18 +791,21 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               final descData = billResponseData['desc'];
 
               final billData = {
-                'customer_name': billResponseData['customer_name'],
-                'customer_no': billResponseData['customer_no'],
+                'customer_name': billResponseData['customer_name'] ?? '',
+                'customer_no': billResponseData['customer_no'] ?? '',
                 'periode': descData['tahun_pajak'] ?? '',
-                'tagihan': billResponseData['price'],
-                'admin': billResponseData['admin'],
+                'tagihan': billResponseData['price'] ?? 0,
+                'admin': billResponseData['admin'] ?? 0,
                 'denda': 0,
-                'total_tagihan': billResponseData['selling_price'],
+                'total_tagihan':
+                    (billResponseData['price'] ?? 0) +
+                    (billResponseData['admin'] ??
+                        0), // price + admin (NOT selling_price)
                 'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
-                'ref_id': billResponseData['ref_id'],
-                'product_name': billResponseData['buyer_sku_code'],
-                'buyer_sku_code': billResponseData['buyer_sku_code'],
-                'brand': billResponseData['buyer_sku_code'],
+                'ref_id': billResponseData['ref_id'] ?? '',
+                'product_name': billResponseData['buyer_sku_code'] ?? '',
+                'buyer_sku_code': billResponseData['buyer_sku_code'] ?? '',
+                'brand': billResponseData['buyer_sku_code'] ?? '',
                 'biaya_lain': 0,
                 // PBB-specific fields
                 'alamat': descData['alamat'] ?? null,
@@ -837,18 +842,21 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   : 0;
 
               final billData = {
-                'customer_name': billResponseData['customer_name'],
-                'customer_no': billResponseData['customer_no'],
+                'customer_name': billResponseData['customer_name'] ?? '',
+                'customer_no': billResponseData['customer_no'] ?? '',
                 'periode': periode,
                 'tagihan': nilaiTagihan,
-                'admin': billResponseData['admin'],
+                'admin': billResponseData['admin'] ?? 0,
                 'denda': 0,
-                'total_tagihan': billResponseData['selling_price'],
+                'total_tagihan':
+                    nilaiTagihan +
+                    (billResponseData['admin'] ??
+                        0), // tagihan + admin (NOT selling_price)
                 'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
-                'ref_id': billResponseData['ref_id'],
-                'product_name': billResponseData['buyer_sku_code'],
-                'buyer_sku_code': billResponseData['buyer_sku_code'],
-                'brand': billResponseData['buyer_sku_code'],
+                'ref_id': billResponseData['ref_id'] ?? '',
+                'product_name': billResponseData['buyer_sku_code'] ?? '',
+                'buyer_sku_code': billResponseData['buyer_sku_code'] ?? '',
+                'brand': billResponseData['buyer_sku_code'] ?? '',
                 'biaya_lain': 0,
                 'alamat': null,
                 'jumlah_peserta': null,
@@ -889,18 +897,21 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   : '';
 
               final billData = {
-                'customer_name': billResponseData['customer_name'],
-                'customer_no': billResponseData['customer_no'],
+                'customer_name': billResponseData['customer_name'] ?? '',
+                'customer_no': billResponseData['customer_no'] ?? '',
                 'periode': periode,
-                'tagihan': billResponseData['price'],
-                'admin': billResponseData['admin'],
+                'tagihan': billResponseData['price'] ?? 0,
+                'admin': billResponseData['admin'] ?? 0,
                 'denda': 0,
-                'total_tagihan': billResponseData['selling_price'],
+                'total_tagihan':
+                    (billResponseData['price'] ?? 0) +
+                    (billResponseData['admin'] ??
+                        0), // price + admin (NOT selling_price)
                 'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
-                'ref_id': billResponseData['ref_id'],
-                'product_name': billResponseData['buyer_sku_code'],
-                'buyer_sku_code': billResponseData['buyer_sku_code'],
-                'brand': billResponseData['buyer_sku_code'],
+                'ref_id': billResponseData['ref_id'] ?? '',
+                'product_name': billResponseData['buyer_sku_code'] ?? '',
+                'buyer_sku_code': billResponseData['buyer_sku_code'] ?? '',
+                'brand': billResponseData['buyer_sku_code'] ?? '',
                 'biaya_lain': 0,
                 'alamat': descData['alamat'] ?? null,
                 'jumlah_peserta': null,
@@ -934,18 +945,21 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
               final jpn = (int.tryParse(descData['jpn'].toString()) ?? 0);
 
               final billData = {
-                'customer_name': billResponseData['customer_name'],
-                'customer_no': billResponseData['customer_no'],
+                'customer_name': billResponseData['customer_name'] ?? '',
+                'customer_no': billResponseData['customer_no'] ?? '',
                 'periode': descData['kode_divisi'] ?? '-',
-                'tagihan': billResponseData['price'],
-                'admin': billResponseData['admin'],
+                'tagihan': billResponseData['price'] ?? 0,
+                'admin': billResponseData['admin'] ?? 0,
                 'denda': 0,
-                'total_tagihan': billResponseData['selling_price'],
+                'total_tagihan':
+                    (billResponseData['price'] ?? 0) +
+                    (billResponseData['admin'] ??
+                        0), // price + admin (NOT selling_price)
                 'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
-                'ref_id': billResponseData['ref_id'],
-                'product_name': billResponseData['buyer_sku_code'],
-                'buyer_sku_code': billResponseData['buyer_sku_code'],
-                'brand': billResponseData['buyer_sku_code'],
+                'ref_id': billResponseData['ref_id'] ?? '',
+                'product_name': billResponseData['buyer_sku_code'] ?? '',
+                'buyer_sku_code': billResponseData['buyer_sku_code'] ?? '',
+                'brand': billResponseData['buyer_sku_code'] ?? '',
                 'biaya_lain': 0,
                 'alamat': null,
                 'jumlah_peserta': null,
@@ -987,20 +1001,20 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                   : '';
 
               final billData = {
-                'customer_name': billResponseData['customer_name'],
-                'customer_no': billResponseData['customer_no'],
+                'customer_name': billResponseData['customer_name'] ?? '',
+                'customer_no': billResponseData['customer_no'] ?? '',
                 'periode': periode,
-                'tagihan': billResponseData['price'],
-                'admin': billResponseData['admin'],
+                'tagihan': billResponseData['price'] ?? 0,
+                'admin': billResponseData['admin'] ?? 0,
                 'denda': 0,
                 'total_tagihan':
-                    billResponseData['price'] +
-                    billResponseData['admin'], // price + admin
+                    (billResponseData['price'] ?? 0) +
+                    (billResponseData['admin'] ?? 0), // price + admin
                 'lembar_tagihan': descData['lembar_tagihan'] ?? 1,
-                'ref_id': billResponseData['ref_id'],
-                'product_name': billResponseData['buyer_sku_code'],
-                'buyer_sku_code': billResponseData['buyer_sku_code'],
-                'brand': billResponseData['buyer_sku_code'],
+                'ref_id': billResponseData['ref_id'] ?? '',
+                'product_name': billResponseData['buyer_sku_code'] ?? '',
+                'buyer_sku_code': billResponseData['buyer_sku_code'] ?? '',
+                'brand': billResponseData['buyer_sku_code'] ?? '',
                 'biaya_lain': 0,
                 'alamat': descData['alamat'] ?? null,
                 'jumlah_peserta': descData['jumlah_peserta'] ?? null,
@@ -1027,7 +1041,10 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
                 'tagihan': billResponseData['price'],
                 'admin': billResponseData['admin'],
                 'denda': 0,
-                'total_tagihan': billResponseData['selling_price'],
+                'total_tagihan':
+                    (billResponseData['price'] ?? 0) +
+                    (billResponseData['admin'] ??
+                        0), // price + admin (NOT selling_price)
                 'lembar_tagihan':
                     billResponseData['desc']['lembar_tagihan'] ?? 1,
                 'ref_id': billResponseData['ref_id'],

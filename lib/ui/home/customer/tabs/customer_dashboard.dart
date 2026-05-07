@@ -112,15 +112,22 @@ class _CustomerDashboardState extends State<CustomerDashboard>
     );
   }
 
-  Future<void> _fetchAdminNotifCount() async {
-    try {
-      String? token = await SessionManager.getToken();
-      final count = await ApiService.instance.getAdminNotificationCount(token);
-      if (mounted) setState(() => _adminNotifCount = count);
-    } catch (e) {
-      
+ Future<void> _fetchAdminNotifCount() async {
+  try {
+    String? token = await SessionManager.getToken();
+
+    // Debug print token
+    print('Admin Token: $token');
+
+    final count = await ApiService.instance.getAdminNotificationCount(token);
+
+    if (mounted) {
+      setState(() => _adminNotifCount = count);
     }
+  } catch (e) {
+    print('Error fetch admin notif count: $e');
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +151,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
           case 'ppob':
             content = const PpobTemplate();
             break;
-          case 'Toko Online':
+          case 'toko online':
             content = const TokoOnlineTemplate();
             break;
           case 'ojek_online':

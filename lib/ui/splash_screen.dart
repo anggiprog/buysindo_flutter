@@ -58,9 +58,9 @@ class _SplashScreenState extends State<SplashScreen> {
           // 
 
           final token = await SessionManager.getToken();
-          debugPrint(
-            '🔑 [SplashScreen] Token retrieved: ${token != null && token.isNotEmpty ? "YES" : "NO"} (length=${token?.length ?? 0})',
-          );
+         // debugPrint(
+         //   '🔑 [SplashScreen] Token retrieved: ${token != null && token.isNotEmpty ? "YES" : "NO"} (length=${token?.length ?? 0})',
+         // );
           if (!mounted) return;
           // Check for pending OTP first
           final pendingOtp = await SessionManager.getPendingOtpEmail();

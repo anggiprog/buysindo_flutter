@@ -24,7 +24,6 @@ class TransactionHistoryTab extends StatefulWidget {
   /// Call this static method after successful transaction to trigger refresh
   static void triggerRefresh() {
     refreshNotifier.value++;
-    
   }
 
   /// Clear cache for prabayar transactions
@@ -32,7 +31,7 @@ class TransactionHistoryTab extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('transaction_history_cache');
     await prefs.remove('transaction_history_timestamp');
-    // 
+    //
   }
 
   /// Clear cache for pascabayar transactions
@@ -40,7 +39,7 @@ class TransactionHistoryTab extends StatefulWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('transaction_pascabayar_cache');
     await prefs.remove('transaction_pascabayar_timestamp');
-    // 
+    //
   }
 
   /// Clear all transaction caches
@@ -52,7 +51,7 @@ class TransactionHistoryTab extends StatefulWidget {
     await prefs.remove('transaction_pascabayar_timestamp');
     await prefs.remove('transaction_mutasi_cache');
     await prefs.remove('transaction_mutasi_timestamp');
-    // 
+    //
   }
 
   @override
@@ -103,7 +102,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
       vsync: this,
       initialIndex: initialIndex,
     );
-    
+
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -135,7 +134,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
   }
 
   void _onRefreshTriggered() {
-    // 
+    //
     // Force refresh based on current tab
     if (_tabController.index == 0) {
       _loadTransactionHistory(forceRefresh: true);
@@ -402,13 +401,13 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         return;
       }
 
-      debugPrint('🔐 Token: ${token.substring(0, 20)}...');
+      // debugPrint('🔐 Token: ${token.length > 20 ? token.substring(0, 20) : token}...');
 
       // 3. Fetch from API
       final response = await _apiService.getTransactionDetailPrabayar(token);
 
-      // 
-      // 
+      //
+      //
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -419,13 +418,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
             data['status'] == 'Sukses' ||
             data['status'] == true);
 
-        
-
         if (isSuccess) {
           // Parse response
           final transactionData = data['data'] as List?;
-
-          
 
           if (transactionData != null) {
             if (transactionData.isNotEmpty) {
@@ -437,8 +432,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                   )
                   .toList();
 
-              
-
               // Sort by date (newest first)
               _allTransactions.sort(
                 (a, b) => b.tanggalTransaksi.compareTo(a.tanggalTransaksi),
@@ -447,8 +440,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
               // 4. Fetch store name and attach to transactions
               try {
                 final storeResponse = await _apiService.getUserStore(token);
-                
-                
 
                 if (storeResponse.statusCode == 200) {
                   final storeData = storeResponse.data;
@@ -485,29 +476,19 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                         namaToko: storeName,
                       );
                     }
-                    
-                  } else {
-                    
-                  }
-                } else {
-                  
-                }
-              } catch (e) {
-                
-                
-              }
+                  } else {}
+                } else {}
+              } catch (e) {}
 
               // Save to cache
               await _saveToCache();
             } else {
-              
               _allTransactions = [];
             }
 
             // Apply filters
             _applyFilters();
           } else {
-            
             _allTransactions = [];
             _applyFilters();
           }
@@ -518,7 +499,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _setError('Gagal mengambil data (${response.statusCode})');
       }
     } catch (e) {
-      
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -551,10 +531,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           )
           .toList();
 
-      
       return true;
     } catch (e) {
-      
       return false;
     }
   }
@@ -589,10 +567,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _cacheTimestampKey,
         DateTime.now().millisecondsSinceEpoch,
       );
-      
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   void _applyFilters() {
@@ -665,13 +640,12 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         return;
       }
 
-      debugPrint('🔐 Token Pascabayar: ${token.substring(0, 20)}...');
+      debugPrint(
+        '🔐 Token Pascabayar: ${token.length > 20 ? token.substring(0, 20) : token}...',
+      );
 
       // 3. Fetch from API
       final response = await _apiService.getTransactionDetailPascabayar(token);
-
-      
-      
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -682,13 +656,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
             data['status'] == 'Sukses' ||
             data['status'] == true);
 
-        
-
         if (isSuccess) {
           // Parse response
           final transactionData = data['data'] as List?;
-
-          
 
           if (transactionData != null) {
             if (transactionData.isNotEmpty) {
@@ -699,8 +669,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                     ),
                   )
                   .toList();
-
-              
 
               // Sort by date (newest first)
               _allPascabayarTransactions.sort(
@@ -762,31 +730,23 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                         namaToko: storeName,
                       );
                     }
-                    
-                  } else {
-                    
-                  }
+                  } else {}
                 } else {
                   debugPrint(
                     '⚠️ Store API (Pascabayar) returned status: ${storeResponse.statusCode}',
                   );
                 }
-              } catch (e) {
-                
-                
-              }
+              } catch (e) {}
 
               // Save to cache
               await _savePascabayarToCache();
             } else {
-              
               _allPascabayarTransactions = [];
             }
 
             // Apply filters
             _applyPascabayarFilters();
           } else {
-            
             _allPascabayarTransactions = [];
             _applyPascabayarFilters();
           }
@@ -797,7 +757,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _setError('Gagal mengambil data (${response.statusCode})');
       }
     } catch (e) {
-      
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -831,10 +790,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           )
           .toList();
 
-      
       return true;
     } catch (e) {
-      
       return false;
     }
   }
@@ -878,10 +835,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _cachePascabayarTimestampKey,
         DateTime.now().millisecondsSinceEpoch,
       );
-      
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   void _setError(String message) {
@@ -1424,13 +1378,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         return;
       }
 
-      debugPrint('🔐 Token Mutasi: ${token.substring(0, 20)}...');
+      // debugPrint('🔐 Token Mutasi: ${token.length > 20 ? token.substring(0, 20) : token}...');
 
       // 3. Fetch from API
       final response = await _apiService.getLogTransaksiMutasi(token);
-
-      
-      
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -1439,13 +1390,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         final bool isSuccess =
             (data['status'] == true || data['status'] == 'success');
 
-        
-
         if (isSuccess) {
           // Parse response
           final transactionData = data['data'] as List?;
-
-          
 
           if (transactionData != null && transactionData.isNotEmpty) {
             _allMutasiTransactions = transactionData
@@ -1454,8 +1401,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                       TransactionMutasi.fromJson(item as Map<String, dynamic>),
                 )
                 .toList();
-
-            
 
             // Sort by date (newest first)
             _allMutasiTransactions.sort(
@@ -1496,18 +1441,14 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
                       namaToko: storeName,
                     );
                   }
-                  
                 }
               }
-            } catch (e) {
-              
-            }
+            } catch (e) {}
 
             // Save to cache
             await _saveMutasiToCache();
             _applyMutasiFilters();
           } else {
-            
             _allMutasiTransactions = [];
             _applyMutasiFilters();
           }
@@ -1518,7 +1459,6 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _setError('Gagal mengambil data (${response.statusCode})');
       }
     } catch (e) {
-      
       _setError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -1547,10 +1487,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
           )
           .toList();
 
-      
       return true;
     } catch (e) {
-      
       return false;
     }
   }
@@ -1568,10 +1506,7 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
         _cacheMutasiTimestampKey,
         DateTime.now().millisecondsSinceEpoch,
       );
-      
-    } catch (e) {
-      
-    }
+    } catch (e) {}
   }
 
   void _applyMutasiFilters() {
@@ -1778,4 +1713,3 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab>
     );
   }
 }
-
