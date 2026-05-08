@@ -1,4 +1,4 @@
-import 'dart:collection';
+//import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart'; // ✅ For HMAC-SHA256
@@ -645,14 +645,14 @@ class ApiService {
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
+    //  final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-           baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-      //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -1298,14 +1298,14 @@ class ApiService {
     String? hmacAdminId, // Optional for admin mode (Admin ID)
     String? zoneId,
   }) {
-   // print('📤 [API Request] processPrabayarTransaction:');
-   // print('   - Category: $category');
-   // print('   - SKU: $sku');
-   // print('   - Product: $productName');
-   // print('   - Phone: $phoneNumber');
-   // print('   - Total: $total');
-   // print('   - Token: ${token.isNotEmpty ? '✓' : '✗'}');
-   // print('   - Zone ID: $zoneId');
+    // print('📤 [API Request] processPrabayarTransaction:');
+    // print('   - Category: $category');
+    // print('   - SKU: $sku');
+    // print('   - Product: $productName');
+    // print('   - Phone: $phoneNumber');
+    // print('   - Total: $total');
+    // print('   - Token: ${token.isNotEmpty ? '✓' : '✗'}');
+    // print('   - Zone ID: $zoneId');
 
     final data = {
       'pin': pin,
@@ -1340,7 +1340,12 @@ class ApiService {
       // for mobile user mode, or used with user_id for admin/server mode.
       final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000)
           .toString();
-      final sortedData = SplayTreeMap<String, dynamic>.from(data);
+
+      // Sort data keys untuk memastikan consistency dengan backend
+      // Backend juga melakukan sort sebelum json_encode
+      final sortedEntries = data.entries.toList()
+        ..sort((a, b) => a.key.compareTo(b.key));
+      final sortedData = Map.fromEntries(sortedEntries);
       final jsonBody = jsonEncode(sortedData);
 
       // Generate HMAC-SHA256 signature
@@ -1357,6 +1362,14 @@ class ApiService {
       headers['X-ADMIN-ID'] = hmacAdminId ?? '';
       headers['Content-Type'] = 'application/json';
       headers['Accept'] = 'application/json';
+
+      // Debug logs untuk membantu troubleshooting
+      print('🔐 [HMAC Debug] Timestamp: $timestamp');
+      print('🔐 [HMAC Debug] Data keys order: ${data.keys.toList()}');
+      print('🔐 [HMAC Debug] Sorted keys order: ${sortedData.keys.toList()}');
+      print('🔐 [HMAC Debug] JSON Body: $jsonBody');
+      print('🔐 [HMAC Debug] Signature Payload: $signaturePayload');
+      print('🔐 [HMAC Debug] Signature: $signature');
 
       // Optional: Add nonce for extra security
       // headers['X-Nonce'] = const Uuid().v4();

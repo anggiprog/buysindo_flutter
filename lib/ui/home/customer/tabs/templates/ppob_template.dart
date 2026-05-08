@@ -312,9 +312,9 @@ class _PpobTemplateState extends State<PpobTemplate> {
         }
       }
 
-      print(
-        '📌 [Banner] FINAL - Fetching banners for adminId: $adminId (subdomain: $subdomain)',
-      );
+    //  print(
+    //    '📌 [Banner] FINAL - Fetching banners for adminId: $adminId (subdomain: $subdomain)',
+    //  );
 
       final response = await apiService.getBanners(adminId);
 

@@ -150,9 +150,9 @@ class _CekTagihanBottomSheetState extends State<_CekTagihanBottomSheet>
 
     try {
       final token = await SessionManager.getToken();
-      print(
-        '🔑 [CekTagihan] Token retrieved: [90m${token?.substring(0, 20)}...[0m',
-      );
+    //  print(
+     //   '🔑 [CekTagihan] Token retrieved: [90m${token?.substring(0, 20)}...[0m',
+    //  );
 
       if (token == null) {
         throw Exception('Token tidak ditemukan');
