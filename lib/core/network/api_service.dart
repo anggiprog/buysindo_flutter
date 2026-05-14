@@ -645,14 +645,14 @@ class ApiService {
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //  final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
+    //final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.6/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
         baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.2/');
+    //baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.6/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -709,21 +709,25 @@ class ApiService {
   // ===========================================================================
 
   /// Mengambil daftar menu/kategori untuk toko online
-  /// GET /api/toko-online/menus?admin_user_id=xxx
-  Future<Response> getTokoOnlineMenus(String adminUserId) {
+  /// GET /api/admin/toko-online/kategori?admin_user_id=xxx
+  Future<Response> getTokoOnlineMenus(String adminUserId, [String? token]) {
     return _dio.get(
-      'api/toko-online/menus',
+      'api/admin/toko-online/kategori',
       queryParameters: {'admin_user_id': adminUserId},
+      options: token != null
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null,
     );
   }
 
   /// Mengambil daftar produk berdasarkan menu ID
-  /// GET /api/toko-online/products?admin_user_id=xxx&menu_id=xxx
+  /// GET /api/admin/toko-online/produk?admin_user_id=xxx&menu_id=xxx&page=1&per_page=20
   Future<Response> getTokoOnlineProducts({
     required String adminUserId,
     int? menuId,
     int page = 1,
     int perPage = 20,
+    String? token,
   }) {
     final Map<String, dynamic> params = {
       'admin_user_id': adminUserId,
@@ -733,22 +737,34 @@ class ApiService {
     if (menuId != null) {
       params['menu_id'] = menuId;
     }
-    return _dio.get('api/toko-online/products', queryParameters: params);
+    return _dio.get(
+      'api/admin/toko-online/produk',
+      queryParameters: params,
+      options: token != null
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null,
+    );
   }
 
   /// Mengambil detail produk berdasarkan ID
-  /// GET /api/toko-online/product/{id}
-  Future<Response> getTokoOnlineProductDetail(int productId) {
-    return _dio.get('api/toko-online/product/$productId');
+  /// GET /api/admin/toko-online/produk/{id}
+  Future<Response> getTokoOnlineProductDetail(int productId, [String? token]) {
+    return _dio.get(
+      'api/admin/toko-online/produk/$productId',
+      options: token != null
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null,
+    );
   }
 
-  /// Mencari produk
-  /// GET /api/toko-online/search?admin_user_id=xxx&q=xxx
+  /// Mencari produk - menggunakan query parameter 'q' pada endpoint produk
+  /// GET /api/admin/toko-online/produk?admin_user_id=xxx&q=query&per_page=20
   Future<Response> searchTokoOnlineProducts({
     required String adminUserId,
     required String query,
     int? menuId,
     int perPage = 20,
+    String? token,
   }) {
     final Map<String, dynamic> params = {
       'admin_user_id': adminUserId,
@@ -758,7 +774,13 @@ class ApiService {
     if (menuId != null) {
       params['menu_id'] = menuId;
     }
-    return _dio.get('api/toko-online/search', queryParameters: params);
+    return _dio.get(
+      'api/admin/toko-online/produk',
+      queryParameters: params,
+      options: token != null
+          ? Options(headers: {'Authorization': 'Bearer $token'})
+          : null,
+    );
   }
 
   // ===========================================================================

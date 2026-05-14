@@ -40,6 +40,11 @@ class AppLogger {
     if (_isLoggingEnabled) {}
   }
 
+  /// Log untuk warning (non-critical issues)
+  static void logWarning(String message) {
+    if (_isLoggingEnabled) {}
+  }
+
   /// Check apakah logging enabled (untuk conditional logging)
   static bool get isEnabled => _isLoggingEnabled;
 }

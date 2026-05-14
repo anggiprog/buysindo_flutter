@@ -8,15 +8,46 @@ class CredentialLoader {
   static const String _fallbackApiSecret =
       'VnYFeBtB409q8AQqjIiQqKsemMnOVN11OiBiUFnxWlZJC7c37emAY3obfaN2mdtW';
 
+  // Store external credentials (loaded from config endpoint)
+  static String? _externalApiKey;
+  static String? _externalApiSecret;
+
+  /// Set credentials from external source (config endpoint)
+  static void setExternalCredentials(String? apiKey, String? apiSecret) {
+    _externalApiKey = apiKey;
+    _externalApiSecret = apiSecret;
+    if (apiKey != null && apiSecret != null) {
+      AppLogger.logInfo(
+        '[CredentialLoader] External credentials set from config | Key: ${apiKey.substring(0, 20)}... | Secret: ${apiSecret.substring(0, 20)}...',
+      );
+    }
+  }
+
   /// Load API credentials with multiple fallback strategies
   /// Priority:
-  /// 1. Asset file (assets/env_config.txt)
-  /// 2. Environment variables (from --dart-define)
-  /// 3. Hardcoded fallback
+  /// 1. External credentials (from config endpoint - for dynamic admin support)
+  /// 2. Asset file (assets/env_config.txt)
+  /// 3. Environment variables (from --dart-define)
+  /// 4. Hardcoded fallback
   static Future<Map<String, String>> loadCredentials() async {
     AppLogger.logInfo('[CredentialLoader] Starting credential loading...');
 
-    // Prefer bundled asset config so app and generated build stay in sync.
+    // PRIORITY 1: External credentials (set from config endpoint)
+    if (_externalApiKey != null &&
+        _externalApiKey!.isNotEmpty &&
+        _externalApiSecret != null &&
+        _externalApiSecret!.isNotEmpty) {
+      AppLogger.logInfo(
+        '[CredentialLoader] Loaded from external config | Key: ${_externalApiKey!.substring(0, 20)}... | Secret: ${_externalApiSecret!.substring(0, 20)}...',
+      );
+      return {
+        'apiKey': _externalApiKey!,
+        'apiSecret': _externalApiSecret!,
+        'source': 'external_config',
+      };
+    }
+
+    // PRIORITY 2: Prefer bundled asset config so app and generated build stay in sync.
     try {
       final envContent = await rootBundle.loadString('assets/env_config.txt');
       final credentials = _parseEnvFile(envContent);
@@ -37,6 +68,7 @@ class CredentialLoader {
       AppLogger.logError('[CredentialLoader] Could not load from assets: $e');
     }
 
+    // PRIORITY 3: Environment variables
     final envApiKey = const String.fromEnvironment('API_KEY', defaultValue: '');
     final envApiSecret = const String.fromEnvironment(
       'API_SECRET',
@@ -54,6 +86,7 @@ class CredentialLoader {
       };
     }
 
+    // PRIORITY 4: Hardcoded fallback
     AppLogger.logError(
       '[CredentialLoader] Using hardcoded fallback credentials | Key: ${_fallbackApiKey.substring(0, 20)}... | Secret: ${_fallbackApiSecret.substring(0, 20)}...',
     );

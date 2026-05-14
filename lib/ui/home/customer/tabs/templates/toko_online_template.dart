@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/app_config.dart';
 import '../../../../../core/network/api_service.dart';
+import '../../../../../core/network/session_manager.dart';
 import '../../../../../core/services/toko_online_cache_service.dart';
 import '../../../banner_slider_widget.dart';
 import '../../../../pages/toko_online/product_list_page.dart';
@@ -65,7 +66,6 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         _menuList = cachedMenus;
         _isLoadingMenus = false;
       });
-      
     }
 
     if (cachedProducts != null && cachedProducts.isNotEmpty) {
@@ -73,7 +73,6 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         _productList = cachedProducts;
         _isLoadingProducts = false;
       });
-      
     }
   }
 
@@ -97,17 +96,24 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         setState(() => _isLoadingBanners = false);
       }
     } catch (e) {
-      
       setState(() => _isLoadingBanners = false);
     }
   }
 
   Future<void> _fetchMenus() async {
     try {
+      // Get token from session
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        setState(() => _isLoadingMenus = false);
+        return;
+      }
+
       final response = await _apiService.getTokoOnlineMenus(
         appConfig.adminUserId,
+        token,
       );
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data['status'] == true) {
         final menus = List<Map<String, dynamic>>.from(
           response.data['data'] ?? [],
         );
@@ -124,7 +130,6 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
           });
           // Save to cache
           await tokoOnlineCache.saveMenus(menus);
-          
         } else {
           setState(() => _isLoadingMenus = false);
         }
@@ -132,7 +137,6 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         setState(() => _isLoadingMenus = false);
       }
     } catch (e) {
-      
       setState(() => _isLoadingMenus = false);
     }
   }
@@ -143,12 +147,20 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
       setState(() => _isLoadingProducts = true);
     }
     try {
+      // Get token from session
+      final token = await SessionManager.getToken();
+      if (token == null) {
+        setState(() => _isLoadingProducts = false);
+        return;
+      }
+
       final response = await _apiService.getTokoOnlineProducts(
         adminUserId: appConfig.adminUserId,
         menuId: menuId,
         perPage: 50, // Fetch more products for caching
+        token: token,
       );
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
         final products = List<Map<String, dynamic>>.from(
           response.data['data'] ?? [],
         );
@@ -165,7 +177,6 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
           });
           // Save to cache
           await tokoOnlineCache.saveProducts(products);
-          
         } else {
           setState(() => _isLoadingProducts = false);
         }
@@ -173,7 +184,6 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
         setState(() => _isLoadingProducts = false);
       }
     } catch (e) {
-      
       setState(() => _isLoadingProducts = false);
     }
   }
@@ -185,8 +195,8 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
   ) {
     if (list1.length != list2.length) return false;
     for (int i = 0; i < list1.length; i++) {
-      if (list1[i]['id'] != list2[i]['id'] ||
-          list1[i]['name'] != list2[i]['name']) {
+      if (list1[i]['kategori_id'] != list2[i]['kategori_id'] ||
+          list1[i]['nama_kategori'] != list2[i]['nama_kategori']) {
         return false;
       }
     }
@@ -201,7 +211,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
     if (list1.length != list2.length) return false;
     for (int i = 0; i < list1.length; i++) {
       if (list1[i]['id'] != list2[i]['id'] ||
-          list1[i]['nama_barang'] != list2[i]['nama_barang']) {
+          list1[i]['nama_produk'] != list2[i]['nama_produk']) {
         return false;
       }
     }
@@ -213,8 +223,8 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
       context,
       MaterialPageRoute(
         builder: (context) => ProductListPage(
-          menuId: menu['id'] as int,
-          menuTitle: menu['title'] ?? 'Produk',
+          menuId: menu['kategori_id'] as int,
+          menuTitle: menu['nama_kategori'] ?? 'Produk',
         ),
       ),
     );
@@ -277,7 +287,11 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
               itemCount: _menuList.length,
               itemBuilder: (context, index) {
                 final menu = _menuList[index];
-                final iconUrl = menu['icon_url'] as String?;
+                final gambarKategori = menu['gambar_kategori'] as String?;
+                final iconUrl =
+                    gambarKategori != null && gambarKategori.isNotEmpty
+                    ? _apiService.imageMenuIconUrl + gambarKategori
+                    : null;
                 return GestureDetector(
                   onTap: () {
                     Navigator.pop(context);
@@ -316,7 +330,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                       SizedBox(
                         width: 60,
                         child: Text(
-                          menu['title'] ?? 'Menu',
+                          menu['nama_kategori'] ?? 'Menu',
                           style: const TextStyle(fontSize: 11),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -542,7 +556,10 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
           }
 
           final menu = displayMenus[index];
-          final iconUrl = menu['icon_url'] as String?;
+          final gambarKategori = menu['gambar_kategori'] as String?;
+          final iconUrl = gambarKategori != null && gambarKategori.isNotEmpty
+              ? _apiService.imageMenuIconUrl + gambarKategori
+              : null;
 
           return GestureDetector(
             onTap: () => _navigateToProductList(menu),
@@ -582,7 +599,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                   SizedBox(
                     width: 70,
                     child: Text(
-                      menu['title'] ?? 'Menu',
+                      menu['nama_kategori'] ?? 'Menu',
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -685,10 +702,14 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
       itemCount: _productList.length,
       itemBuilder: (context, index) {
         final product = _productList[index];
-        final imageUrl = product['gambar'] as String?;
-        final harga = (product['harga'] as num?)?.toDouble() ?? 0;
-        final hargaDiskon = (product['harga_diskon'] as num?)?.toDouble() ?? 0;
-        final hasDiscount = hargaDiskon > 0 && hargaDiskon < harga;
+        final gambarProduk = product['gambar_produk'] as String?;
+        final imageUrl = gambarProduk != null && gambarProduk.isNotEmpty
+            ? _apiService.imageProductUrl + gambarProduk
+            : null;
+        final harga = (product['harga_produk'] as num?)?.toDouble() ?? 0;
+        final hargaAsli =
+            (product['harga_produk_asli'] as num?)?.toDouble() ?? 0;
+        final hasDiscount = hargaAsli > 0 && hargaAsli > harga;
 
         return GestureDetector(
           onTap: () => _navigateToProductDetail(product),
@@ -782,7 +803,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '${((harga - hargaDiskon) / harga * 100).round()}%',
+                              '${((hargaAsli - harga) / hargaAsli * 100).round()}%',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -801,7 +822,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product['nama_barang'] ?? 'Produk',
+                        product['nama_produk'] ?? 'Produk',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 13, height: 1.2),
@@ -810,7 +831,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                       // Price
                       if (hasDiscount) ...[
                         Text(
-                          _currencyFormatter.format(harga),
+                          _currencyFormatter.format(hargaAsli),
                           style: TextStyle(
                             fontSize: 11,
                             color: Colors.grey.shade500,
@@ -818,7 +839,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                           ),
                         ),
                         Text(
-                          _currencyFormatter.format(hargaDiskon),
+                          _currencyFormatter.format(harga),
                           style: TextStyle(
                             color: appConfig.primaryColor,
                             fontWeight: FontWeight.bold,
@@ -845,7 +866,7 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Stok: ${product['stok'] ?? 0}',
+                            'Stok: ${product['jumlah_stok'] ?? 0}',
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey.shade500,
@@ -864,4 +885,3 @@ class _TokoOnlineTemplateState extends State<TokoOnlineTemplate> {
     );
   }
 }
-

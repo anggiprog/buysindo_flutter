@@ -256,6 +256,22 @@ class AppConfig with ChangeNotifier {
         //
         final model = AppConfigModel.fromApi(responseData);
 
+        // 🔐 Extract and set API credentials from response (for dynamic admin support)
+        if (responseData is Map<String, dynamic>) {
+          final apiKey = responseData['api_key'];
+          final apiSecret = responseData['api_secret'];
+          if (apiKey != null && apiSecret != null) {
+            CredentialLoader.setExternalCredentials(apiKey, apiSecret);
+            AppLogger.logDebug(
+              '✅ [AppConfig] Loaded API credentials from config endpoint for admin: ${model.id}',
+            );
+          } else {
+            AppLogger.logWarning(
+              '⚠️ [AppConfig] API credentials not found in config response for admin: ${model.id}',
+            );
+          }
+        }
+
         // STRICT RULE: Admin User ID determination
         // Priority: 1. From subdomain API, 2. From model if subdomain exists, 3. Default admin ID
         if (apiAdminUserId != null && apiAdminUserId.isNotEmpty) {
