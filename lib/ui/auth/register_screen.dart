@@ -7,6 +7,7 @@ import 'dart:math';
 import '../../core/app_config.dart';
 import '../../core/network/api_service.dart';
 import '../../core/security/signature_service.dart';
+import '../../core/security/credential_loader.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -105,6 +106,54 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return generatedId;
   }
 
+  /// 🆕 Fetch admin-specific credentials for registration
+  /// This method calls the backend to get the correct API key and secret
+  /// for the current admin/subdomain, ensuring registrations are attributed
+  /// to the correct admin instead of always using the hardcoded universal key
+  Future<void> _fetchAdminCredentialsForRegistration(
+    ApiService apiService,
+  ) async {
+    try {
+      debugPrint(
+        '[RegisterScreen._fetchAdminCredentialsForRegistration] Starting...',
+      );
+
+      // Try to get subdomain from app config
+      final appConfig = AppConfig();
+      String? subdomain = appConfig.subdomain;
+      String? adminUserId = appConfig.adminUserId;
+
+      debugPrint(
+        '[RegisterScreen._fetchAdminCredentialsForRegistration] Current config: subdomain=$subdomain, adminUserId=$adminUserId',
+      );
+
+      // Try to fetch admin-specific credentials
+      final success = await CredentialLoader.fetchAndSetAdminCredentials(
+        apiService,
+        subdomain: subdomain?.isNotEmpty == true ? subdomain : null,
+        adminUserId: adminUserId?.isNotEmpty == true ? adminUserId : null,
+      );
+
+      if (success) {
+        debugPrint(
+          '[RegisterScreen._fetchAdminCredentialsForRegistration] ✅ Successfully fetched admin-specific credentials',
+        );
+        // Reload credentials to get the fetched ones
+        await AppConfig.loadCredentials();
+      } else {
+        debugPrint(
+          '[RegisterScreen._fetchAdminCredentialsForRegistration] ⚠️ Failed to fetch admin credentials, will use cached ones',
+        );
+        // If we can't fetch admin-specific credentials, continue with cached ones
+      }
+    } catch (e) {
+      debugPrint(
+        '[RegisterScreen._fetchAdminCredentialsForRegistration] Error: $e',
+      );
+      // Don't fail the registration, just log the error and continue
+    }
+  }
+
   Future<void> _handleRegister() async {
     _clearErrorMessage();
 
@@ -131,6 +180,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       final dio = Dio();
       final apiService = ApiService(dio);
+
+      // 🆕 STEP 0: Fetch admin-specific credentials before registration
+      // This ensures we use the correct admin's credentials instead of the hardcoded universal ones
+      await _fetchAdminCredentialsForRegistration(apiService);
 
       // --- [1] Sanitize username ---
       final sanitizedUsername = _usernameController.text
@@ -253,17 +306,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else if (response.statusCode == 401) {
         final responseData = response.data;
         setState(() {
-          _errorMessage =
-              responseData is Map<String, dynamic>
-                  ? (responseData['message'] ??
-                        'Signature HMAC atau credential API tidak sesuai dengan backend.')
-                  : 'Signature HMAC atau credential API tidak sesuai dengan backend.';
+          _errorMessage = responseData is Map<String, dynamic>
+              ? (responseData['message'] ??
+                    'Signature HMAC atau credential API tidak sesuai dengan backend.')
+              : 'Signature HMAC atau credential API tidak sesuai dengan backend.';
         });
       } else if (response.statusCode == 403) {
         setState(() {
           _errorMessage =
-              response.data['message'] ??
-              'Akses ditolak oleh server.';
+              response.data['message'] ?? 'Akses ditolak oleh server.';
         });
       } else if (response.statusCode == 500) {
         setState(() {

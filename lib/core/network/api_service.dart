@@ -644,15 +644,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.11/');
+    //  final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.11/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //  baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.11/');
+        //     baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.11/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -1618,6 +1618,42 @@ class ApiService {
   /// Verifikasi email user
   Future<Response> verifyEmail(String token) {
     return _dio.get('api/verify-email', queryParameters: {'token': token});
+  }
+
+  /// Get admin-specific API credentials for registration
+  /// This method fetches the correct API key and secret for a given subdomain/admin
+  ///
+  /// Parameters:
+  /// - subdomain: The subdomain of the admin (optional)
+  /// - adminUserId: The admin user ID (optional, used as fallback)
+  ///
+  /// Returns a response containing:
+  /// {
+  ///   "error": false,
+  ///   "data": {
+  ///     "admin_user_id": 1050,
+  ///     "api_key": "...",
+  ///     "api_secret": "...",
+  ///     "username": "..."
+  ///   }
+  /// }
+  Future<Response> getAdminCredentials({
+    String? subdomain,
+    String? adminUserId,
+  }) {
+    final queryParams = <String, dynamic>{};
+    if (subdomain != null && subdomain.isNotEmpty) {
+      queryParams['subdomain'] = subdomain;
+    }
+    if (adminUserId != null && adminUserId.isNotEmpty) {
+      queryParams['admin_user_id'] = adminUserId;
+    }
+
+    return _dio.get(
+      'api/admin-credentials',
+      queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      options: Options(validateStatus: (status) => status! < 500),
+    );
   }
 
   // ===========================================================================

@@ -23,6 +23,60 @@ class CredentialLoader {
     }
   }
 
+  /// Fetch credentials for a specific admin/subdomain from backend
+  /// This should be called before registration to get the correct admin's credentials
+  ///
+  /// Parameters:
+  /// - apiService: The API service instance to make HTTP requests
+  /// - subdomain: The subdomain to get credentials for (optional)
+  /// - adminUserId: The admin user ID to get credentials for (optional)
+  static Future<bool> fetchAndSetAdminCredentials(
+    dynamic apiService, {
+    String? subdomain,
+    String? adminUserId,
+  }) async {
+    try {
+      AppLogger.logInfo(
+        '[CredentialLoader.fetchAndSetAdminCredentials] Fetching admin credentials | subdomain: $subdomain, adminUserId: $adminUserId',
+      );
+
+      // Make API call to get admin credentials
+      final response = await apiService.getAdminCredentials(
+        subdomain: subdomain,
+        adminUserId: adminUserId,
+      );
+
+      if (response.statusCode == 200 &&
+          response.data['error'] == false &&
+          response.data['data'] != null) {
+        final data = response.data['data'];
+        final apiKey = data['api_key'] as String?;
+        final apiSecret = data['api_secret'] as String?;
+
+        if (apiKey != null &&
+            apiKey.isNotEmpty &&
+            apiSecret != null &&
+            apiSecret.isNotEmpty) {
+          setExternalCredentials(apiKey, apiSecret);
+          AppLogger.logInfo(
+            '[CredentialLoader.fetchAndSetAdminCredentials] SUCCESS | Admin ID: ${data['admin_user_id']}, Username: ${data['username']}',
+          );
+          return true;
+        }
+      }
+
+      AppLogger.logError(
+        '[CredentialLoader.fetchAndSetAdminCredentials] FAILED | Response: ${response.data}',
+      );
+      return false;
+    } catch (e) {
+      AppLogger.logError(
+        '[CredentialLoader.fetchAndSetAdminCredentials] Exception: $e',
+      );
+      return false;
+    }
+  }
+
   /// Load API credentials with multiple fallback strategies
   /// Priority:
   /// 1. External credentials (from config endpoint - for dynamic admin support)
