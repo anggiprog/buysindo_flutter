@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:math';
 import '../../core/app_config.dart';
 import '../../core/network/api_service.dart';
-import '../../core/security/signature_service.dart';
-import '../../core/security/credential_loader.dart';
+import '../../core/security/totp_service.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -39,20 +36,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    // Load API credentials at startup
-    _loadCredentials();
-  }
-
-  Future<void> _loadCredentials() async {
-    try {
-      await AppConfig.loadCredentials();
-      if (mounted) {
-        setState(() {});
-      }
-    } catch (e) {
-      // Credentials will fallback to defaults
-      debugPrint('Error loading credentials: $e');
-    }
   }
 
   @override
@@ -91,69 +74,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<String> _getRegistrationDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    const deviceIdKey = 'stored_device_id';
-
-    final existingId = prefs.getString(deviceIdKey);
-    if (existingId != null && existingId.isNotEmpty) {
-      return existingId;
-    }
-
-    final generatedId =
-        'device_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
-    await prefs.setString(deviceIdKey, generatedId);
-    return generatedId;
-  }
-
-  /// 🆕 Fetch admin-specific credentials for registration
-  /// This method calls the backend to get the correct API key and secret
-  /// for the current admin/subdomain, ensuring registrations are attributed
-  /// to the correct admin instead of always using the hardcoded universal key
-  Future<void> _fetchAdminCredentialsForRegistration(
-    ApiService apiService,
-  ) async {
-    try {
-      debugPrint(
-        '[RegisterScreen._fetchAdminCredentialsForRegistration] Starting...',
-      );
-
-      // Try to get subdomain from app config
-      final appConfig = AppConfig();
-      String? subdomain = appConfig.subdomain;
-      String? adminUserId = appConfig.adminUserId;
-
-      debugPrint(
-        '[RegisterScreen._fetchAdminCredentialsForRegistration] Current config: subdomain=$subdomain, adminUserId=$adminUserId',
-      );
-
-      // Try to fetch admin-specific credentials
-      final success = await CredentialLoader.fetchAndSetAdminCredentials(
-        apiService,
-        subdomain: subdomain?.isNotEmpty == true ? subdomain : null,
-        adminUserId: adminUserId?.isNotEmpty == true ? adminUserId : null,
-      );
-
-      if (success) {
-        debugPrint(
-          '[RegisterScreen._fetchAdminCredentialsForRegistration] ✅ Successfully fetched admin-specific credentials',
-        );
-        // Reload credentials to get the fetched ones
-        await AppConfig.loadCredentials();
-      } else {
-        debugPrint(
-          '[RegisterScreen._fetchAdminCredentialsForRegistration] ⚠️ Failed to fetch admin credentials, will use cached ones',
-        );
-        // If we can't fetch admin-specific credentials, continue with cached ones
-      }
-    } catch (e) {
-      debugPrint(
-        '[RegisterScreen._fetchAdminCredentialsForRegistration] Error: $e',
-      );
-      // Don't fail the registration, just log the error and continue
-    }
-  }
-
   Future<void> _handleRegister() async {
     _clearErrorMessage();
 
@@ -176,74 +96,43 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await AppConfig.loadCredentials();
-
       final dio = Dio();
       final apiService = ApiService(dio);
 
-      // 🆕 STEP 0: Fetch admin-specific credentials before registration
-      // This ensures we use the correct admin's credentials instead of the hardcoded universal ones
-      await _fetchAdminCredentialsForRegistration(apiService);
+      // --- [1] Generate TOTP token otomatis ---
+      const String secretKey = 'Anggiprog@241288123_2026';
+      const int timeStep = 60;
+      final adminToken = TOTPService.getCurrentToken(
+        secretKey: secretKey,
+        timeStep: timeStep,
+      );
 
-      // --- [1] Sanitize username ---
+      // --- [2] Sanitize username ---
       final sanitizedUsername = _usernameController.text
           .replaceAll(RegExp(r'\s+'), '')
           .toLowerCase();
 
-      // --- [2] Prepare request body ---
-      // Important: Send null instead of empty strings to match backend signature validation
-      final registrationDeviceId = await _getRegistrationDeviceId();
-
-      final body = {
-        'username': sanitizedUsername,
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text,
-        'full_name': _fullNameController.text.trim().isEmpty
-            ? null
-            : _fullNameController.text.trim(),
-        'phone': _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
-        'referral_code': _referralCodeController.text.trim().isEmpty
-            ? null
-            : _referralCodeController.text.trim(),
-        'device_token': registrationDeviceId,
-      };
-
-      // --- [3] Generate signature headers ---
-      // Register V2 mengikuti backend: hanya HMAC + API key.
-      final apiKey = AppConfig.runtimeApiKey;
-      final apiSecret = AppConfig.runtimeApiSecret;
-      final credentialSource = AppConfig.runtimeCredentialSource;
-      final secretFingerprint = sha256
-          .convert(apiSecret.codeUnits)
-          .toString()
-          .substring(0, 12);
-
-      // 🔍 Debug: Log which credentials are being used
-      debugPrint('[RegisterScreen] Using credentials:');
-      debugPrint('  Source: $credentialSource');
-      debugPrint('  API Key: ${apiKey.substring(0, 20)}...');
-      debugPrint('  API Secret: ${apiSecret.substring(0, 20)}...');
-      debugPrint('  Secret Fingerprint: $secretFingerprint');
-
-      final headers = SignatureService.generateHeaders(
-        body: body,
-        apiKey: apiKey,
-        secret: apiSecret,
-      );
-      headers['X-Credential-Source'] = credentialSource;
-      headers['X-Secret-Fingerprint'] = secretFingerprint;
-
-      // --- [4] Call registerV2 dengan signature headers ---
+      // --- [3] Call registerV2 dengan token di header ---
       final url = '${apiService.baseUrl}api/registerV2';
 
       final response = await dio.post(
         url,
-        data: body,
+        data: {
+          'username': sanitizedUsername,
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text,
+          'full_name': _fullNameController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'referral_code': _referralCodeController.text.trim(),
+          'device_token':
+              'flutter-app-${DateTime.now().millisecondsSinceEpoch}',
+        },
         options: Options(
-          headers: headers,
-          validateStatus: (status) => status != null && status < 600,
+          headers: {
+            'X-Admin-Token': adminToken,
+            'X-Admin-User-ID': appConfig.adminUserId,
+            'Content-Type': 'application/json',
+          },
         ),
       );
 
@@ -254,13 +143,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (response.statusCode == 201) {
         // Sukses registrasi
         final responseData = response.data;
-        final responseUserId =
-            responseData is Map<String, dynamic> &&
-                responseData['data'] is Map<String, dynamic>
-            ? responseData['data']['user_id']
-            : null;
 
-        if (responseData['error'] == false && responseUserId != null) {
+        if (responseData['error'] == false) {
           // Simpan email ke registered_emails untuk deteksi duplikat
           final prefs = await SharedPreferences.getInstance();
           final registeredEmails =
@@ -292,7 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           setState(() {
             _errorMessage =
                 responseData['message'] ??
-                'Registrasi belum tersimpan dengan benar. Silakan coba lagi.';
+                'Registrasi gagal. Silakan coba lagi.';
           });
         }
       } else if (response.statusCode == 400) {
@@ -303,18 +187,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               responseData['message'] ??
               'Data tidak valid. Silakan periksa kembali.';
         });
-      } else if (response.statusCode == 401) {
-        final responseData = response.data;
-        setState(() {
-          _errorMessage = responseData is Map<String, dynamic>
-              ? (responseData['message'] ??
-                    'Signature HMAC atau credential API tidak sesuai dengan backend.')
-              : 'Signature HMAC atau credential API tidak sesuai dengan backend.';
-        });
       } else if (response.statusCode == 403) {
+        // Token admin tidak valid
         setState(() {
           _errorMessage =
-              response.data['message'] ?? 'Akses ditolak oleh server.';
+              response.data['message'] ??
+              'Token admin tidak valid. Hubungi administrator.';
         });
       } else if (response.statusCode == 500) {
         setState(() {
