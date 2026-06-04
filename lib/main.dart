@@ -62,6 +62,8 @@ import 'ui/home/referral/referral.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+
 import 'dart:convert';
 import 'dart:async';
 import 'features/topup/screens/topup_history_screen.dart';
@@ -125,6 +127,15 @@ Future<void> main() async {
 
   // Ensure Flutter bindings are initialized for native calls and plugins
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 2. Inisialisasi Firebase
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint("Firebase init error: $e");
+  }
   AppLogger.log('✅ [main] WidgetsFlutterBinding initialized');
 
   // Load environment variables if used by DefaultFirebaseOptions
@@ -140,19 +151,38 @@ Future<void> main() async {
   // Initialize Firebase
   try {
     AppLogger.log('🔥 [main] Initializing Firebase...');
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    
+    // ✅ Mencoba inisialisasi dengan opsi
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } catch (e) {
+      AppLogger.log('⚠️ [main] Initializing with options failed, trying default native init...');
+      // Jika DefaultFirebaseOptions error, coba inisialisasi default (membaca file native)
+      await Firebase.initializeApp();
+    }
+    
     AppLogger.log('✅ [main] Firebase initialized successfully');
 
-    // Register background message handler and request permission for messaging
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-    await FirebaseMessaging.instance.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
+    if (Firebase.apps.isNotEmpty) {
+      // Register background message handler
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      
+      // Pancing FCM untuk mendapatkan token seawal mungkin
+      FirebaseMessaging.instance.getToken().then((token) {
+        AppLogger.log('📲 [main] FCM Token Status: ${token != null ? "READY" : "NULL"}');
+      }).catchError((e) {
+        AppLogger.logError('❌ [main] Gagal mendapatkan token awal', e);
+      });
+
+      await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+      );
+    }
     AppLogger.log('✅ [main] FCM Permission requested');
   } catch (e) {
     AppLogger.logError('Firebase initialization error', e);
@@ -349,13 +379,11 @@ Future<void> _fetchConfigAsync() async {
 
 /// Background message handler for Firebase Cloud Messaging
 /// This runs when app is in background or terminated
+// Definisikan background handler di luar fungsi main (top-level function)
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background message
-
-  // Anda bisa add custom logic di sini untuk handle background notifications
-  // Misalnya: simpan ke local storage, trigger background fetch, dll
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print("Handling a background message: ${message.messageId}");
 }
-
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 

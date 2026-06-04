@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ Pastikan package ini sudah di-import di pubspec.yaml
 import '../../core/app_config.dart';
 import '../../core/network/api_service.dart';
 import '../../core/network/session_manager.dart';
 import 'otp_screen.dart';
 import 'register_screen.dart';
-import 'forgot_password_screen.dart'; // Import the ForgotPasswordScreen
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,7 +19,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isObscure = true;
   bool _isLoading = false;
-  bool _checkingPendingOtp = true; // Block UI until check completes
+  bool _checkingPendingOtp = true;
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -31,8 +33,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _checkPendingOtp() async {
     final pendingEmail = await SessionManager.getPendingOtpEmail();
     if (pendingEmail != null && pendingEmail.isNotEmpty && mounted) {
-      
-      // Use pushReplacement to prevent going back to login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => OtpScreen(email: pendingEmail)),
@@ -45,10 +45,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    // First check if there's a pending OTP - block login if so
     final pendingEmail = await SessionManager.getPendingOtpEmail();
     if (pendingEmail != null && pendingEmail.isNotEmpty) {
-      
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -70,24 +68,39 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final dio = Dio();
-      final apiService = ApiService(dio);
+      final apiService = ApiService.instance;
 
-      
+      // ✅ Cek apakah Firebase sudah terinisialisasi sebelum memanggil FCM
+      if (Firebase.apps.isNotEmpty) {
+        try {
+          String? fcmToken = await FirebaseMessaging.instance
+              .getToken()
+              .timeout(const Duration(seconds: 8));
+          if (fcmToken != null) {
+            //   debugPrint(
+            //    '🚀 [FCM] Berhasil mendapatkan token asli: ${fcmToken.substring(0, 10)}...',
+            //   );
+          }
+        } catch (e) {
+          // debugPrint(
+          //    '⚠️ [FCM] Gagal mengambil token (mungkin masalah koneksi/Play Services): $e',
+          //   );
+        }
+      } else {
+        // debugPrint(
+        //   '❌ [FCM] Firebase belum terinisialisasi. Periksa config native.',
+        //  );
+      }
 
+      // 3. Kirim fcmToken ke server (Pastikan Langkah 1 di api_service.dart sudah dilakukan)
       final loginResponse = await apiService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      
-
       if (!mounted) return;
 
-      // Check if OTP is required
       if (loginResponse.requireOtp == true) {
-        
-        // Save pending OTP email so if user exits app, they'll be redirected back
         await SessionManager.savePendingOtpEmail(_emailController.text.trim());
         if (mounted) {
           Navigator.push(
@@ -101,42 +114,24 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // If no OTP required and token is available, save and navigate
       if (loginResponse.status == true && loginResponse.accessToken != null) {
-        
-
         await SessionManager.saveToken(loginResponse.accessToken!);
-        
 
-        // Update device token di server
-        
         try {
           await apiService.updateDeviceToken(loginResponse.accessToken!);
         } catch (e) {
           debugPrint('⚠️ Device token update failed (non-critical): $e');
         }
 
-        // Delay untuk memastikan token tersimpan dengan baik
         await Future.delayed(const Duration(milliseconds: 500));
 
-        if (!mounted) {
-          
-          return;
-        }
+        if (!mounted) return;
 
-        
-        Navigator.of(context)
-            .pushReplacementNamed('/home')
-            .then((_) {
-              
-            })
-            .catchError((e) {
-              
-            });
+        Navigator.of(
+          context,
+        ).pushReplacementNamed('/home').then((_) {}).catchError((e) {});
       } else {
         final errorMsg = loginResponse.message ?? 'Login gagal';
-        
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
@@ -145,20 +140,14 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on DioException catch (e) {
       if (!mounted) return;
-
       final errorMsg =
           e.response?.data?['message'] ??
           'Koneksi gagal. Periksa email dan password Anda.';
-      
-      
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
       );
     } catch (e) {
       if (!mounted) return;
-
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${e.toString()}'),
@@ -166,6 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } finally {
+      // ✅ Typo 'finaly' sudah diperbaiki menjadi 'finally'
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -179,7 +169,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading while checking pending OTP
     if (_checkingPendingOtp) {
       return const Scaffold(
         backgroundColor: Colors.white,
@@ -196,7 +185,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
           return Stack(
             children: [
-              // Latar belakang header berwarna dinamis
               Container(
                 height: MediaQuery.of(context).size.height * 0.4,
                 width: double.infinity,
@@ -209,7 +197,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       children: [
                         const SizedBox(height: 60),
-                        // Card Putih Floating
                         Container(
                           padding: const EdgeInsets.all(24.0),
                           decoration: BoxDecoration(
@@ -237,8 +224,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               const SizedBox(height: 20),
-
-                              // Input Email
                               TextFormField(
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
@@ -256,7 +241,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Icons.email_outlined,
                                     color: Colors.black,
                                   ),
-                                  prefixIconColor: Colors.black,
                                   labelText: "Email",
                                   labelStyle: const TextStyle(
                                     color: Colors.black,
@@ -284,8 +268,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               const SizedBox(height: 15),
-
-                              // Input Password
                               TextFormField(
                                 controller: _passwordController,
                                 obscureText: _isObscure,
@@ -304,7 +286,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                         Icons.lock_outlined,
                                         color: Colors.black,
                                       ),
-                                      prefixIconColor: Colors.black,
                                       labelText: "Password",
                                       labelStyle: const TextStyle(
                                         color: Colors.black,
@@ -345,8 +326,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                               ),
                               const SizedBox(height: 30),
-
-                              // Tombol Login dengan Loading Indicator
                               SizedBox(
                                 width: double.infinity,
                                 height: 50,
@@ -393,7 +372,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Widget Helper tetap dipertahankan
   Widget _buildHeader(Color primaryColor) {
     return Row(
       children: [
@@ -481,4 +459,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

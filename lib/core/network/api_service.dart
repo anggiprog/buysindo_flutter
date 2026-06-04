@@ -17,7 +17,9 @@ import '../utils/file_reader.dart';
 import '../logger.dart';
 
 // Silence all debug logging in this service
-void _noopLog(Object? _) {}
+void _noopLog(Object? message) {
+  if (message != null) AppLogger.log(message.toString());
+}
 
 // Temporary helper to surface tokens in console for debugging/Postman
 void _debugTokenLog(String? token, {String source = ''}) {
@@ -644,15 +646,15 @@ class ApiService {
 
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
-      final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-   // final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.11/');
+    final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    //final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.14/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
-             baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-       // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.11/');
+        baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
+    //baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.14/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -788,10 +790,15 @@ class ApiService {
   // ===========================================================================
 
   /// High-level Login: sends device token and returns LoginResponse
+ /// High-level Login: sends device token and returns LoginResponse
   Future<LoginResponse> login(String email, String password) async {
     try {
       _noopLog('🔐 [ApiService] Starting login with email: $email');
+      
+      // Gunakan getDeviceToken() yang sudah memiliki logika safety check (Firebase.apps.isEmpty)
+      // dan fallback otomatis ke ID lokal jika Firebase gagal.
       final deviceToken = await getDeviceToken();
+
       _noopLog(
         '📤 [ApiService] Sending login request with device_token: $deviceToken',
       );
@@ -801,7 +808,7 @@ class ApiService {
         data: {
           'email': email,
           'password': password,
-          'device_token': deviceToken,
+          'device_token': deviceToken, // ✅ Token asli (atau fallback) dikirim ke sini
         },
       );
 
@@ -823,61 +830,47 @@ class ApiService {
   /// Get Firebase Device Token safely - with persistent stored device ID fallback
   Future<String> getDeviceToken() async {
     try {
-      _noopLog('📱 [ApiService] Fetching Firebase device token...');
+      AppLogger.log('📱 [ApiService] Fetching Firebase device token...');
 
-      // Check if Firebase is initialized
-      final firebaseInitialized = Firebase.apps.isNotEmpty;
-      _noopLog('📱 [ApiService] Firebase.apps.length: ${Firebase.apps.length}');
-      _noopLog('📱 [ApiService] Firebase initialized: $firebaseInitialized');
-
-      if (!firebaseInitialized) {
-        _noopLog('⚠️ [ApiService] Firebase NOT initialized! Using fallback.');
+      if (Firebase.apps.isEmpty) {
+        AppLogger.log('⚠️ [ApiService] Firebase NOT initialized! Using fallback.');
         return await _getStoredDeviceId();
       }
 
       final fm = FirebaseMessaging.instance;
-      _noopLog('📱 [ApiService] FirebaseMessaging instance acquired');
 
-      // Request permission first
-      final settings = await fm.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-      _noopLog(
-        '📱 [ApiService] FCM Permission status: ${settings.authorizationStatus}',
-      );
+      // Cek status izin. Hindari memanggil requestPermission setiap saat jika sudah diberikan.
+      NotificationSettings settings = await fm.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        settings = await fm.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      }
+
+      AppLogger.log('📱 [ApiService] FCM Permission status: ${settings.authorizationStatus}');
 
       // Try to get token
+      // PENTING: Jika Anda menjalankan ini di WEB, Anda WAJIB memberikan vapidKey.
+      // Ambil VAPID Key di Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificates.
+      // Contoh: final token = await fm.getToken(vapidKey: "YOUR_PUBLIC_VAPID_KEY");
       final token = await fm.getToken();
-      _noopLog(
-        '📱 [ApiService] Firebase.getToken() returned: ${token != null ? '✅ TOKEN' : '❌ NULL'}',
-      );
-      _noopLog('📱 [ApiService] Token length: ${token?.length ?? 0}');
+
+      AppLogger.log('📱 [ApiService] Firebase.getToken() returned: ${token != null ? '✅ TOKEN' : '❌ NULL'}');
 
       if (token != null && token.isNotEmpty) {
-        _noopLog(
-          '✅ [ApiService] Firebase device token fetched: ${token.substring(0, 30)}...',
-        );
+        AppLogger.log('✅ [ApiService] Firebase device token fetched successfully');
         return token;
       } else {
-        _noopLog('⚠️ [ApiService] Firebase token is NULL/EMPTY!');
-        _noopLog('⚠️ [ApiService] Common causes:');
-        _noopLog('   - Device without Google Play Services');
-        _noopLog('   - Firebase config (google-services.json) invalid');
-        _noopLog('   - Network connectivity issue');
-        _noopLog('   - FCM permission not granted');
-        _noopLog('⚠️ [ApiService] Using fallback stored device ID instead...');
+        AppLogger.log('⚠️ [ApiService] Firebase token is NULL/EMPTY!');
+        AppLogger.log('   Penyebab Umum: 1. Emulator tanpa Google Play Services, 2. google-services.json salah, 3. VAPID Key (Web) belum diset.');
+        
         final storedId = await _getStoredDeviceId();
-        _noopLog('⚠️ [ApiService] Fallback device ID: $storedId');
         return storedId;
       }
     } catch (e) {
-      _noopLog('❌ [ApiService] EXCEPTION getting Firebase token: $e');
-      _noopLog('❌ [ApiService] Exception type: ${e.runtimeType}');
-      _noopLog('❌ [ApiService] Stack trace: ${StackTrace.current}');
-      _noopLog('❌ [ApiService] Using fallback stored device ID...');
+      AppLogger.logError('❌ [ApiService] Error getting Firebase token', e);
       return await _getStoredDeviceId();
     }
   }
