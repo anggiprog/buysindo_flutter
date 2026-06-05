@@ -20,6 +20,37 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+// Optional Firebase config override for generated SaaS apps.
+// Example:
+// flutter build apk --release \
+//   -PappPackage=com.agicell.app \
+//   -PgoogleServicesFile=E:/path/to/com.agicell.app/google-services.json
+//
+// Without this property, the default android/app/google-services.json is used
+// for com.buysindostore.app.
+val googleServicesFileProperty = providers.gradleProperty("googleServicesFile").orNull
+val generatedGoogleServicesFile = file("src/release/google-services.json")
+val generatedGoogleServicesMarker = file("src/release/.generated-google-services")
+if (!googleServicesFileProperty.isNullOrBlank()) {
+    val sourceGoogleServicesFile = file(googleServicesFileProperty)
+    if (!sourceGoogleServicesFile.exists()) {
+        throw GradleException("googleServicesFile not found: $googleServicesFileProperty")
+    }
+
+    generatedGoogleServicesFile.parentFile.mkdirs()
+    sourceGoogleServicesFile.copyTo(generatedGoogleServicesFile, overwrite = true)
+    generatedGoogleServicesMarker.writeText(sourceGoogleServicesFile.absolutePath)
+    println("[Firebase] Using tenant google-services.json: ${sourceGoogleServicesFile.absolutePath}")
+
+    gradle.buildFinished {
+        generatedGoogleServicesFile.delete()
+        generatedGoogleServicesMarker.delete()
+    }
+} else if (generatedGoogleServicesMarker.exists()) {
+    generatedGoogleServicesFile.delete()
+    generatedGoogleServicesMarker.delete()
+}
+
 // Ambil variabel dari Laravel Job (-PversionCode & -PversionName)
 val flutterVersionCode = if (project.hasProperty("versionCode")) {
     project.property("versionCode").toString()
@@ -233,5 +264,3 @@ tasks.whenTaskAdded {
         }
     }
 }
-
-
