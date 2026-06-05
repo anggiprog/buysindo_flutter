@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ Pastikan package ini sudah di-import di pubspec.yaml
 import '../../core/app_config.dart';
 import '../../core/network/api_service.dart';
 import '../../core/network/session_manager.dart';
@@ -69,30 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final apiService = ApiService.instance;
-
-      // ✅ Cek apakah Firebase sudah terinisialisasi sebelum memanggil FCM
-      if (Firebase.apps.isNotEmpty) {
-        try {
-          String? fcmToken = await FirebaseMessaging.instance
-              .getToken()
-              .timeout(const Duration(seconds: 8));
-          if (fcmToken != null) {
-            debugPrint(
-              '🚀 [FCM] Berhasil mendapatkan token asli: ${fcmToken.substring(0, 10)}...',
-            );
-          }
-        } catch (e) {
-          debugPrint(
-            '⚠️ [FCM] Gagal mengambil token (mungkin masalah koneksi/Play Services): $e',
-          );
-        }
-      } else {
-        debugPrint(
-          '❌ [FCM] Firebase belum terinisialisasi. Periksa config native.',
-        );
-      }
-
-      // 3. Kirim fcmToken ke server (Pastikan Langkah 1 di api_service.dart sudah dilakukan)
       final loginResponse = await apiService.login(
         _emailController.text.trim(),
         _passwordController.text,

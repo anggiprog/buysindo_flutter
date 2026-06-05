@@ -794,7 +794,7 @@ class ApiService {
     try {
       _noopLog('🔐 [ApiService] Starting login with email: $email');
       
-      final deviceToken = await tryGetDeviceToken();
+      final deviceToken = await getAuthDeviceToken();
 
       _noopLog(
         '📤 [ApiService] Sending login request with device_token: $deviceToken',
@@ -805,7 +805,7 @@ class ApiService {
         data: {
           'email': email,
           'password': password,
-          if (deviceToken != null) 'device_token': deviceToken,
+          'device_token': deviceToken,
         },
       );
 
@@ -890,6 +890,19 @@ class ApiService {
     }
   }
 
+  Future<String> getAuthDeviceToken() async {
+    final fcmToken = await tryGetDeviceToken();
+    if (fcmToken != null && fcmToken.isNotEmpty) {
+      return fcmToken;
+    }
+
+    final fallbackToken = await _getStoredDeviceId();
+    _noopLog(
+      'Using local fallback device_token for auth because FCM is unavailable.',
+    );
+    return fallbackToken;
+  }
+
   /// Get or generate stored device identifier (persists across app sessions)
   Future<String> _getStoredDeviceId() async {
     try {
@@ -931,14 +944,14 @@ class ApiService {
   /// Verify OTP code
   Future<OtpResponse> verifyOtp(String email, String otpCode) async {
     try {
-      final deviceToken = await tryGetDeviceToken();
+      final deviceToken = await getAuthDeviceToken();
 
       final response = await _dio.post(
         'api/verify-otp',
         data: {
           'email': email,
           'otp_code': otpCode,
-          if (deviceToken != null) 'device_token': deviceToken,
+          'device_token': deviceToken,
         },
       );
 
