@@ -794,8 +794,7 @@ class ApiService {
     try {
       _noopLog('🔐 [ApiService] Starting login with email: $email');
       
-      // device_token di backend dipakai untuk FCM, jadi wajib token asli Firebase.
-      final deviceToken = await getDeviceToken();
+      final deviceToken = await tryGetDeviceToken();
 
       _noopLog(
         '📤 [ApiService] Sending login request with device_token: $deviceToken',
@@ -806,7 +805,7 @@ class ApiService {
         data: {
           'email': email,
           'password': password,
-          'device_token': deviceToken,
+          if (deviceToken != null) 'device_token': deviceToken,
         },
       );
 
@@ -880,6 +879,17 @@ class ApiService {
     return token.length >= 50;
   }
 
+  Future<String?> tryGetDeviceToken() async {
+    try {
+      return await getDeviceToken();
+    } catch (e) {
+      _noopLog(
+        'FCM token unavailable, continuing without device_token: $e',
+      );
+      return null;
+    }
+  }
+
   /// Get or generate stored device identifier (persists across app sessions)
   Future<String> _getStoredDeviceId() async {
     try {
@@ -921,14 +931,14 @@ class ApiService {
   /// Verify OTP code
   Future<OtpResponse> verifyOtp(String email, String otpCode) async {
     try {
-      final deviceToken = await getDeviceToken();
+      final deviceToken = await tryGetDeviceToken();
 
       final response = await _dio.post(
         'api/verify-otp',
         data: {
           'email': email,
           'otp_code': otpCode,
-          'device_token': deviceToken,
+          if (deviceToken != null) 'device_token': deviceToken,
         },
       );
 
