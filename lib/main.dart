@@ -128,14 +128,6 @@ Future<void> main() async {
   // Ensure Flutter bindings are initialized for native calls and plugins
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Inisialisasi Firebase
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint("Firebase init error: $e");
-  }
   AppLogger.log('✅ [main] WidgetsFlutterBinding initialized');
 
   // Load environment variables if used by DefaultFirebaseOptions
@@ -151,30 +143,23 @@ Future<void> main() async {
   // Initialize Firebase
   try {
     AppLogger.log('🔥 [main] Initializing Firebase...');
-    
-    // ✅ Mencoba inisialisasi dengan opsi
-    try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-    } catch (e) {
-      AppLogger.log('⚠️ [main] Initializing with options failed, trying default native init...');
-      // Jika DefaultFirebaseOptions error, coba inisialisasi default (membaca file native)
-      await Firebase.initializeApp();
+
+    if (Firebase.apps.isEmpty) {
+      if (kIsWeb) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } else {
+        // Native Android/iOS membaca google-services.json/GoogleService-Info.plist.
+        await Firebase.initializeApp();
+      }
     }
-    
+
     AppLogger.log('✅ [main] Firebase initialized successfully');
 
     if (Firebase.apps.isNotEmpty) {
       // Register background message handler
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-      
-      // Pancing FCM untuk mendapatkan token seawal mungkin
-      FirebaseMessaging.instance.getToken().then((token) {
-        AppLogger.log('📲 [main] FCM Token Status: ${token != null ? "READY" : "NULL"}');
-      }).catchError((e) {
-        AppLogger.logError('❌ [main] Gagal mendapatkan token awal', e);
-      });
 
       await FirebaseMessaging.instance.requestPermission(
         alert: true,
@@ -182,12 +167,21 @@ Future<void> main() async {
         sound: true,
         provisional: false,
       );
+
+      // Pancing FCM setelah permission diminta supaya token asli cepat tersedia.
+      FirebaseMessaging.instance.getToken().then((token) {
+        AppLogger.log(
+          '📲 [main] FCM Token Status: ${token != null ? "READY" : "NULL"}',
+        );
+      }).catchError((e) {
+        AppLogger.logError('❌ [main] Gagal mendapatkan token awal', e);
+      });
     }
     AppLogger.log('✅ [main] FCM Permission requested');
   } catch (e) {
     AppLogger.logError('Firebase initialization error', e);
     AppLogger.log(
-      '⚠️  [main] FCM will not be available. App will use mock token fallback.',
+      '⚠️  [main] FCM will not be available until Firebase initialization succeeds.',
     );
   }
 
@@ -381,9 +375,18 @@ Future<void> _fetchConfigAsync() async {
 /// This runs when app is in background or terminated
 // Definisikan background handler di luar fungsi main (top-level function)
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  if (Firebase.apps.isEmpty) {
+    if (kIsWeb) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+  }
   print("Handling a background message: ${message.messageId}");
 }
+
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 

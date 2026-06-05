@@ -789,14 +789,12 @@ class ApiService {
   // ENDPOINTS AUTH & USER
   // ===========================================================================
 
-  /// High-level Login: sends device token and returns LoginResponse
- /// High-level Login: sends device token and returns LoginResponse
+  /// High-level Login: sends FCM token and returns LoginResponse
   Future<LoginResponse> login(String email, String password) async {
     try {
       _noopLog('🔐 [ApiService] Starting login with email: $email');
       
-      // Gunakan getDeviceToken() yang sudah memiliki logika safety check (Firebase.apps.isEmpty)
-      // dan fallback otomatis ke ID lokal jika Firebase gagal.
+      // device_token di backend dipakai untuk FCM, jadi wajib token asli Firebase.
       final deviceToken = await getDeviceToken();
 
       _noopLog(
@@ -808,7 +806,7 @@ class ApiService {
         data: {
           'email': email,
           'password': password,
-          'device_token': deviceToken, // ✅ Token asli (atau fallback) dikirim ke sini
+          'device_token': deviceToken,
         },
       );
 
@@ -827,14 +825,16 @@ class ApiService {
     }
   }
 
-  /// Get Firebase Device Token safely - with persistent stored device ID fallback
+  /// Get Firebase FCM token safely.
+  ///
+  /// Jangan pernah fallback ke ID lokal seperti device_... untuk field device_token,
+  /// karena backend memakai field ini untuk mengirim FCM.
   Future<String> getDeviceToken() async {
     try {
       AppLogger.log('📱 [ApiService] Fetching Firebase device token...');
 
       if (Firebase.apps.isEmpty) {
-        AppLogger.log('⚠️ [ApiService] Firebase NOT initialized! Using fallback.');
-        return await _getStoredDeviceId();
+        throw Exception('Firebase belum terinisialisasi');
       }
 
       final fm = FirebaseMessaging.instance;
@@ -855,24 +855,29 @@ class ApiService {
       // PENTING: Jika Anda menjalankan ini di WEB, Anda WAJIB memberikan vapidKey.
       // Ambil VAPID Key di Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificates.
       // Contoh: final token = await fm.getToken(vapidKey: "YOUR_PUBLIC_VAPID_KEY");
-      final token = await fm.getToken();
+      final token = await fm.getToken().timeout(const Duration(seconds: 15));
 
       AppLogger.log('📱 [ApiService] Firebase.getToken() returned: ${token != null ? '✅ TOKEN' : '❌ NULL'}');
 
-      if (token != null && token.isNotEmpty) {
+      if (token != null && _isLikelyFcmToken(token)) {
         AppLogger.log('✅ [ApiService] Firebase device token fetched successfully');
         return token;
-      } else {
-        AppLogger.log('⚠️ [ApiService] Firebase token is NULL/EMPTY!');
-        AppLogger.log('   Penyebab Umum: 1. Emulator tanpa Google Play Services, 2. google-services.json salah, 3. VAPID Key (Web) belum diset.');
-        
-        final storedId = await _getStoredDeviceId();
-        return storedId;
       }
+
+      throw Exception(
+        'Firebase belum mengembalikan token FCM valid. Cek Google Play Services, koneksi, dan google-services.json.',
+      );
     } catch (e) {
       AppLogger.logError('❌ [ApiService] Error getting Firebase token', e);
-      return await _getStoredDeviceId();
+      throw Exception('Gagal mengambil token FCM Firebase: $e');
     }
+  }
+
+  bool _isLikelyFcmToken(String token) {
+    if (token.isEmpty) return false;
+    if (token.startsWith('device_')) return false;
+    if (token.startsWith('flutter-app-')) return false;
+    return token.length >= 50;
   }
 
   /// Get or generate stored device identifier (persists across app sessions)

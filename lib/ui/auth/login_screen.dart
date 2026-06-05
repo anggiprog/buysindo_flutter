@@ -77,19 +77,19 @@ class _LoginScreenState extends State<LoginScreen> {
               .getToken()
               .timeout(const Duration(seconds: 8));
           if (fcmToken != null) {
-            //   debugPrint(
-            //    '🚀 [FCM] Berhasil mendapatkan token asli: ${fcmToken.substring(0, 10)}...',
-            //   );
+            debugPrint(
+              '🚀 [FCM] Berhasil mendapatkan token asli: ${fcmToken.substring(0, 10)}...',
+            );
           }
         } catch (e) {
-          // debugPrint(
-          //    '⚠️ [FCM] Gagal mengambil token (mungkin masalah koneksi/Play Services): $e',
-          //   );
+          debugPrint(
+            '⚠️ [FCM] Gagal mengambil token (mungkin masalah koneksi/Play Services): $e',
+          );
         }
       } else {
-        // debugPrint(
-        //   '❌ [FCM] Firebase belum terinisialisasi. Periksa config native.',
-        //  );
+        debugPrint(
+          '❌ [FCM] Firebase belum terinisialisasi. Periksa config native.',
+        );
       }
 
       // 3. Kirim fcmToken ke server (Pastikan Langkah 1 di api_service.dart sudah dilakukan)

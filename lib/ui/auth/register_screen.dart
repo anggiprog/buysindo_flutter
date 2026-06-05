@@ -114,6 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       // --- [3] Call registerV2 dengan token di header ---
       final url = '${apiService.baseUrl}api/registerV2';
+      final deviceToken = await apiService.getDeviceToken();
 
       final response = await dio.post(
         url,
@@ -124,8 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'full_name': _fullNameController.text.trim(),
           'phone': _phoneController.text.trim(),
           'referral_code': _referralCodeController.text.trim(),
-          'device_token':
-              'flutter-app-${DateTime.now().millisecondsSinceEpoch}',
+          'device_token': deviceToken,
         },
         options: Options(
           headers: {
