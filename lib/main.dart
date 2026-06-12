@@ -398,6 +398,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  StreamSubscription<String>? _fcmTokenRefreshSubscription;
+
   @override
   void initState() {
     AppLogger.logDebug('🔧 [_MyAppState.initState] Initializing state');
@@ -414,6 +416,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         '🔧 [_MyAppState.initState] Setting up Firebase message handlers...',
       );
       _setupForegroundMessageHandler();
+      _setupFcmTokenRefreshHandler();
       AppLogger.logDebug(
         '✅ [_MyAppState.initState] Firebase handlers setup complete',
       );
@@ -433,6 +436,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _fcmTokenRefreshSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -701,6 +705,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       AppLogger.logError('⚠️ [FCM] Error during handler setup', e);
       // Continue even if FCM setup fails
     }
+  }
+
+  void _setupFcmTokenRefreshHandler() {
+    if (kIsWeb || Firebase.apps.isEmpty) return;
+
+    _fcmTokenRefreshSubscription?.cancel();
+    _fcmTokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh
+        .listen((newToken) async {
+          final authToken = await SessionManager.getToken();
+          if (authToken == null || authToken.isEmpty) return;
+
+          await ApiService.instance.updateDeviceToken(
+            authToken,
+            deviceToken: newToken,
+          );
+        });
   }
 
   /// Initialize local notifications with Android channel

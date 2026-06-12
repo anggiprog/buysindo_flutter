@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../features/customer/data/models/product_prabayar_model.dart'; // Pastikan path benar
 import '../../features/customer/data/models/notification_count_model.dart';
 import '../../features/topup/models/topup_response_models.dart';
@@ -647,14 +648,14 @@ class ApiService {
   /// Factory constructor yang otomatis mendeteksi baseUrl untuk web
   factory ApiService.auto(Dio dio) {
     final url = WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.14/');
+    //  final url = WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.14/');
     return ApiService(dio, baseUrl: url);
   }
 
   ApiService(this._dio, {String? baseUrl}) {
     this.baseUrl =
         baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'https://buysindo.com/');
-    //baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.14/');
+    // baseUrl ?? WebHelper.getBaseUrl(defaultUrl: 'http://192.168.101.14/');
     _dio.options.baseUrl = this.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
@@ -793,8 +794,9 @@ class ApiService {
   Future<LoginResponse> login(String email, String password) async {
     try {
       _noopLog('🔐 [ApiService] Starting login with email: $email');
-      
+
       final deviceToken = await getAuthDeviceToken();
+      final deviceMetadata = await getDeviceMetadata();
 
       _noopLog(
         '📤 [ApiService] Sending login request with device_token: $deviceToken',
@@ -806,6 +808,7 @@ class ApiService {
           'email': email,
           'password': password,
           'device_token': deviceToken,
+          ...deviceMetadata,
         },
       );
 
@@ -848,7 +851,9 @@ class ApiService {
         );
       }
 
-      AppLogger.log('📱 [ApiService] FCM Permission status: ${settings.authorizationStatus}');
+      AppLogger.log(
+        '📱 [ApiService] FCM Permission status: ${settings.authorizationStatus}',
+      );
 
       // Try to get token
       // PENTING: Jika Anda menjalankan ini di WEB, Anda WAJIB memberikan vapidKey.
@@ -856,10 +861,14 @@ class ApiService {
       // Contoh: final token = await fm.getToken(vapidKey: "YOUR_PUBLIC_VAPID_KEY");
       final token = await fm.getToken().timeout(const Duration(seconds: 15));
 
-      AppLogger.log('📱 [ApiService] Firebase.getToken() returned: ${token != null ? '✅ TOKEN' : '❌ NULL'}');
+      AppLogger.log(
+        '📱 [ApiService] Firebase.getToken() returned: ${token != null ? '✅ TOKEN' : '❌ NULL'}',
+      );
 
       if (token != null && _isLikelyFcmToken(token)) {
-        AppLogger.log('✅ [ApiService] Firebase device token fetched successfully');
+        AppLogger.log(
+          '✅ [ApiService] Firebase device token fetched successfully',
+        );
         return token;
       }
 
@@ -883,9 +892,7 @@ class ApiService {
     try {
       return await getDeviceToken();
     } catch (e) {
-      _noopLog(
-        'FCM token unavailable, continuing without device_token: $e',
-      );
+      _noopLog('FCM token unavailable, continuing without device_token: $e');
       return null;
     }
   }
@@ -932,11 +939,31 @@ class ApiService {
     }
   }
 
-  /// Generate unique device identifier (timestamp + random number)
+  Future<Map<String, dynamic>> getDeviceMetadata() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    final firebaseOptions = Firebase.apps.isNotEmpty
+        ? Firebase.app().options
+        : null;
+
+    return {
+      'installation_id': await _getStoredDeviceId(),
+      'package_name': packageInfo.packageName,
+      'app_version': packageInfo.version,
+      'app_build_number': packageInfo.buildNumber,
+      'firebase_app_id': firebaseOptions?.appId,
+      'firebase_project_id': firebaseOptions?.projectId,
+      'platform': kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase(),
+    };
+  }
+
+  /// Generate a stable random identifier for this app installation.
   String _generateUniqueDeviceId() {
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final random = Random().nextInt(999999);
-    final deviceId = 'device_${timestamp}_${random}';
+    final random = Random.secure();
+    final randomHex = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    final deviceId = 'installation_$randomHex';
     _noopLog('📱 [ApiService] Generated unique device ID: $deviceId');
     return deviceId;
   }
@@ -945,6 +972,7 @@ class ApiService {
   Future<OtpResponse> verifyOtp(String email, String otpCode) async {
     try {
       final deviceToken = await getAuthDeviceToken();
+      final deviceMetadata = await getDeviceMetadata();
 
       final response = await _dio.post(
         'api/verify-otp',
@@ -952,6 +980,7 @@ class ApiService {
           'email': email,
           'otp_code': otpCode,
           'device_token': deviceToken,
+          ...deviceMetadata,
         },
       );
 
@@ -1731,19 +1760,20 @@ class ApiService {
   }
 
   /// Update or register device token
-  Future<void> updateDeviceToken(String token) async {
+  Future<void> updateDeviceToken(String token, {String? deviceToken}) async {
     try {
       _noopLog('📝 [ApiService] updateDeviceToken() called');
       _noopLog(
         '🔑 [ApiService] Using auth token: ${token.substring(0, 20)}...',
       );
 
-      final deviceToken = await getDeviceToken();
-      _noopLog('📱 [ApiService] Device token to update: $deviceToken');
+      final currentDeviceToken = deviceToken ?? await getDeviceToken();
+      final deviceMetadata = await getDeviceMetadata();
+      _noopLog('📱 [ApiService] Device token to update: $currentDeviceToken');
 
       final response = await _dio.post(
         'api/device-token/update',
-        data: {'device_token': deviceToken},
+        data: {'device_token': currentDeviceToken, ...deviceMetadata},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 

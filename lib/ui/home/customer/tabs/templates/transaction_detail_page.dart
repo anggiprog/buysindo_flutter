@@ -44,7 +44,7 @@ class _TransactionDetailPageState extends State<TransactionDetailPage> {
   @override
   void initState() {
     super.initState();
-    _apiService = ApiService(Dio());
+    _apiService = ApiService.auto(Dio());
     _printerService = BluetoothPrinterService();
     _hargaController = TextEditingController();
     _loadTransactionDetail();
@@ -963,4 +963,3 @@ class DottedLine extends StatelessWidget {
     );
   }
 }
-

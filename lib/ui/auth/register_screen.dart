@@ -115,6 +115,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // --- [3] Call registerV2 dengan token di header ---
       final url = '${apiService.baseUrl}api/registerV2';
       final deviceToken = await apiService.getAuthDeviceToken();
+      final deviceMetadata = await apiService.getDeviceMetadata();
 
       final response = await dio.post(
         url,
@@ -126,6 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'phone': _phoneController.text.trim(),
           'referral_code': _referralCodeController.text.trim(),
           'device_token': deviceToken,
+          ...deviceMetadata,
         },
         options: Options(
           headers: {
